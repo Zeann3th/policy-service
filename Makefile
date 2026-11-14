@@ -1,4 +1,4 @@
-MODULE := github.com/zeann3th/haphaestus
+MODULE := github.com/zeann3th/policy-service
 PROTOC ?= protoc
 PROTO_FILES := $(wildcard proto/*.proto)
 

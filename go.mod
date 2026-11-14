@@ -1,4 +1,4 @@
-module github.com/zeann3th/haphaestus
+module github.com/zeann3th/policy-service
 
 go 1.26.5
 

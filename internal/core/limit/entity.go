@@ -55,6 +55,7 @@ type ReferenceCode struct {
 }
 
 type LimitType struct {
+	ID          int64
 	Code        string
 	Description *string
 	Unit        *string
@@ -64,48 +65,54 @@ type LimitType struct {
 }
 
 type LimitGroup struct {
-	ID             int64
-	WalletTypeCode string
-	CurrencyCode   string
-	TierCode       string
-	CreatedAt      time.Time
-	UpdatedAt      *time.Time
+	ID         int64
+	WalletType string
+	Currency   string
+	Tier       string
+	CreatedAt  time.Time
+	UpdatedAt  *time.Time
 }
 
 type LimitKey struct {
-	LimitTypeCode       string
-	TransactionTypeCode string
-	ChannelCode         string
+	LimitTypeID     int64
+	TransactionType string
+	Channel         string
 }
 
 type LimitValue struct {
-	LimitGroupID        int64
-	LimitTypeCode       string
-	TransactionTypeCode string
-	ChannelCode         string
-	Operator            Operator
-	Value               decimal.Decimal
-	CreatedAt           time.Time
-	UpdatedAt           *time.Time
+	LimitGroupID    int64
+	LimitTypeID     int64
+	LimitType       string
+	TransactionType string
+	Channel         string
+	Operator        Operator
+	Value           decimal.Decimal
+	CreatedAt       time.Time
+	UpdatedAt       *time.Time
 }
 
 func (v LimitValue) Key() LimitKey {
-	return LimitKey{v.LimitTypeCode, v.TransactionTypeCode, v.ChannelCode}
+	return LimitKey{LimitTypeID: v.LimitTypeID, TransactionType: v.TransactionType, Channel: v.Channel}
 }
 
 type UserLimit struct {
-	WalletID            string
-	LimitTypeCode       string
-	TransactionTypeCode string
-	ChannelCode         string
-	Operator            Operator
-	Value               decimal.Decimal
-	EffectiveFrom       time.Time
-	EffectiveTo         *time.Time
-	Reason              *string
-	CreatedBy           string
-	CreatedAt           time.Time
-	UpdatedAt           *time.Time
+	WalletID        string
+	LimitTypeID     int64
+	LimitType       string
+	TransactionType string
+	Channel         string
+	Operator        Operator
+	Value           decimal.Decimal
+	EffectiveFrom   time.Time
+	EffectiveTo     *time.Time
+	Reason          *string
+	CreatedBy       string
+	CreatedAt       time.Time
+	UpdatedAt       *time.Time
+}
+
+func (v UserLimit) Key() LimitKey {
+	return LimitKey{LimitTypeID: v.LimitTypeID, TransactionType: v.TransactionType, Channel: v.Channel}
 }
 
 type AuditAction string
@@ -135,10 +142,10 @@ const (
 )
 
 type ResolvedLimit struct {
-	Code                string
-	TransactionTypeCode string
-	ChannelCode         string
-	Operator            Operator
-	Value               decimal.Decimal
-	Source              Source
+	LimitType       string
+	TransactionType string
+	Channel         string
+	Operator        Operator
+	Value           decimal.Decimal
+	Source          Source
 }

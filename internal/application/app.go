@@ -10,11 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	grpcserver "github.com/zeann3th/haphaestus/internal/application/grpc"
-	httpserver "github.com/zeann3th/haphaestus/internal/application/http"
-	"github.com/zeann3th/haphaestus/internal/core/limit"
-	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
-	"github.com/zeann3th/haphaestus/internal/infrastructure/postgres"
+	grpcserver "github.com/zeann3th/policy-service/internal/application/grpc"
+	httpserver "github.com/zeann3th/policy-service/internal/application/http"
+	"github.com/zeann3th/policy-service/internal/core/limit"
+	rediscache "github.com/zeann3th/policy-service/internal/infrastructure/cache"
+	"github.com/zeann3th/policy-service/internal/infrastructure/config"
+	"github.com/zeann3th/policy-service/internal/infrastructure/postgres"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -38,7 +39,11 @@ func Run() error {
 	}
 
 	limitStore := postgres.NewLimitStore(db)
-	limitService := limit.NewService(logger, limitStore)
+	redisClient := rediscache.NewRedisClient(cfg)
+	defer redisClient.Close()
+
+	limitCache := rediscache.New(redisClient)
+	limitService := limit.NewService(logger, limitStore, limitCache, cfg.ServiceName)
 
 	httpServer, err := httpserver.New(cfg, logger, db, limitService)
 	if err != nil {

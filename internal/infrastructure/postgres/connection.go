@@ -9,7 +9,7 @@ import (
 	shopspring "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
+	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 )
 
 func New(cfg *config.Config, log *slog.Logger) (*pgxpool.Pool, error) {

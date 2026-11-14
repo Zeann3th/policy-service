@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/zeann3th/haphaestus/internal/core/limit"
-	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
+	"github.com/zeann3th/policy-service/internal/core/limit"
+	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 

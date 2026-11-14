@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS reference_codes (
 );
 
 CREATE TABLE IF NOT EXISTS limit_types (
-  code text PRIMARY KEY CHECK (code = upper(code)),
+  id bigserial PRIMARY KEY,
+  code text NOT NULL UNIQUE CHECK (code = upper(code)),
   description text,
   unit text,
   active boolean NOT NULL DEFAULT true,
@@ -34,21 +35,29 @@ CREATE TABLE IF NOT EXISTS limit_types (
   updated_at timestamptz
 );
 
+INSERT INTO limit_types (code, description, unit) VALUES
+  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'BALANCE'),
+  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'BALANCE'),
+  ('TXN_MIN_AMT', 'Minimum amount of a single transaction', 'AMOUNT'),
+  ('TXN_MAX_AMT', 'Maximum amount of a single transaction', 'AMOUNT'),
+  ('DAILY_OUT_MAX', 'Maximum total sent out per day (counter lives in policy)', 'AMOUNT')
+ON CONFLICT (code) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS limit_groups (
   id bigserial PRIMARY KEY,
-  wallet_type_code text NOT NULL,
-  currency_code varchar(3) NOT NULL, -- ISO 4217
-  tier_code text NOT NULL,
+  wallet_type text NOT NULL,
+  currency varchar(3) NOT NULL, -- ISO 4217
+  tier text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
-  UNIQUE (wallet_type_code, currency_code, tier_code)
+  UNIQUE (wallet_type, currency, tier)
 );
 
 CREATE TABLE IF NOT EXISTS limit_values (
   limit_group_id bigint NOT NULL REFERENCES limit_groups (id) ON DELETE CASCADE,
-  limit_type_code text NOT NULL REFERENCES limit_types (code),
-  transaction_type_code text NOT NULL DEFAULT 'ALL',
-  channel_code text NOT NULL DEFAULT 'ALL',
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  transaction_type text NOT NULL DEFAULT 'ALL',
+  channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
     operator IN ('EQ', 'NEQ', 'GT', 'GTE', 'LT', 'LTE')
   ),
@@ -57,17 +66,17 @@ CREATE TABLE IF NOT EXISTS limit_values (
   updated_at timestamptz,
   PRIMARY KEY (
     limit_group_id,
-    limit_type_code,
-    transaction_type_code,
-    channel_code
+    limit_type_id,
+    transaction_type,
+    channel
   )
 );
 
 CREATE TABLE IF NOT EXISTS user_limits (
   wallet_id text NOT NULL,
-  limit_type_code text NOT NULL REFERENCES limit_types (code),
-  transaction_type_code text NOT NULL DEFAULT 'ALL',
-  channel_code text NOT NULL DEFAULT 'ALL',
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  transaction_type text NOT NULL DEFAULT 'ALL',
+  channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
     operator IN ('EQ', 'NEQ', 'GT', 'GTE', 'LT', 'LTE')
   ),
@@ -80,9 +89,9 @@ CREATE TABLE IF NOT EXISTS user_limits (
   updated_at timestamptz,
   PRIMARY KEY (
     wallet_id,
-    limit_type_code,
-    transaction_type_code,
-    channel_code
+    limit_type_id,
+    transaction_type,
+    channel
   ),
   CHECK (
     effective_to IS NULL

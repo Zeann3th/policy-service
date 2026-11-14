@@ -7,68 +7,79 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/shopspring/decimal"
 )
 
-const getLimitGroupID = `-- name: GetLimitGroupID :one
+const getActiveUserLimits = `-- name: GetActiveUserLimits :many
 SELECT
-  id
+  ul.wallet_id,
+  ul.limit_type_id,
+  lt.code AS limit_type,
+  ul.transaction_type,
+  ul.channel,
+  ul.operator,
+  ul.value,
+  ul.effective_from,
+  ul.effective_to,
+  ul.reason,
+  ul.created_by,
+  ul.created_at,
+  ul.updated_at
 FROM
-  limit_groups
+  user_limits ul
+  JOIN limit_types lt ON lt.id = ul.limit_type_id
 WHERE
-  wallet_type_code = $1
-  AND currency_code = $2
-  AND tier_code = $3
-`
-
-type GetLimitGroupIDParams struct {
-	WalletTypeCode string `json:"wallet_type_code"`
-	CurrencyCode   string `json:"currency_code"`
-	TierCode       string `json:"tier_code"`
-}
-
-func (q *Queries) GetLimitGroupID(ctx context.Context, arg GetLimitGroupIDParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getLimitGroupID, arg.WalletTypeCode, arg.CurrencyCode, arg.TierCode)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
-const getLimitValuesByGroupID = `-- name: GetLimitValuesByGroupID :many
-SELECT
-  limit_group_id,
-  limit_type_code,
-  transaction_type_code,
-  channel_code,
-  operator,
-  value,
-  created_at,
-  updated_at
-FROM
-  limit_values
-WHERE
-  limit_group_id = $1
+  ul.wallet_id = $1
+  AND ul.effective_from <= now()
+  AND (
+    ul.effective_to IS NULL
+    OR ul.effective_to > now()
+  )
 ORDER BY
-  limit_type_code,
-  transaction_type_code,
-  channel_code
+  lt.code,
+  ul.transaction_type,
+  ul.channel
 `
 
-func (q *Queries) GetLimitValuesByGroupID(ctx context.Context, limitGroupID int64) ([]LimitValue, error) {
-	rows, err := q.db.Query(ctx, getLimitValuesByGroupID, limitGroupID)
+type GetActiveUserLimitsRow struct {
+	WalletID        string          `json:"wallet_id"`
+	LimitTypeID     int64           `json:"limit_type_id"`
+	LimitType       string          `json:"limit_type"`
+	TransactionType string          `json:"transaction_type"`
+	Channel         string          `json:"channel"`
+	Operator        string          `json:"operator"`
+	Value           decimal.Decimal `json:"value"`
+	EffectiveFrom   time.Time       `json:"effective_from"`
+	EffectiveTo     *time.Time      `json:"effective_to"`
+	Reason          *string         `json:"reason"`
+	CreatedBy       string          `json:"created_by"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       *time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) GetActiveUserLimits(ctx context.Context, walletID string) ([]GetActiveUserLimitsRow, error) {
+	rows, err := q.db.Query(ctx, getActiveUserLimits, walletID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []LimitValue
+	var items []GetActiveUserLimitsRow
 	for rows.Next() {
-		var i LimitValue
+		var i GetActiveUserLimitsRow
 		if err := rows.Scan(
-			&i.LimitGroupID,
-			&i.LimitTypeCode,
-			&i.TransactionTypeCode,
-			&i.ChannelCode,
+			&i.WalletID,
+			&i.LimitTypeID,
+			&i.LimitType,
+			&i.TransactionType,
+			&i.Channel,
 			&i.Operator,
 			&i.Value,
+			&i.EffectiveFrom,
+			&i.EffectiveTo,
+			&i.Reason,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -82,19 +93,90 @@ func (q *Queries) GetLimitValuesByGroupID(ctx context.Context, limitGroupID int6
 	return items, nil
 }
 
-const hasLimitTypes = `-- name: HasLimitTypes :one
+const getLimitGroupID = `-- name: GetLimitGroupID :one
 SELECT
-  EXISTS (
-    SELECT
-      1
-    FROM
-      limit_types
-  )
+  id
+FROM
+  limit_groups
+WHERE
+  wallet_type = $1
+  AND currency = $2
+  AND tier = $3
 `
 
-func (q *Queries) HasLimitTypes(ctx context.Context) (bool, error) {
-	row := q.db.QueryRow(ctx, hasLimitTypes)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
+type GetLimitGroupIDParams struct {
+	WalletType string `json:"wallet_type"`
+	Currency   string `json:"currency"`
+	Tier       string `json:"tier"`
+}
+
+func (q *Queries) GetLimitGroupID(ctx context.Context, arg GetLimitGroupIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getLimitGroupID, arg.WalletType, arg.Currency, arg.Tier)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getLimitValuesByGroupID = `-- name: GetLimitValuesByGroupID :many
+SELECT
+  lv.limit_group_id,
+  lv.limit_type_id,
+  lt.code AS limit_type,
+  lv.transaction_type,
+  lv.channel,
+  lv.operator,
+  lv.value,
+  lv.created_at,
+  lv.updated_at
+FROM
+  limit_values lv
+  JOIN limit_types lt ON lt.id = lv.limit_type_id
+WHERE
+  lv.limit_group_id = $1
+ORDER BY
+  lt.code,
+  lv.transaction_type,
+  lv.channel
+`
+
+type GetLimitValuesByGroupIDRow struct {
+	LimitGroupID    int64           `json:"limit_group_id"`
+	LimitTypeID     int64           `json:"limit_type_id"`
+	LimitType       string          `json:"limit_type"`
+	TransactionType string          `json:"transaction_type"`
+	Channel         string          `json:"channel"`
+	Operator        string          `json:"operator"`
+	Value           decimal.Decimal `json:"value"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       *time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) GetLimitValuesByGroupID(ctx context.Context, limitGroupID int64) ([]GetLimitValuesByGroupIDRow, error) {
+	rows, err := q.db.Query(ctx, getLimitValuesByGroupID, limitGroupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetLimitValuesByGroupIDRow
+	for rows.Next() {
+		var i GetLimitValuesByGroupIDRow
+		if err := rows.Scan(
+			&i.LimitGroupID,
+			&i.LimitTypeID,
+			&i.LimitType,
+			&i.TransactionType,
+			&i.Channel,
+			&i.Operator,
+			&i.Value,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

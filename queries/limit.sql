@@ -1,37 +1,60 @@
--- name: HasLimitTypes :one
-SELECT
-  EXISTS (
-    SELECT
-      1
-    FROM
-      limit_types
-  );
-
 -- name: GetLimitGroupID :one
 SELECT
   id
 FROM
   limit_groups
 WHERE
-  wallet_type_code = $1
-  AND currency_code = $2
-  AND tier_code = $3;
+  wallet_type = $1
+  AND currency = $2
+  AND tier = $3;
 
 -- name: GetLimitValuesByGroupID :many
 SELECT
-  limit_group_id,
-  limit_type_code,
-  transaction_type_code,
-  channel_code,
-  operator,
-  value,
-  created_at,
-  updated_at
+  lv.limit_group_id,
+  lv.limit_type_id,
+  lt.code AS limit_type,
+  lv.transaction_type,
+  lv.channel,
+  lv.operator,
+  lv.value,
+  lv.created_at,
+  lv.updated_at
 FROM
-  limit_values
+  limit_values lv
+  JOIN limit_types lt ON lt.id = lv.limit_type_id
 WHERE
-  limit_group_id = $1
+  lv.limit_group_id = $1
 ORDER BY
-  limit_type_code,
-  transaction_type_code,
-  channel_code;
+  lt.code,
+  lv.transaction_type,
+  lv.channel;
+
+-- name: GetActiveUserLimits :many
+SELECT
+  ul.wallet_id,
+  ul.limit_type_id,
+  lt.code AS limit_type,
+  ul.transaction_type,
+  ul.channel,
+  ul.operator,
+  ul.value,
+  ul.effective_from,
+  ul.effective_to,
+  ul.reason,
+  ul.created_by,
+  ul.created_at,
+  ul.updated_at
+FROM
+  user_limits ul
+  JOIN limit_types lt ON lt.id = ul.limit_type_id
+WHERE
+  ul.wallet_id = $1
+  AND ul.effective_from <= now()
+  AND (
+    ul.effective_to IS NULL
+    OR ul.effective_to > now()
+  )
+ORDER BY
+  lt.code,
+  ul.transaction_type,
+  ul.channel;

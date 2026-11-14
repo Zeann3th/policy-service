@@ -22,15 +22,16 @@ type LimitAuditLog struct {
 }
 
 type LimitGroup struct {
-	ID             int64      `json:"id"`
-	WalletTypeCode string     `json:"wallet_type_code"`
-	CurrencyCode   string     `json:"currency_code"`
-	TierCode       string     `json:"tier_code"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      *time.Time `json:"updated_at"`
+	ID         int64      `json:"id"`
+	WalletType string     `json:"wallet_type"`
+	Currency   string     `json:"currency"`
+	Tier       string     `json:"tier"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at"`
 }
 
 type LimitType struct {
+	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
 	Unit        *string    `json:"unit"`
@@ -40,14 +41,14 @@ type LimitType struct {
 }
 
 type LimitValue struct {
-	LimitGroupID        int64           `json:"limit_group_id"`
-	LimitTypeCode       string          `json:"limit_type_code"`
-	TransactionTypeCode string          `json:"transaction_type_code"`
-	ChannelCode         string          `json:"channel_code"`
-	Operator            string          `json:"operator"`
-	Value               decimal.Decimal `json:"value"`
-	CreatedAt           time.Time       `json:"created_at"`
-	UpdatedAt           *time.Time      `json:"updated_at"`
+	LimitGroupID    int64           `json:"limit_group_id"`
+	LimitTypeID     int64           `json:"limit_type_id"`
+	TransactionType string          `json:"transaction_type"`
+	Channel         string          `json:"channel"`
+	Operator        string          `json:"operator"`
+	Value           decimal.Decimal `json:"value"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       *time.Time      `json:"updated_at"`
 }
 
 type ReferenceCode struct {
@@ -59,16 +60,16 @@ type ReferenceCode struct {
 }
 
 type UserLimit struct {
-	WalletID            string          `json:"wallet_id"`
-	LimitTypeCode       string          `json:"limit_type_code"`
-	TransactionTypeCode string          `json:"transaction_type_code"`
-	ChannelCode         string          `json:"channel_code"`
-	Operator            string          `json:"operator"`
-	Value               decimal.Decimal `json:"value"`
-	EffectiveFrom       time.Time       `json:"effective_from"`
-	EffectiveTo         *time.Time      `json:"effective_to"`
-	Reason              *string         `json:"reason"`
-	CreatedBy           string          `json:"created_by"`
-	CreatedAt           time.Time       `json:"created_at"`
-	UpdatedAt           *time.Time      `json:"updated_at"`
+	WalletID        string          `json:"wallet_id"`
+	LimitTypeID     int64           `json:"limit_type_id"`
+	TransactionType string          `json:"transaction_type"`
+	Channel         string          `json:"channel"`
+	Operator        string          `json:"operator"`
+	Value           decimal.Decimal `json:"value"`
+	EffectiveFrom   time.Time       `json:"effective_from"`
+	EffectiveTo     *time.Time      `json:"effective_to"`
+	Reason          *string         `json:"reason"`
+	CreatedBy       string          `json:"created_by"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       *time.Time      `json:"updated_at"`
 }

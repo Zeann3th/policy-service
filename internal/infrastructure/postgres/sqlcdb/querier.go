@@ -9,9 +9,9 @@ import (
 )
 
 type Querier interface {
+	GetActiveUserLimits(ctx context.Context, walletID string) ([]GetActiveUserLimitsRow, error)
 	GetLimitGroupID(ctx context.Context, arg GetLimitGroupIDParams) (int64, error)
-	GetLimitValuesByGroupID(ctx context.Context, limitGroupID int64) ([]LimitValue, error)
-	HasLimitTypes(ctx context.Context) (bool, error)
+	GetLimitValuesByGroupID(ctx context.Context, limitGroupID int64) ([]GetLimitValuesByGroupIDRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

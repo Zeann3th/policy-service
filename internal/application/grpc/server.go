@@ -7,8 +7,8 @@ import (
 	"net"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/zeann3th/haphaestus/internal/core/limit"
-	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
+	"github.com/zeann3th/policy-service/internal/core/limit"
+	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )

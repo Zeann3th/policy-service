@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/zeann3th/haphaestus/internal/application"
+	"github.com/zeann3th/policy-service/internal/application"
 )
 
 func main() {

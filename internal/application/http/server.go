@@ -8,6 +8,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zeann3th/haphaestus/internal/core/limit"
 	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
@@ -21,6 +23,8 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
+	db *pgxpool.Pool,
+	limitService limit.LimitService,
 ) (*Server, error) {
 	gin.SetMode(cfg.HttpConfig.GinMode)
 
@@ -28,9 +32,10 @@ func New(
 
 	router.Use(otelgin.Middleware(cfg.ServiceName))
 
-	prefixGroup := router.Group(fmt.Sprintf("/%s", cfg.ServiceName))
+	prefixGroup := router.Group(fmt.Sprintf("/%s/api", cfg.ServiceName))
 
 	RegisterUtilityRoutes(prefixGroup)
+	RegisterLimitRoutes(prefixGroup, limitService)
 
 	addr := fmt.Sprintf(":%s", cfg.HttpConfig.Port)
 	listener, err := net.Listen("tcp", addr)

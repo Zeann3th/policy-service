@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zeann3th/haphaestus/internal/core/limit"
 	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -20,6 +22,8 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
+	db *pgxpool.Pool,
+	limitService limit.LimitService,
 ) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GrpcConfig.Port))
 	if err != nil {

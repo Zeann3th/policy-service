@@ -6,15 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type handler struct {
+type commonHandler struct {
 }
 
-func (h *handler) checkHealth(c *gin.Context) {
+func (h *commonHandler) checkHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 func RegisterUtilityRoutes(rg *gin.RouterGroup) {
-	handler := &handler{}
+	handler := &commonHandler{}
 
 	rg.GET("/healthz", handler.checkHealth)
 }

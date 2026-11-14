@@ -12,7 +12,9 @@ import (
 
 	grpcserver "github.com/zeann3th/haphaestus/internal/application/grpc"
 	httpserver "github.com/zeann3th/haphaestus/internal/application/http"
+	"github.com/zeann3th/haphaestus/internal/core/limit"
 	"github.com/zeann3th/haphaestus/internal/infrastructure/config"
+	"github.com/zeann3th/haphaestus/internal/infrastructure/postgres"
 )
 
 const shutdownTimeout = 10 * time.Second
@@ -29,12 +31,21 @@ func Run() error {
 	}
 
 	logger := slog.Default()
-	httpServer, err := httpserver.New(cfg, logger)
+
+	db, err := postgres.New(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+
+	limitStore := postgres.NewLimitStore(db)
+	limitService := limit.NewService(logger, limitStore)
+
+	httpServer, err := httpserver.New(cfg, logger, db, limitService)
 	if err != nil {
 		return fmt.Errorf("create HTTP server: %w", err)
 	}
 
-	grpcServer, err := grpcserver.New(cfg, logger)
+	grpcServer, err := grpcserver.New(cfg, logger, db, limitService)
 	if err != nil {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}

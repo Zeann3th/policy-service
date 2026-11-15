@@ -9,8 +9,8 @@ import (
 	"context"
 )
 
-const createLimitAuditLog = `-- name: CreateLimitAuditLog :one
-INSERT INTO limit_audit_logs
+const createPolicyAuditLog = `-- name: CreatePolicyAuditLog :one
+INSERT INTO policy_audit_logs
   (entity, entity_key, action, old_value, new_value, updated_by)
 VALUES
   ($1, $2, $3,
@@ -18,7 +18,7 @@ VALUES
 RETURNING id, entity, entity_key, action, old_value, new_value, updated_by, updated_at
 `
 
-type CreateLimitAuditLogParams struct {
+type CreatePolicyAuditLogParams struct {
 	Entity    string `json:"entity"`
 	EntityKey string `json:"entity_key"`
 	Action    string `json:"action"`
@@ -27,8 +27,8 @@ type CreateLimitAuditLogParams struct {
 	UpdatedBy string `json:"updated_by"`
 }
 
-func (q *Queries) CreateLimitAuditLog(ctx context.Context, arg CreateLimitAuditLogParams) (LimitAuditLog, error) {
-	row := q.db.QueryRow(ctx, createLimitAuditLog,
+func (q *Queries) CreatePolicyAuditLog(ctx context.Context, arg CreatePolicyAuditLogParams) (PolicyAuditLog, error) {
+	row := q.db.QueryRow(ctx, createPolicyAuditLog,
 		arg.Entity,
 		arg.EntityKey,
 		arg.Action,
@@ -36,7 +36,7 @@ func (q *Queries) CreateLimitAuditLog(ctx context.Context, arg CreateLimitAuditL
 		arg.NewValue,
 		arg.UpdatedBy,
 	)
-	var i LimitAuditLog
+	var i PolicyAuditLog
 	err := row.Scan(
 		&i.ID,
 		&i.Entity,

@@ -1,0 +1,1596 @@
+basePath: /policy-service/api
+definitions:
+  cache.ReloadRequest:
+    properties:
+      key:
+        example: policy:config:0:CU0001:VND:1
+        type: string
+      namespaces:
+        items:
+          enum:
+          - units
+          - policy:types
+          - policy:groups
+          - policies
+          - policy:custom
+          - policy:config
+          type: string
+        type: array
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - updatedBy
+    type: object
+  cache.ReloadResponse:
+    properties:
+      evicted:
+        type: boolean
+      reloadedNamespaces:
+        items:
+          type: string
+        type: array
+    type: object
+  core.ActorRequest:
+    properties:
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - updatedBy
+    type: object
+  core.AppError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  http.customPolicyPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/policy.CustomPolicyResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  http.healthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  http.policyPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/policy.PolicyResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  http.policyTypePageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/policy.PolicyTypeResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  http.unitPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/unit.Response'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  policy.CreateCustomPolicyRequest:
+    properties:
+      channel:
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      effectiveFrom:
+        format: date-time
+        type: string
+      effectiveTo:
+        format: date-time
+        type: string
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyTypeId:
+        type: integer
+      reason:
+        type: string
+      transactionType:
+        type: string
+      updatedBy:
+        type: string
+      value:
+        example: "10000"
+        type: string
+    required:
+    - operator
+    - policyTypeId
+    - updatedBy
+    - value
+    type: object
+  policy.CreatePolicyGroupRequest:
+    properties:
+      currency:
+        type: string
+      tier:
+        type: string
+      updatedBy:
+        type: string
+      walletType:
+        type: string
+    required:
+    - currency
+    - tier
+    - updatedBy
+    - walletType
+    type: object
+  policy.CreatePolicyRequest:
+    properties:
+      channel:
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyTypeId:
+        type: integer
+      transactionType:
+        type: string
+      updatedBy:
+        type: string
+      value:
+        example: "10000"
+        type: string
+    required:
+    - operator
+    - policyTypeId
+    - updatedBy
+    - value
+    type: object
+  policy.CreatePolicyTypeRequest:
+    properties:
+      active:
+        type: boolean
+      code:
+        type: string
+      description:
+        type: string
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - FEE
+        - TAX
+        - DISCOUNT
+      unitId:
+        type: integer
+      updatedBy:
+        type: string
+      windowType:
+        allOf:
+        - $ref: '#/definitions/policy.WindowType'
+        enum:
+        - NONE
+        - DAILY
+        - MONTHLY
+        - LIFETIME
+    required:
+    - code
+    - unitId
+    - updatedBy
+    type: object
+  policy.CustomPolicyResponse:
+    properties:
+      channel:
+        type: string
+      createdAt:
+        format: date-time
+        type: string
+      createdBy:
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      effectiveFrom:
+        format: date-time
+        type: string
+      effectiveTo:
+        format: date-time
+        type: string
+      id:
+        type: integer
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyTypeId:
+        type: integer
+      reason:
+        type: string
+      transactionType:
+        type: string
+      updatedAt:
+        format: date-time
+        type: string
+      value:
+        example: "10000"
+        type: string
+      walletId:
+        type: string
+    type: object
+  policy.Direction:
+    enum:
+    - ALL
+    - OUT
+    - IN
+    type: string
+    x-enum-varnames:
+    - DirectionAll
+    - DirectionOut
+    - DirectionIn
+  policy.GetConfigResponse:
+    properties:
+      rules:
+        items:
+          $ref: '#/definitions/policy.Rule'
+        type: array
+    type: object
+  policy.Kind:
+    enum:
+    - LIMIT
+    - WAIVER
+    - FEE
+    - TAX
+    - DISCOUNT
+    type: string
+    x-enum-varnames:
+    - KindLimit
+    - KindWaiver
+    - KindFee
+    - KindTax
+    - KindDiscount
+  policy.Operator:
+    enum:
+    - EQ
+    - NEQ
+    - GT
+    - GTE
+    - LT
+    - LTE
+    type: string
+    x-enum-varnames:
+    - OpEQ
+    - OpNEQ
+    - OpGT
+    - OpGTE
+    - OpLT
+    - OpLTE
+  policy.PolicyGroupResponse:
+    properties:
+      createdAt:
+        format: date-time
+        type: string
+      currency:
+        type: string
+      id:
+        type: integer
+      tier:
+        type: string
+      updatedAt:
+        format: date-time
+        type: string
+      walletType:
+        type: string
+    type: object
+  policy.PolicyResponse:
+    properties:
+      channel:
+        type: string
+      createdAt:
+        format: date-time
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      id:
+        type: integer
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyGroupId:
+        type: integer
+      policyTypeId:
+        type: integer
+      transactionType:
+        type: string
+      updatedAt:
+        format: date-time
+        type: string
+      value:
+        example: "10000"
+        type: string
+    type: object
+  policy.PolicyTypeResponse:
+    properties:
+      active:
+        type: boolean
+      code:
+        type: string
+      createdAt:
+        format: date-time
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - FEE
+        - TAX
+        - DISCOUNT
+      unitId:
+        type: integer
+      updatedAt:
+        format: date-time
+        type: string
+      windowType:
+        allOf:
+        - $ref: '#/definitions/policy.WindowType'
+        enum:
+        - NONE
+        - DAILY
+        - MONTHLY
+        - LIFETIME
+    type: object
+  policy.Rule:
+    properties:
+      channel:
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyType:
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/policy.Source'
+        enum:
+        - SYSTEM
+        - USER
+      transactionType:
+        type: string
+      unit:
+        type: string
+      value:
+        example: "10000"
+        type: string
+    type: object
+  policy.Source:
+    enum:
+    - SYSTEM
+    - USER
+    type: string
+    x-enum-varnames:
+    - SourceSystem
+    - SourceCustom
+  policy.UpdateCustomPolicyRequest:
+    properties:
+      effectiveFrom:
+        format: date-time
+        type: string
+      effectiveTo:
+        format: date-time
+        type: string
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      reason:
+        type: string
+      updatedBy:
+        type: string
+      value:
+        example: "10000"
+        type: string
+    required:
+    - effectiveFrom
+    - operator
+    - updatedBy
+    - value
+    type: object
+  policy.UpdatePolicyRequest:
+    properties:
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      updatedBy:
+        type: string
+      value:
+        example: "10000"
+        type: string
+    required:
+    - operator
+    - updatedBy
+    - value
+    type: object
+  policy.UpdatePolicyTypeRequest:
+    properties:
+      active:
+        type: boolean
+      description:
+        type: string
+      updatedBy:
+        type: string
+    required:
+    - active
+    - updatedBy
+    type: object
+  policy.WindowType:
+    enum:
+    - NONE
+    - DAILY
+    - MONTHLY
+    - LIFETIME
+    type: string
+    x-enum-varnames:
+    - WindowNone
+    - WindowDaily
+    - WindowMonthly
+    - WindowLifetime
+  unit.CreateRequest:
+    properties:
+      active:
+        type: boolean
+      code:
+        example: AMOUNT
+        type: string
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - code
+    - updatedBy
+    type: object
+  unit.Response:
+    properties:
+      active:
+        type: boolean
+      code:
+        example: AMOUNT
+        type: string
+      createdAt:
+        format: date-time
+        type: string
+      id:
+        type: integer
+      updatedAt:
+        format: date-time
+        type: string
+    type: object
+  unit.UpdateRequest:
+    properties:
+      active:
+        type: boolean
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - active
+    - updatedBy
+    type: object
+info:
+  contact: {}
+  description: Policy configuration, custom policy, unit, and cache administration
+    API.
+  title: Policy Service API
+  version: "1.0"
+paths:
+  /healthz:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.healthResponse'
+      summary: Check service health
+      tags:
+      - Utility
+  /v1/cache/reload:
+    post:
+      consumes:
+      - application/json
+      description: Evicts one relative key or invalidates one or more cache namespaces.
+        Key and namespaces are mutually exclusive.
+      parameters:
+      - description: Cache reload selector
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/cache.ReloadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/cache.ReloadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Reload cached data
+      tags:
+      - Cache
+  /v1/policies:
+    get:
+      description: Returns active system policies merged with active wallet-specific
+        overrides. An override replaces only an exact policy type, transaction type,
+        channel, and direction match.
+      parameters:
+      - description: Wallet type
+        in: query
+        name: walletType
+        required: true
+        type: string
+      - description: ISO 4217 currency
+        in: query
+        maxLength: 3
+        minLength: 3
+        name: currency
+        required: true
+        type: string
+      - description: Tier
+        in: query
+        name: tier
+        required: true
+        type: string
+      - description: Wallet ID
+        in: query
+        name: walletId
+        required: true
+        type: string
+      - description: Transaction type filter; ALL policies remain included
+        in: query
+        name: transactionType
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.GetConfigResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Resolve effective policies
+      tags:
+      - Policy Resolution
+  /v1/policies/custom/{walletId}:
+    get:
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: walletId
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.customPolicyPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List custom wallet policies
+      tags:
+      - Custom Policies
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: walletId
+        required: true
+        type: string
+      - description: Custom policy
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.CreateCustomPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/policy.CustomPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a custom wallet policy
+      tags:
+      - Custom Policies
+  /v1/policies/custom/{walletId}/{customPolicyId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: walletId
+        required: true
+        type: string
+      - description: Custom policy ID
+        in: path
+        minimum: 1
+        name: customPolicyId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a custom wallet policy
+      tags:
+      - Custom Policies
+    get:
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: walletId
+        required: true
+        type: string
+      - description: Custom policy ID
+        in: path
+        minimum: 1
+        name: customPolicyId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.CustomPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a custom wallet policy
+      tags:
+      - Custom Policies
+    put:
+      consumes:
+      - application/json
+      description: Wallet, policy type, transaction type, channel, direction, and
+        creator are immutable.
+      parameters:
+      - description: Wallet ID
+        in: path
+        name: walletId
+        required: true
+        type: string
+      - description: Custom policy ID
+        in: path
+        minimum: 1
+        name: customPolicyId
+        required: true
+        type: integer
+      - description: Mutable custom policy fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.UpdateCustomPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.CustomPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Update a custom wallet policy
+      tags:
+      - Custom Policies
+  /v1/policies/groups:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Policy group
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.CreatePolicyGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/policy.PolicyGroupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a policy group
+      tags:
+      - Policy Groups
+  /v1/policies/groups/{groupId}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the group and its configured policies.
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a policy group
+      tags:
+      - Policy Groups
+    get:
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.PolicyGroupResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a policy group
+      tags:
+      - Policy Groups
+  /v1/policies/groups/{groupId}/policies:
+    get:
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.policyPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List policies in a group
+      tags:
+      - Policies
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - description: Policy
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.CreatePolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/policy.PolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a system policy
+      tags:
+      - Policies
+  /v1/policies/groups/{groupId}/policies/{policyId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - description: Policy ID
+        in: path
+        minimum: 1
+        name: policyId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a system policy
+      tags:
+      - Policies
+    get:
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - description: Policy ID
+        in: path
+        minimum: 1
+        name: policyId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.PolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a system policy
+      tags:
+      - Policies
+    put:
+      consumes:
+      - application/json
+      description: Policy group, type, transaction type, channel, and direction are
+        immutable.
+      parameters:
+      - description: Policy group ID
+        in: path
+        minimum: 1
+        name: groupId
+        required: true
+        type: integer
+      - description: Policy ID
+        in: path
+        minimum: 1
+        name: policyId
+        required: true
+        type: integer
+      - description: Mutable policy fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.UpdatePolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.PolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Update a system policy
+      tags:
+      - Policies
+  /v1/policies/types:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.policyTypePageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List policy types
+      tags:
+      - Policy Types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Policy type
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.CreatePolicyTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/policy.PolicyTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a policy type
+      tags:
+      - Policy Types
+  /v1/policies/types/{typeId}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletion is rejected when historical counters reference the type.
+      parameters:
+      - description: Policy type ID
+        in: path
+        minimum: 1
+        name: typeId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a policy type
+      tags:
+      - Policy Types
+    get:
+      parameters:
+      - description: Policy type ID
+        in: path
+        minimum: 1
+        name: typeId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.PolicyTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a policy type
+      tags:
+      - Policy Types
+    put:
+      consumes:
+      - application/json
+      description: Code, unit, kind, and window type are immutable.
+      parameters:
+      - description: Policy type ID
+        in: path
+        minimum: 1
+        name: typeId
+        required: true
+        type: integer
+      - description: Mutable policy type fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/policy.UpdatePolicyTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/policy.PolicyTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Update a policy type
+      tags:
+      - Policy Types
+  /v1/units:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.unitPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List units
+      tags:
+      - Units
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/unit.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a unit
+      tags:
+      - Units
+  /v1/units/{unitId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a unit
+      tags:
+      - Units
+    get:
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a unit
+      tags:
+      - Units
+    put:
+      consumes:
+      - application/json
+      description: The unit code is immutable.
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      - description: Mutable unit fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/unit.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Update a unit
+      tags:
+      - Units
+schemes:
+- http
+- https
+swagger: "2.0"

@@ -12,7 +12,9 @@ import (
 
 	grpcserver "github.com/zeann3th/policy-service/internal/application/grpc"
 	httpserver "github.com/zeann3th/policy-service/internal/application/http"
-	"github.com/zeann3th/policy-service/internal/core/limit"
+	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
+	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/unit"
 	rediscache "github.com/zeann3th/policy-service/internal/infrastructure/cache"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"github.com/zeann3th/policy-service/internal/infrastructure/postgres"
@@ -38,19 +40,22 @@ func Run() error {
 		return fmt.Errorf("connect database: %w", err)
 	}
 
-	limitStore := postgres.NewLimitStore(db)
 	redisClient := rediscache.NewRedisClient(cfg)
 	defer redisClient.Close()
 
-	limitCache := rediscache.New(redisClient)
-	limitService := limit.NewService(logger, limitStore, limitCache, cfg.ServiceName)
+	applicationCache := rediscache.New(redisClient)
+	unitStore := postgres.NewUnitStore(db)
+	policyStore := postgres.NewPolicyStore(db)
+	unitService := unit.NewService(logger, unitStore, applicationCache, cfg.ServiceName)
+	groupService, typeService, policyService := policy.NewServices(logger, policyStore, unitStore, applicationCache, cfg.ServiceName)
+	cacheService := cachecore.NewService(logger, applicationCache, cfg.ServiceName)
 
-	httpServer, err := httpserver.New(cfg, logger, db, limitService)
+	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService)
 	if err != nil {
 		return fmt.Errorf("create HTTP server: %w", err)
 	}
 
-	grpcServer, err := grpcserver.New(cfg, logger, db, limitService)
+	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService)
 	if err != nil {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}

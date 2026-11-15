@@ -7,62 +7,23 @@ package db
 import (
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
 
-type LimitAuditLog struct {
-	ID        int64     `json:"id"`
-	Entity    string    `json:"entity"`
-	EntityKey string    `json:"entity_key"`
-	Action    string    `json:"action"`
-	OldValue  []byte    `json:"old_value"`
-	NewValue  []byte    `json:"new_value"`
-	UpdatedBy string    `json:"updated_by"`
-	UpdatedAt time.Time `json:"updated_at"`
+type Counter struct {
+	ID              int64     `json:"id"`
+	PolicyTypeID    int64     `json:"policy_type_id"`
+	WindowType      string    `json:"window_type"`
+	TransactionType string    `json:"transaction_type"`
+	Channel         string    `json:"channel"`
+	Direction       string    `json:"direction"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
-type LimitGroup struct {
-	ID         int64      `json:"id"`
-	WalletType string     `json:"wallet_type"`
-	Currency   string     `json:"currency"`
-	Tier       string     `json:"tier"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  *time.Time `json:"updated_at"`
-}
-
-type LimitType struct {
-	ID          int64      `json:"id"`
-	Code        string     `json:"code"`
-	Description *string    `json:"description"`
-	UnitID      int64      `json:"unit_id"`
-	Active      bool       `json:"active"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
-}
-
-type LimitValue struct {
-	LimitGroupID    int64           `json:"limit_group_id"`
-	LimitTypeID     int64           `json:"limit_type_id"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Operator        string          `json:"operator"`
-	Value           decimal.Decimal `json:"value"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       *time.Time      `json:"updated_at"`
-	ID              int64           `json:"id"`
-}
-
-type Unit struct {
-	ID        int64      `json:"id"`
-	Code      string     `json:"code"`
-	Active    bool       `json:"active"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
-}
-
-type UserLimit struct {
+type CustomPolicy struct {
 	WalletID        string          `json:"wallet_id"`
-	LimitTypeID     int64           `json:"limit_type_id"`
+	PolicyTypeID    int64           `json:"policy_type_id"`
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Operator        string          `json:"operator"`
@@ -74,4 +35,98 @@ type UserLimit struct {
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       *time.Time      `json:"updated_at"`
 	ID              int64           `json:"id"`
+	Direction       string          `json:"direction"`
+}
+
+type Policy struct {
+	PolicyGroupID   int64           `json:"policy_group_id"`
+	PolicyTypeID    int64           `json:"policy_type_id"`
+	TransactionType string          `json:"transaction_type"`
+	Channel         string          `json:"channel"`
+	Operator        string          `json:"operator"`
+	Value           decimal.Decimal `json:"value"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64           `json:"id"`
+	Direction       string          `json:"direction"`
+}
+
+type PolicyAuditLog struct {
+	ID        int64     `json:"id"`
+	Entity    string    `json:"entity"`
+	EntityKey string    `json:"entity_key"`
+	Action    string    `json:"action"`
+	OldValue  []byte    `json:"old_value"`
+	NewValue  []byte    `json:"new_value"`
+	UpdatedBy string    `json:"updated_by"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type PolicyGroup struct {
+	ID         int64      `json:"id"`
+	WalletType string     `json:"wallet_type"`
+	Currency   string     `json:"currency"`
+	Tier       string     `json:"tier"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at"`
+}
+
+type PolicyType struct {
+	ID          int64      `json:"id"`
+	Code        string     `json:"code"`
+	Description *string    `json:"description"`
+	UnitID      int64      `json:"unit_id"`
+	Active      bool       `json:"active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+	Kind        string     `json:"kind"`
+	WindowType  string     `json:"window_type"`
+}
+
+type Unit struct {
+	ID        int64      `json:"id"`
+	Code      string     `json:"code"`
+	Active    bool       `json:"active"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type Usage struct {
+	SubjectID   string          `json:"subject_id"`
+	CounterID   int64           `json:"counter_id"`
+	WindowType  string          `json:"window_type"`
+	WindowStart pgtype.Date     `json:"window_start"`
+	Value       decimal.Decimal `json:"value"`
+}
+
+type UsageDaily struct {
+	SubjectID   string          `json:"subject_id"`
+	CounterID   int64           `json:"counter_id"`
+	WindowType  string          `json:"window_type"`
+	WindowStart pgtype.Date     `json:"window_start"`
+	Value       decimal.Decimal `json:"value"`
+}
+
+type UsageDailyTemplate struct {
+	SubjectID   string          `json:"subject_id"`
+	CounterID   int64           `json:"counter_id"`
+	WindowType  string          `json:"window_type"`
+	WindowStart pgtype.Date     `json:"window_start"`
+	Value       decimal.Decimal `json:"value"`
+}
+
+type UsageLifetime struct {
+	SubjectID   string          `json:"subject_id"`
+	CounterID   int64           `json:"counter_id"`
+	WindowType  string          `json:"window_type"`
+	WindowStart pgtype.Date     `json:"window_start"`
+	Value       decimal.Decimal `json:"value"`
+}
+
+type UsageMonthly struct {
+	SubjectID   string          `json:"subject_id"`
+	CounterID   int64           `json:"counter_id"`
+	WindowType  string          `json:"window_type"`
+	WindowStart pgtype.Date     `json:"window_start"`
+	Value       decimal.Decimal `json:"value"`
 }

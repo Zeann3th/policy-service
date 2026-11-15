@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
-	"github.com/zeann3th/policy-service/internal/core/limit"
+	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
+	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/unit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -23,8 +24,11 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
-	db *pgxpool.Pool,
-	limitService limit.LimitService,
+	unitService unit.Service,
+	groupService policy.GroupService,
+	typeService policy.TypeService,
+	policyService policy.Service,
+	cacheService cachecore.Service,
 ) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GrpcConfig.Port))
 	if err != nil {
@@ -33,7 +37,11 @@ func New(
 
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()))
-	pb.RegisterLimitServiceServer(grpcServer, &limitGRPCHandler{service: limitService})
+	pb.RegisterUnitServiceServer(grpcServer, &unitHandler{service: unitService})
+	pb.RegisterPolicyGroupServiceServer(grpcServer, &policyGroupHandler{service: groupService})
+	pb.RegisterPolicyTypeServiceServer(grpcServer, &policyTypeHandler{service: typeService})
+	pb.RegisterPolicyServiceServer(grpcServer, &policyHandler{service: policyService})
+	pb.RegisterCacheServiceServer(grpcServer, &cacheHandler{service: cacheService})
 
 	return &Server{
 		grpcServer: grpcServer,

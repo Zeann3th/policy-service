@@ -8,8 +8,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/zeann3th/policy-service/internal/core/limit"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	docs "github.com/zeann3th/policy-service/docs"
+	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
+	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/unit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
@@ -23,8 +27,11 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
-	db *pgxpool.Pool,
-	limitService limit.LimitService,
+	unitService unit.Service,
+	groupService policy.GroupService,
+	typeService policy.TypeService,
+	policyService policy.Service,
+	cacheService cachecore.Service,
 ) (*Server, error) {
 	gin.SetMode(cfg.HttpConfig.GinMode)
 
@@ -33,9 +40,15 @@ func New(
 	router.Use(otelgin.Middleware(cfg.ServiceName))
 
 	prefixGroup := router.Group(fmt.Sprintf("/%s/api", cfg.ServiceName))
+	docs.SwaggerInfo.BasePath = fmt.Sprintf("/%s/api", cfg.ServiceName)
 
 	RegisterUtilityRoutes(prefixGroup)
-	RegisterLimitRoutes(prefixGroup, limitService)
+	RegisterUnitRoutes(prefixGroup, unitService)
+	RegisterPolicyGroupRoutes(prefixGroup, groupService)
+	RegisterPolicyTypeRoutes(prefixGroup, typeService)
+	RegisterPolicyRoutes(prefixGroup, policyService)
+	RegisterCacheRoutes(prefixGroup, cacheService)
+	prefixGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	addr := fmt.Sprintf(":%s", cfg.HttpConfig.Port)
 	listener, err := net.Listen("tcp", addr)

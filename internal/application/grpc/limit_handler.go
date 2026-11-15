@@ -19,7 +19,7 @@ import (
 
 type limitGRPCHandler struct {
 	pb.UnimplementedLimitServiceServer
-	service limit.Service
+	service limit.LimitService
 }
 
 func grpcError(err error) error {

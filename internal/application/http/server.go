@@ -36,9 +36,6 @@ func New(
 
 	RegisterUtilityRoutes(prefixGroup)
 	RegisterLimitRoutes(prefixGroup, limitService)
-	if adminService, ok := limitService.(limit.LimitAdminService); ok {
-		RegisterLimitAdminRoutes(prefixGroup, adminService)
-	}
 
 	addr := fmt.Sprintf(":%s", cfg.HttpConfig.Port)
 	listener, err := net.Listen("tcp", addr)

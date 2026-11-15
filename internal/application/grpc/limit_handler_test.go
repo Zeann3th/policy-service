@@ -3,6 +3,8 @@ package grpc
 import (
 	"context"
 	"math"
+	"os"
+	"strings"
 	"testing"
 
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
@@ -12,8 +14,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func TestLimitProtoGeneratesIntoGRPCCodegenPackage(t *testing.T) {
+	data, err := os.ReadFile("../../../proto/limit.proto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `option go_package = "github.com/zeann3th/policy-service/internal/application/grpc/codegen;grpc";`
+	if !strings.Contains(string(data), want) {
+		t.Fatalf("limit.proto missing %q", want)
+	}
+}
+
 type grpcServiceStub struct {
-	limit.Service
+	limit.LimitService
 	page limit.PageRequest
 }
 

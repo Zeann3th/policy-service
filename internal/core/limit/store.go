@@ -7,9 +7,6 @@ type LimitStore interface {
 	GetLimitGroupID(ctx context.Context, walletType, currency, tier string) (int64, error)
 	GetLimitValuesByGroupID(ctx context.Context, groupID int64) ([]LimitValue, error)
 	GetActiveUserLimits(ctx context.Context, walletID string) ([]UserLimit, error)
-}
-
-type LimitAdminStore interface {
 	CreateUnit(context.Context, CreateUnitRequest) (Unit, error)
 	GetUnit(context.Context, int64) (Unit, error)
 	ListUnits(context.Context, int32, int32) ([]Unit, int64, error)

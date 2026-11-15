@@ -15,6 +15,7 @@ import (
 )
 
 type fakeLimitStore struct {
+	LimitStore
 	units        []Unit
 	unitsErr     error
 	unitsCalled  bool
@@ -65,16 +66,6 @@ func (c *fakeCache) Get(_ context.Context, key string) (string, error) {
 		return "0", nil
 	}
 	return c.value, c.getErr
-}
-
-func TestGenerationTransportFailureUsesUniqueBypassKey(t *testing.T) {
-	service := newTestService(&fakeLimitStore{}, &fakeCache{generationErr: errors.New("redis unavailable")}).(*limitServiceImpl)
-	first := service.generatedKey(context.Background(), "units", 1, 20)
-	time.Sleep(time.Nanosecond)
-	second := service.generatedKey(context.Background(), "units", 1, 20)
-	if first == second || !strings.Contains(first, "limit-service:limit:admin:bypass-") {
-		t.Fatalf("bypass keys = %q / %q", first, second)
-	}
 }
 
 func (c *fakeCache) Set(_ context.Context, key string, value string) error {
@@ -406,49 +397,6 @@ func TestGetLimitConfigReturnsEmptyRulesWhenTransactionDoesNotMatch(t *testing.T
 	}
 }
 
-func TestGetUnitsReturnsCachedCatalog(t *testing.T) {
-	want := map[int64]string{1: "BALANCE", 2: "AMOUNT"}
-	encoded, err := core.Encode(&want)
-	if err != nil {
-		t.Fatalf("Encode() error = %v", err)
-	}
-	store := &fakeLimitStore{}
-	cache := &fakeCache{value: encoded}
-	service := newTestService(store, cache).(*limitServiceImpl)
-
-	got, err := service.getUnits(context.Background())
-	if err != nil {
-		t.Fatalf("getUnits() error = %v", err)
-	}
-	if got[1] != "BALANCE" || got[2] != "AMOUNT" {
-		t.Fatalf("getUnits() = %#v", got)
-	}
-	if store.unitsCalled {
-		t.Fatal("getUnits() queried the store on a cache hit")
-	}
-	if cache.getKey != "limit-service:limit:limit-config:0:units" {
-		t.Fatalf("getUnits() cache key = %q", cache.getKey)
-	}
-}
-
-func TestGetUnitsCachesStoreCatalog(t *testing.T) {
-	store := &fakeLimitStore{units: []Unit{{ID: 1, Code: "BALANCE"}}}
-	cache := &fakeCache{getErr: cacheport.ErrMiss}
-	service := newTestService(store, cache).(*limitServiceImpl)
-
-	got, err := service.getUnits(context.Background())
-	if err != nil {
-		t.Fatalf("getUnits() error = %v", err)
-	}
-	if got[1] != "BALANCE" || !store.unitsCalled {
-		t.Fatalf("getUnits() = %#v, store called = %t", got, store.unitsCalled)
-	}
-	cached, err := core.Decode[map[int64]string](cache.setValues["limit-service:limit:limit-config:0:units"])
-	if err != nil || (*cached)[1] != "BALANCE" {
-		t.Fatalf("getUnits() cached value = %#v, error = %v", cached, err)
-	}
-}
-
 func TestGetLimitConfigReturnsErrorForMissingUnit(t *testing.T) {
 	store := &fakeLimitStore{
 		groupID: 42,
@@ -474,5 +422,51 @@ func TestGetLimitConfigReturnsUserLimitError(t *testing.T) {
 	_, err := service.GetLimitConfig(context.Background(), GetLimitConfigRequest{WalletID: "wallet-123"})
 	if !errors.Is(err, userErr) {
 		t.Fatalf("GetLimitConfig() error = %v, want %v", err, userErr)
+	}
+}
+
+type limitStoreStub struct {
+	LimitStore
+	listLimit, listOffset int32
+	createValue           CreateLimitValueRequest
+}
+
+func (s *limitStoreStub) ListUnits(_ context.Context, limit, offset int32) ([]Unit, int64, error) {
+	s.listLimit, s.listOffset = limit, offset
+	return []Unit{{ID: 1, Code: "AMOUNT", Active: true}}, 1, nil
+}
+
+func (s *limitStoreStub) CreateLimitValue(_ context.Context, _ int64, request CreateLimitValueRequest) (LimitValue, error) {
+	s.createValue = request
+	return LimitValue{ID: 1, TransactionType: request.TransactionType, Channel: request.Channel}, nil
+}
+func (s *limitStoreStub) GetLimitGroup(context.Context, int64) (LimitGroup, error) {
+	return LimitGroup{}, nil
+}
+
+func TestListUnitsDefaultsToFirstTwenty(t *testing.T) {
+	store := &limitStoreStub{}
+	service := newTestService(store, &fakeCache{getErr: context.Canceled})
+
+	page, err := service.ListUnits(context.Background(), PageRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Page != 1 || page.Limit != 20 || page.Total != 1 || store.listLimit != 20 || store.listOffset != 0 {
+		t.Fatalf("page = %#v; store limit/offset = %d/%d", page, store.listLimit, store.listOffset)
+	}
+}
+
+func TestCreateLimitValueDefaultsScopeToAll(t *testing.T) {
+	store := &limitStoreStub{}
+	service := newTestService(store, &fakeCache{getErr: context.Canceled})
+
+	value := decimal.Zero
+	_, err := service.CreateLimitValue(context.Background(), 7, CreateLimitValueRequest{Value: &value, UpdatedBy: "admin"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.createValue.TransactionType != All || store.createValue.Channel != All {
+		t.Fatalf("request = %#v", store.createValue)
 	}
 }

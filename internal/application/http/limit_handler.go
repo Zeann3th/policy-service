@@ -9,7 +9,56 @@ import (
 	"github.com/zeann3th/policy-service/internal/core/limit"
 )
 
-type limitAdminHandler struct{ service limit.LimitAdminService }
+type limitHandler struct {
+	service limit.LimitService
+}
+
+func (h *limitHandler) getLimitConfig(c *gin.Context) {
+	var request limit.GetLimitConfigRequest
+	if err := c.ShouldBindQuery(&request); err != nil {
+		handleError(c, badRequest(err, request))
+		return
+	}
+
+	response, err := h.service.GetLimitConfig(c.Request.Context(), request)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func RegisterLimitRoutes(rg *gin.RouterGroup, limitService limit.LimitService) {
+	handler := &limitHandler{
+		service: limitService,
+	}
+
+	rg.GET("/v1/limits", handler.getLimitConfig)
+	rg.POST("/v1/units", handler.unitCreate)
+	rg.GET("/v1/units", handler.unitList)
+	rg.GET("/v1/units/:unitId", handler.unitGet)
+	rg.PUT("/v1/units/:unitId", handler.unitUpdate)
+	rg.DELETE("/v1/units/:unitId", handler.unitDelete)
+	rg.POST("/v1/limits/types", handler.typeCreate)
+	rg.GET("/v1/limits/types", handler.typeList)
+	rg.GET("/v1/limits/types/:typeId", handler.typeGet)
+	rg.PUT("/v1/limits/types/:typeId", handler.typeUpdate)
+	rg.DELETE("/v1/limits/types/:typeId", handler.typeDelete)
+	rg.POST("/v1/limits/groups", handler.groupCreate)
+	rg.GET("/v1/limits/groups/:groupId", handler.groupGet)
+	rg.DELETE("/v1/limits/groups/:groupId", handler.groupDelete)
+	rg.POST("/v1/limits/groups/:groupId/values", handler.valueCreate)
+	rg.GET("/v1/limits/groups/:groupId/values", handler.valueList)
+	rg.GET("/v1/limits/groups/:groupId/values/:valueId", handler.valueGet)
+	rg.PUT("/v1/limits/groups/:groupId/values/:valueId", handler.valueUpdate)
+	rg.DELETE("/v1/limits/groups/:groupId/values/:valueId", handler.valueDelete)
+	rg.POST("/v1/limits/users/:walletId", handler.userCreate)
+	rg.GET("/v1/limits/users/:walletId", handler.userList)
+	rg.GET("/v1/limits/users/:walletId/:userLimitId", handler.userGet)
+	rg.PUT("/v1/limits/users/:walletId/:userLimitId", handler.userUpdate)
+	rg.DELETE("/v1/limits/users/:walletId/:userLimitId", handler.userDelete)
+}
 
 func pathID(c *gin.Context, name string) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param(name), 10, 64)
@@ -35,7 +84,7 @@ func bindPage(c *gin.Context) (limit.PageRequest, bool) {
 	return p, true
 }
 
-func (h *limitAdminHandler) unitCreate(c *gin.Context) {
+func (h *limitHandler) unitCreate(c *gin.Context) {
 	var r limit.CreateUnitRequest
 	if !bindJSON(c, &r) {
 		return
@@ -47,7 +96,7 @@ func (h *limitAdminHandler) unitCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
-func (h *limitAdminHandler) unitGet(c *gin.Context) {
+func (h *limitHandler) unitGet(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
 		return
@@ -59,7 +108,7 @@ func (h *limitAdminHandler) unitGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) unitList(c *gin.Context) {
+func (h *limitHandler) unitList(c *gin.Context) {
 	p, ok := bindPage(c)
 	if !ok {
 		return
@@ -71,7 +120,7 @@ func (h *limitAdminHandler) unitList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) unitUpdate(c *gin.Context) {
+func (h *limitHandler) unitUpdate(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
 		return
@@ -87,7 +136,7 @@ func (h *limitAdminHandler) unitUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) unitDelete(c *gin.Context) {
+func (h *limitHandler) unitDelete(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
 		return
@@ -103,7 +152,7 @@ func (h *limitAdminHandler) unitDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *limitAdminHandler) typeCreate(c *gin.Context) {
+func (h *limitHandler) typeCreate(c *gin.Context) {
 	var r limit.CreateLimitTypeRequest
 	if !bindJSON(c, &r) {
 		return
@@ -115,7 +164,7 @@ func (h *limitAdminHandler) typeCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
-func (h *limitAdminHandler) typeGet(c *gin.Context) {
+func (h *limitHandler) typeGet(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
 		return
@@ -127,7 +176,7 @@ func (h *limitAdminHandler) typeGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) typeList(c *gin.Context) {
+func (h *limitHandler) typeList(c *gin.Context) {
 	p, ok := bindPage(c)
 	if !ok {
 		return
@@ -139,7 +188,7 @@ func (h *limitAdminHandler) typeList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) typeUpdate(c *gin.Context) {
+func (h *limitHandler) typeUpdate(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
 		return
@@ -155,7 +204,7 @@ func (h *limitAdminHandler) typeUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) typeDelete(c *gin.Context) {
+func (h *limitHandler) typeDelete(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
 		return
@@ -171,7 +220,7 @@ func (h *limitAdminHandler) typeDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *limitAdminHandler) groupCreate(c *gin.Context) {
+func (h *limitHandler) groupCreate(c *gin.Context) {
 	var r limit.CreateLimitGroupRequest
 	if !bindJSON(c, &r) {
 		return
@@ -183,7 +232,7 @@ func (h *limitAdminHandler) groupCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
-func (h *limitAdminHandler) groupGet(c *gin.Context) {
+func (h *limitHandler) groupGet(c *gin.Context) {
 	id, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -195,7 +244,7 @@ func (h *limitAdminHandler) groupGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) groupDelete(c *gin.Context) {
+func (h *limitHandler) groupDelete(c *gin.Context) {
 	id, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -211,7 +260,7 @@ func (h *limitAdminHandler) groupDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *limitAdminHandler) valueCreate(c *gin.Context) {
+func (h *limitHandler) valueCreate(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -227,7 +276,7 @@ func (h *limitAdminHandler) valueCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
-func (h *limitAdminHandler) valueGet(c *gin.Context) {
+func (h *limitHandler) valueGet(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -243,7 +292,7 @@ func (h *limitAdminHandler) valueGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) valueList(c *gin.Context) {
+func (h *limitHandler) valueList(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -259,7 +308,7 @@ func (h *limitAdminHandler) valueList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) valueUpdate(c *gin.Context) {
+func (h *limitHandler) valueUpdate(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -279,7 +328,7 @@ func (h *limitAdminHandler) valueUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) valueDelete(c *gin.Context) {
+func (h *limitHandler) valueDelete(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
 		return
@@ -299,7 +348,7 @@ func (h *limitAdminHandler) valueDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (h *limitAdminHandler) userCreate(c *gin.Context) {
+func (h *limitHandler) userCreate(c *gin.Context) {
 	w := c.Param("walletId")
 	var r limit.CreateUserLimitRequest
 	if !bindJSON(c, &r) {
@@ -312,7 +361,7 @@ func (h *limitAdminHandler) userCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
-func (h *limitAdminHandler) userGet(c *gin.Context) {
+func (h *limitHandler) userGet(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")
 	if !ok {
@@ -325,7 +374,7 @@ func (h *limitAdminHandler) userGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) userList(c *gin.Context) {
+func (h *limitHandler) userList(c *gin.Context) {
 	w := c.Param("walletId")
 	p, ok := bindPage(c)
 	if !ok {
@@ -338,7 +387,7 @@ func (h *limitAdminHandler) userList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) userUpdate(c *gin.Context) {
+func (h *limitHandler) userUpdate(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")
 	if !ok {
@@ -355,7 +404,7 @@ func (h *limitAdminHandler) userUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
-func (h *limitAdminHandler) userDelete(c *gin.Context) {
+func (h *limitHandler) userDelete(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")
 	if !ok {
@@ -370,31 +419,4 @@ func (h *limitAdminHandler) userDelete(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
-}
-
-func RegisterLimitAdminRoutes(r *gin.RouterGroup, service limit.LimitAdminService) {
-	h := &limitAdminHandler{service: service}
-	r.POST("/v1/units", h.unitCreate)
-	r.GET("/v1/units", h.unitList)
-	r.GET("/v1/units/:unitId", h.unitGet)
-	r.PUT("/v1/units/:unitId", h.unitUpdate)
-	r.DELETE("/v1/units/:unitId", h.unitDelete)
-	r.POST("/v1/limits/types", h.typeCreate)
-	r.GET("/v1/limits/types", h.typeList)
-	r.GET("/v1/limits/types/:typeId", h.typeGet)
-	r.PUT("/v1/limits/types/:typeId", h.typeUpdate)
-	r.DELETE("/v1/limits/types/:typeId", h.typeDelete)
-	r.POST("/v1/limits/groups", h.groupCreate)
-	r.GET("/v1/limits/groups/:groupId", h.groupGet)
-	r.DELETE("/v1/limits/groups/:groupId", h.groupDelete)
-	r.POST("/v1/limits/groups/:groupId/values", h.valueCreate)
-	r.GET("/v1/limits/groups/:groupId/values", h.valueList)
-	r.GET("/v1/limits/groups/:groupId/values/:valueId", h.valueGet)
-	r.PUT("/v1/limits/groups/:groupId/values/:valueId", h.valueUpdate)
-	r.DELETE("/v1/limits/groups/:groupId/values/:valueId", h.valueDelete)
-	r.POST("/v1/limits/users/:walletId", h.userCreate)
-	r.GET("/v1/limits/users/:walletId", h.userList)
-	r.GET("/v1/limits/users/:walletId/:userLimitId", h.userGet)
-	r.PUT("/v1/limits/users/:walletId/:userLimitId", h.userUpdate)
-	r.DELETE("/v1/limits/users/:walletId/:userLimitId", h.userDelete)
 }

@@ -33,9 +33,7 @@ func New(
 
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()))
-	if service, ok := limitService.(limit.Service); ok {
-		pb.RegisterLimitServiceServer(grpcServer, &limitGRPCHandler{service: service})
-	}
+	pb.RegisterLimitServiceServer(grpcServer, &limitGRPCHandler{service: limitService})
 
 	return &Server{
 		grpcServer: grpcServer,

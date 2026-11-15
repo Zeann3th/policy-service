@@ -34,7 +34,7 @@ type LimitType struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
-	Unit        *string    `json:"unit"`
+	UnitID      int64      `json:"unit_id"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
@@ -49,10 +49,11 @@ type LimitValue struct {
 	Value           decimal.Decimal `json:"value"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64           `json:"id"`
 }
 
-type ReferenceCode struct {
-	Kind      string     `json:"kind"`
+type Unit struct {
+	ID        int64      `json:"id"`
 	Code      string     `json:"code"`
 	Active    bool       `json:"active"`
 	CreatedAt time.Time  `json:"created_at"`
@@ -72,4 +73,5 @@ type UserLimit struct {
 	CreatedBy       string          `json:"created_by"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64           `json:"id"`
 }

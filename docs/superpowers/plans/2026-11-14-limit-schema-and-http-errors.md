@@ -34,7 +34,7 @@
 - Modify: `migrations/00002_limit_setup.sql`
 - Modify: `schema.sql`
 - Modify: `queries/limit.sql`
-- Regenerate: `internal/infrastructure/postgres/sqlcdb/*.go`
+- Regenerate: `internal/infrastructure/postgres/codegen/*.go`
 
 **Interfaces:**
 - Produces: `limit_types(id, code)` and ID-based limit relationships; `GetLimitValuesByGroupID` returns joined external names.

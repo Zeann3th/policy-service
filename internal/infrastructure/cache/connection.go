@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	redis "github.com/redis/go-redis/v9"
@@ -30,7 +31,11 @@ func New(client redis.UniversalClient) cacheport.Cache {
 }
 
 func (c *redisCache) Get(ctx context.Context, key string) (string, error) {
-	return c.client.Get(ctx, key).Result()
+	value, err := c.client.Get(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", cacheport.ErrMiss
+	}
+	return value, err
 }
 
 func (c *redisCache) Set(ctx context.Context, key string, value string) error {
@@ -56,4 +61,8 @@ func (c *redisCache) Evict(ctx context.Context, key string) (bool, error) {
 
 func (c *redisCache) EvictAll(ctx context.Context) error {
 	return c.client.FlushDB(ctx).Err()
+}
+
+func (c *redisCache) Increment(ctx context.Context, key string) (int64, error) {
+	return c.client.Incr(ctx, key).Result()
 }

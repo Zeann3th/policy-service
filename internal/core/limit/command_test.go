@@ -24,7 +24,7 @@ func TestGetLimitConfigResponseJSONContract(t *testing.T) {
 	if err := json.Unmarshal(rules, &items); err != nil {
 		t.Fatalf("Unmarshal() rules error = %v", err)
 	}
-	for _, field := range []string{"limitType", "transactionType", "channel", "operator", "value"} {
+	for _, field := range []string{"limitType", "unit", "transactionType", "channel", "operator", "value", "source"} {
 		if _, ok := items[0][field]; !ok {
 			t.Fatalf("Marshal() rule = %s, missing %s", rules, field)
 		}

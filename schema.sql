@@ -1,29 +1,35 @@
-CREATE TABLE reference_codes (
-  kind text NOT NULL,
-  code text NOT NULL,
+CREATE TABLE units (
+  id bigserial PRIMARY KEY,
+  code text NOT NULL UNIQUE,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
-  PRIMARY KEY (kind, code),
   CHECK (code = upper(code))
 );
+
+INSERT INTO units (code) VALUES ('BALANCE'), ('AMOUNT')
+ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE limit_types (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE CHECK (code = upper(code)),
   description text,
-  unit text,
+  unit_id bigint NOT NULL REFERENCES units (id) ON DELETE CASCADE,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO limit_types (code, description, unit) VALUES
+INSERT INTO limit_types (code, description, unit_id)
+SELECT v.code, v.description, u.id
+FROM (VALUES
   ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'BALANCE'),
   ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'BALANCE'),
   ('TXN_MIN_AMT', 'Minimum amount of a single transaction', 'AMOUNT'),
   ('TXN_MAX_AMT', 'Maximum amount of a single transaction', 'AMOUNT'),
   ('DAILY_OUT_MAX', 'Maximum total sent out per day (counter lives in policy)', 'AMOUNT')
+) AS v (code, description, unit)
+JOIN units u ON u.code = v.unit
 ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE limit_groups (
@@ -37,8 +43,9 @@ CREATE TABLE limit_groups (
 );
 
 CREATE TABLE limit_values (
+  id bigserial PRIMARY KEY,
   limit_group_id bigint NOT NULL REFERENCES limit_groups (id) ON DELETE CASCADE,
-  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id) ON DELETE CASCADE,
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
@@ -46,18 +53,22 @@ CREATE TABLE limit_values (
   ),
   value numeric(24, 4) NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz,
-  PRIMARY KEY (
-    limit_group_id,
-    limit_type_id,
-    transaction_type,
-    channel
-  )
+  updated_at timestamptz
 );
 
+CREATE UNIQUE INDEX limit_values_identity_idx ON limit_values (
+  limit_group_id,
+  limit_type_id,
+  transaction_type,
+  channel
+);
+
+CREATE INDEX limit_values_group_page_idx ON limit_values (limit_group_id, id);
+
 CREATE TABLE user_limits (
+  id bigserial PRIMARY KEY,
   wallet_id text NOT NULL,
-  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id) ON DELETE CASCADE,
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
@@ -70,17 +81,20 @@ CREATE TABLE user_limits (
   created_by text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
-  PRIMARY KEY (
-    wallet_id,
-    limit_type_id,
-    transaction_type,
-    channel
-  ),
   CHECK (
     effective_to IS NULL
     OR effective_from < effective_to
   )
 );
+
+CREATE UNIQUE INDEX user_limits_identity_idx ON user_limits (
+  wallet_id,
+  limit_type_id,
+  transaction_type,
+  channel
+);
+
+CREATE INDEX user_limits_wallet_page_idx ON user_limits (wallet_id, id);
 
 CREATE INDEX user_limits_expiry_idx ON user_limits (effective_to)
 WHERE

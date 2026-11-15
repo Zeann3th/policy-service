@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/limit"
 )
 
@@ -15,7 +14,7 @@ type limitHandler struct {
 func (h *limitHandler) getLimitConfig(c *gin.Context) {
 	var request limit.GetLimitConfigRequest
 	if err := c.ShouldBindQuery(&request); err != nil {
-		handleError(c, core.ErrBadRequest.WithCause(err))
+		handleError(c, badRequest(err, request))
 		return
 	}
 

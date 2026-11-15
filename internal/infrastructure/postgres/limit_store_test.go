@@ -10,24 +10,30 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/limit"
-	sqlcdb "github.com/zeann3th/policy-service/internal/infrastructure/postgres/sqlcdb"
+	codegen "github.com/zeann3th/policy-service/internal/infrastructure/postgres/codegen"
 )
 
 type fakeLimitQueries struct {
 	groupErr  error
-	userRows  []sqlcdb.GetActiveUserLimitsRow
+	unitRows  []codegen.Unit
+	unitError error
+	userRows  []codegen.GetActiveUserLimitsRow
 	userError error
 }
 
-func (q *fakeLimitQueries) GetActiveUserLimits(context.Context, string) ([]sqlcdb.GetActiveUserLimitsRow, error) {
+func (q *fakeLimitQueries) GetUnits(context.Context) ([]codegen.Unit, error) {
+	return q.unitRows, q.unitError
+}
+
+func (q *fakeLimitQueries) GetActiveUserLimits(context.Context, string) ([]codegen.GetActiveUserLimitsRow, error) {
 	return q.userRows, q.userError
 }
 
-func (q *fakeLimitQueries) GetLimitGroupID(context.Context, sqlcdb.GetLimitGroupIDParams) (int64, error) {
+func (q *fakeLimitQueries) GetLimitGroupID(context.Context, codegen.GetLimitGroupIDParams) (int64, error) {
 	return 0, q.groupErr
 }
 
-func (q *fakeLimitQueries) GetLimitValuesByGroupID(context.Context, int64) ([]sqlcdb.GetLimitValuesByGroupIDRow, error) {
+func (q *fakeLimitQueries) GetLimitValuesByGroupID(context.Context, int64) ([]codegen.GetLimitValuesByGroupIDRow, error) {
 	return nil, nil
 }
 
@@ -42,10 +48,11 @@ func TestGetLimitGroupIDReturnsNotFound(t *testing.T) {
 
 func TestGetActiveUserLimitsMapsGeneratedRows(t *testing.T) {
 	effectiveTo := time.Now().Add(time.Hour)
-	rows := []sqlcdb.GetActiveUserLimitsRow{{
+	rows := []codegen.GetActiveUserLimitsRow{{
 		WalletID:        "wallet-123",
 		LimitTypeID:     7,
 		LimitType:       "TXN_MAX_AMT",
+		UnitID:          3,
 		TransactionType: "TRANSFER_OUT",
 		Channel:         "USSD",
 		Operator:        "LTE",
@@ -65,6 +72,7 @@ func TestGetActiveUserLimitsMapsGeneratedRows(t *testing.T) {
 	value := values[0]
 	if value.LimitTypeID != rows[0].LimitTypeID ||
 		value.LimitType != rows[0].LimitType ||
+		value.UnitID != rows[0].UnitID ||
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Operator != limit.OpLTE ||
@@ -74,11 +82,12 @@ func TestGetActiveUserLimitsMapsGeneratedRows(t *testing.T) {
 }
 
 func TestToLimitValuesMapsGeneratedRows(t *testing.T) {
-	rows := []sqlcdb.GetLimitValuesByGroupIDRow{
+	rows := []codegen.GetLimitValuesByGroupIDRow{
 		{
 			LimitGroupID:    42,
 			LimitTypeID:     7,
 			LimitType:       "TXN_MAX_AMT",
+			UnitID:          3,
 			TransactionType: "TRANSFER",
 			Channel:         "MOBILE",
 			Operator:        "LTE",
@@ -95,10 +104,24 @@ func TestToLimitValuesMapsGeneratedRows(t *testing.T) {
 	if value.LimitGroupID != rows[0].LimitGroupID ||
 		value.LimitTypeID != rows[0].LimitTypeID ||
 		value.LimitType != rows[0].LimitType ||
+		value.UnitID != rows[0].UnitID ||
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Operator != limit.OpLTE ||
 		!value.Value.Equal(rows[0].Value) {
 		t.Fatalf("toLimitValues() value = %#v", value)
+	}
+}
+
+func TestGetUnitsMapsGeneratedRows(t *testing.T) {
+	rows := []codegen.Unit{{ID: 3, Code: "AMOUNT", Active: true}}
+	store := &limitStoreImpl{queries: &fakeLimitQueries{unitRows: rows}}
+
+	units, err := store.GetUnits(context.Background())
+	if err != nil {
+		t.Fatalf("GetUnits() error = %v", err)
+	}
+	if len(units) != 1 || units[0].ID != 3 || units[0].Code != "AMOUNT" || !units[0].Active {
+		t.Fatalf("GetUnits() = %#v", units)
 	}
 }

@@ -8,17 +8,46 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/limit"
-	sqlcdb "github.com/zeann3th/policy-service/internal/infrastructure/postgres/sqlcdb"
+	codegen "github.com/zeann3th/policy-service/internal/infrastructure/postgres/codegen"
 )
 
 type limitStoreImpl struct {
-	queries sqlcdb.Querier
+	db      *pgxpool.Pool
+	queries limitQueries
+	admin   *codegen.Queries
+}
+
+type limitQueries interface {
+	GetUnits(context.Context) ([]codegen.Unit, error)
+	GetLimitGroupID(context.Context, codegen.GetLimitGroupIDParams) (int64, error)
+	GetLimitValuesByGroupID(context.Context, int64) ([]codegen.GetLimitValuesByGroupIDRow, error)
+	GetActiveUserLimits(context.Context, string) ([]codegen.GetActiveUserLimitsRow, error)
 }
 
 func NewLimitStore(db *pgxpool.Pool) limit.LimitStore {
 	return &limitStoreImpl{
-		queries: sqlcdb.New(db),
+		db:      db,
+		queries: codegen.New(db),
+		admin:   codegen.New(db),
 	}
+}
+
+func (s *limitStoreImpl) GetUnits(ctx context.Context) ([]limit.Unit, error) {
+	rows, err := s.queries.GetUnits(ctx)
+	if err != nil {
+		return nil, err
+	}
+	units := make([]limit.Unit, len(rows))
+	for i, row := range rows {
+		units[i] = limit.Unit{
+			ID:        row.ID,
+			Code:      row.Code,
+			Active:    row.Active,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+	}
+	return units, nil
 }
 
 func (s *limitStoreImpl) GetLimitGroupID(
@@ -27,7 +56,7 @@ func (s *limitStoreImpl) GetLimitGroupID(
 	currency string,
 	tier string,
 ) (int64, error) {
-	groupID, err := s.queries.GetLimitGroupID(ctx, sqlcdb.GetLimitGroupIDParams{
+	groupID, err := s.queries.GetLimitGroupID(ctx, codegen.GetLimitGroupIDParams{
 		WalletType: walletType,
 		Currency:   currency,
 		Tier:       tier,
@@ -46,9 +75,11 @@ func (s *limitStoreImpl) GetActiveUserLimits(ctx context.Context, walletID strin
 	values := make([]limit.UserLimit, len(rows))
 	for i, row := range rows {
 		values[i] = limit.UserLimit{
+			ID:              row.ID,
 			WalletID:        row.WalletID,
 			LimitTypeID:     row.LimitTypeID,
 			LimitType:       row.LimitType,
+			UnitID:          row.UnitID,
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Operator:        limit.Operator(row.Operator),
@@ -72,13 +103,15 @@ func (s *limitStoreImpl) GetLimitValuesByGroupID(ctx context.Context, groupID in
 	return toLimitValues(rows), nil
 }
 
-func toLimitValues(rows []sqlcdb.GetLimitValuesByGroupIDRow) []limit.LimitValue {
+func toLimitValues(rows []codegen.GetLimitValuesByGroupIDRow) []limit.LimitValue {
 	values := make([]limit.LimitValue, len(rows))
 	for i, row := range rows {
 		values[i] = limit.LimitValue{
+			ID:              row.ID,
 			LimitGroupID:    row.LimitGroupID,
 			LimitTypeID:     row.LimitTypeID,
 			LimitType:       row.LimitType,
+			UnitID:          row.UnitID,
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Operator:        limit.Operator(row.Operator),

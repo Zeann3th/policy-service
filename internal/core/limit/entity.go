@@ -46,8 +46,8 @@ func (o Operator) Satisfied(actual, bound decimal.Decimal) bool {
 	return false
 }
 
-type ReferenceCode struct {
-	Kind      string
+type Unit struct {
+	ID        int64
 	Code      string
 	Active    bool
 	CreatedAt time.Time
@@ -58,7 +58,7 @@ type LimitType struct {
 	ID          int64
 	Code        string
 	Description *string
-	Unit        *string
+	UnitID      int64
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
@@ -80,13 +80,16 @@ type LimitKey struct {
 }
 
 type LimitValue struct {
+	ID              int64
 	LimitGroupID    int64
 	LimitTypeID     int64
 	LimitType       string
+	UnitID          int64
 	TransactionType string
 	Channel         string
 	Operator        Operator
 	Value           decimal.Decimal
+	Source          Source
 	CreatedAt       time.Time
 	UpdatedAt       *time.Time
 }
@@ -96,9 +99,11 @@ func (v LimitValue) Key() LimitKey {
 }
 
 type UserLimit struct {
+	ID              int64
 	WalletID        string
 	LimitTypeID     int64
 	LimitType       string
+	UnitID          int64
 	TransactionType string
 	Channel         string
 	Operator        Operator
@@ -137,8 +142,8 @@ type AuditLog struct {
 type Source string
 
 const (
-	SourceGroup Source = "GROUP"
-	SourceUser  Source = "USER"
+	SourceSystem Source = "SYSTEM"
+	SourceUser   Source = "USER"
 )
 
 type ResolvedLimit struct {

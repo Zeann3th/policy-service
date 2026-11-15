@@ -11,9 +11,16 @@ import (
 func handleError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, core.ErrBadRequest):
+		var appErr *core.AppError
+		if errors.As(err, &appErr) {
+			c.AbortWithStatusJSON(http.StatusBadRequest, appErr)
+			return
+		}
 		c.AbortWithStatusJSON(http.StatusBadRequest, core.ErrBadRequest)
 	case errors.Is(err, core.ErrNotFound):
 		c.AbortWithStatusJSON(http.StatusNotFound, core.ErrNotFound)
+	case errors.Is(err, core.ErrConflict):
+		c.AbortWithStatusJSON(http.StatusConflict, core.ErrConflict)
 	default:
 		c.AbortWithStatusJSON(http.StatusInternalServerError, core.ErrInternal)
 	}

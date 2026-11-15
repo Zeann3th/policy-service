@@ -14,9 +14,11 @@ import (
 
 const getActiveUserLimits = `-- name: GetActiveUserLimits :many
 SELECT
+  ul.id,
   ul.wallet_id,
   ul.limit_type_id,
   lt.code AS limit_type,
+  lt.unit_id,
   ul.transaction_type,
   ul.channel,
   ul.operator,
@@ -32,6 +34,8 @@ FROM
   JOIN limit_types lt ON lt.id = ul.limit_type_id
 WHERE
   ul.wallet_id = $1
+  AND lt.active = true
+  AND EXISTS (SELECT 1 FROM units u WHERE u.id = lt.unit_id AND u.active = true)
   AND ul.effective_from <= now()
   AND (
     ul.effective_to IS NULL
@@ -44,9 +48,11 @@ ORDER BY
 `
 
 type GetActiveUserLimitsRow struct {
+	ID              int64           `json:"id"`
 	WalletID        string          `json:"wallet_id"`
 	LimitTypeID     int64           `json:"limit_type_id"`
 	LimitType       string          `json:"limit_type"`
+	UnitID          int64           `json:"unit_id"`
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Operator        string          `json:"operator"`
@@ -69,9 +75,11 @@ func (q *Queries) GetActiveUserLimits(ctx context.Context, walletID string) ([]G
 	for rows.Next() {
 		var i GetActiveUserLimitsRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.WalletID,
 			&i.LimitTypeID,
 			&i.LimitType,
+			&i.UnitID,
 			&i.TransactionType,
 			&i.Channel,
 			&i.Operator,
@@ -119,9 +127,11 @@ func (q *Queries) GetLimitGroupID(ctx context.Context, arg GetLimitGroupIDParams
 
 const getLimitValuesByGroupID = `-- name: GetLimitValuesByGroupID :many
 SELECT
+  lv.id,
   lv.limit_group_id,
   lv.limit_type_id,
   lt.code AS limit_type,
+  lt.unit_id,
   lv.transaction_type,
   lv.channel,
   lv.operator,
@@ -133,6 +143,8 @@ FROM
   JOIN limit_types lt ON lt.id = lv.limit_type_id
 WHERE
   lv.limit_group_id = $1
+  AND lt.active = true
+  AND EXISTS (SELECT 1 FROM units u WHERE u.id = lt.unit_id AND u.active = true)
 ORDER BY
   lt.code,
   lv.transaction_type,
@@ -140,9 +152,11 @@ ORDER BY
 `
 
 type GetLimitValuesByGroupIDRow struct {
+	ID              int64           `json:"id"`
 	LimitGroupID    int64           `json:"limit_group_id"`
 	LimitTypeID     int64           `json:"limit_type_id"`
 	LimitType       string          `json:"limit_type"`
+	UnitID          int64           `json:"unit_id"`
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Operator        string          `json:"operator"`
@@ -161,13 +175,54 @@ func (q *Queries) GetLimitValuesByGroupID(ctx context.Context, limitGroupID int6
 	for rows.Next() {
 		var i GetLimitValuesByGroupIDRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.LimitGroupID,
 			&i.LimitTypeID,
 			&i.LimitType,
+			&i.UnitID,
 			&i.TransactionType,
 			&i.Channel,
 			&i.Operator,
 			&i.Value,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUnits = `-- name: GetUnits :many
+SELECT
+  id,
+  code,
+  active,
+  created_at,
+  updated_at
+FROM
+  units
+ORDER BY
+  code
+`
+
+func (q *Queries) GetUnits(ctx context.Context) ([]Unit, error) {
+	rows, err := q.db.Query(ctx, getUnits)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Unit
+	for rows.Next() {
+		var i Unit
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

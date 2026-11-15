@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	"github.com/zeann3th/policy-service/internal/core/limit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -32,6 +33,9 @@ func New(
 
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	if service, ok := limitService.(limit.Service); ok {
+		pb.RegisterLimitServiceServer(grpcServer, &limitGRPCHandler{service: service})
+	}
 
 	return &Server{
 		grpcServer: grpcServer,

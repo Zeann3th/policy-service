@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -28,9 +29,9 @@ func (s *fakeLimitService) GetLimitConfig(_ context.Context, request limit.GetLi
 
 func TestGetLimitConfigReturnsResponseDirectly(t *testing.T) {
 	service := &fakeLimitService{response: limit.GetLimitConfigResponse{
-		Rules: []limit.LimitRule{{LimitType: "TXN_MAX_AMT"}},
+		Rules: []limit.LimitRule{{LimitType: "TXN_MAX_AMT", Unit: "AMOUNT", Source: limit.SourceSystem}},
 	}}
-	response := performLimitRequest(service, "/v1/limits?walletType=PERSONAL&currency=USD&tier=TIER_1&walletId=wallet-123")
+	response := performLimitRequest(service, "/v1/limits?walletType=PERSONAL&currency=USD&tier=TIER_1&walletId=wallet-123&transactionType=TRANSFER_OUT")
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
@@ -39,11 +40,14 @@ func TestGetLimitConfigReturnsResponseDirectly(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
-	if len(body.Rules) != 1 || body.Rules[0].LimitType != "TXN_MAX_AMT" {
+	if len(body.Rules) != 1 || body.Rules[0].LimitType != "TXN_MAX_AMT" || body.Rules[0].Unit != "AMOUNT" || body.Rules[0].Source != limit.SourceSystem {
 		t.Fatalf("response = %s", response.Body.String())
 	}
 	if service.request.WalletType != "PERSONAL" || service.request.Currency != "USD" || service.request.Tier != "TIER_1" {
 		t.Fatalf("request = %#v", service.request)
+	}
+	if service.request.TransactionType != "TRANSFER_OUT" {
+		t.Fatalf("request transaction type = %q", service.request.TransactionType)
 	}
 }
 
@@ -51,7 +55,9 @@ func TestGetLimitConfigReturnsBadRequest(t *testing.T) {
 	service := &fakeLimitService{}
 	response := performLimitRequest(service, "/v1/limits?walletType=PERSONAL")
 
-	assertHTTPError(t, response, http.StatusBadRequest, core.ErrBadRequest)
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "currency is required") {
+		t.Fatalf("expected actionable 400, got %d: %s", response.Code, response.Body.String())
+	}
 	if service.called {
 		t.Fatal("service called for invalid request")
 	}

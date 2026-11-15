@@ -2,7 +2,7 @@ MODULE := github.com/zeann3th/policy-service
 PROTOC ?= protoc
 PROTO_FILES := $(wildcard proto/*.proto)
 
-.PHONY: test grpc swag sqlc goose-up goose-down goose-status
+.PHONY: test grpc sqlc goose-up goose-down goose-status
 
 test:
 	go test ./...

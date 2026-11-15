@@ -1,3 +1,15 @@
+-- name: GetUnits :many
+SELECT
+  id,
+  code,
+  active,
+  created_at,
+  updated_at
+FROM
+  units
+ORDER BY
+  code;
+
 -- name: GetLimitGroupID :one
 SELECT
   id
@@ -10,9 +22,11 @@ WHERE
 
 -- name: GetLimitValuesByGroupID :many
 SELECT
+  lv.id,
   lv.limit_group_id,
   lv.limit_type_id,
   lt.code AS limit_type,
+  lt.unit_id,
   lv.transaction_type,
   lv.channel,
   lv.operator,
@@ -24,6 +38,8 @@ FROM
   JOIN limit_types lt ON lt.id = lv.limit_type_id
 WHERE
   lv.limit_group_id = $1
+  AND lt.active = true
+  AND EXISTS (SELECT 1 FROM units u WHERE u.id = lt.unit_id AND u.active = true)
 ORDER BY
   lt.code,
   lv.transaction_type,
@@ -31,9 +47,11 @@ ORDER BY
 
 -- name: GetActiveUserLimits :many
 SELECT
+  ul.id,
   ul.wallet_id,
   ul.limit_type_id,
   lt.code AS limit_type,
+  lt.unit_id,
   ul.transaction_type,
   ul.channel,
   ul.operator,
@@ -49,6 +67,8 @@ FROM
   JOIN limit_types lt ON lt.id = ul.limit_type_id
 WHERE
   ul.wallet_id = $1
+  AND lt.active = true
+  AND EXISTS (SELECT 1 FROM units u WHERE u.id = lt.unit_id AND u.active = true)
   AND ul.effective_from <= now()
   AND (
     ul.effective_to IS NULL

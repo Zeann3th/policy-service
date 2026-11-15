@@ -25,8 +25,15 @@ func (e *AppError) WithCause(cause error) *AppError {
 	return &clone
 }
 
+func (e *AppError) WithMessage(message string) *AppError {
+	clone := *e
+	clone.Message = message
+	return &clone
+}
+
 var (
 	ErrBadRequest = &AppError{Code: "BAD_REQUEST", Message: "bad request"}
 	ErrNotFound   = &AppError{Code: "NOT_FOUND", Message: "not found"}
+	ErrConflict   = &AppError{Code: "CONFLICT", Message: "conflict"}
 	ErrInternal   = &AppError{Code: "INTERNAL_ERROR", Message: "internal server error"}
 )

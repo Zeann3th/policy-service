@@ -12,35 +12,40 @@ $$ LANGUAGE plpgsql;
 
 -- +goose StatementEnd
 -- ---------------------------------------------------------------------
--- reference codes (wallet type, currency, tier, txn type, channel ...)
--- no FKs to this table: validate against an in-memory copy
+-- units are referenced internally by ID and exposed externally by code
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS reference_codes (
-  kind text NOT NULL,
-  code text NOT NULL,
+CREATE TABLE IF NOT EXISTS units (
+  id bigserial PRIMARY KEY,
+  code text NOT NULL UNIQUE,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz,
-  PRIMARY KEY (kind, code),
   CHECK (code = upper(code))
 );
+
+INSERT INTO units (code) VALUES ('BALANCE'), ('AMOUNT')
+ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS limit_types (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE CHECK (code = upper(code)),
   description text,
-  unit text,
+  unit_id bigint NOT NULL REFERENCES units (id) ON DELETE CASCADE,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO limit_types (code, description, unit) VALUES
+INSERT INTO limit_types (code, description, unit_id)
+SELECT v.code, v.description, u.id
+FROM (VALUES
   ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'BALANCE'),
   ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'BALANCE'),
   ('TXN_MIN_AMT', 'Minimum amount of a single transaction', 'AMOUNT'),
   ('TXN_MAX_AMT', 'Maximum amount of a single transaction', 'AMOUNT'),
   ('DAILY_OUT_MAX', 'Maximum total sent out per day (counter lives in policy)', 'AMOUNT')
+) AS v (code, description, unit)
+JOIN units u ON u.code = v.unit
 ON CONFLICT (code) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS limit_groups (
@@ -55,7 +60,7 @@ CREATE TABLE IF NOT EXISTS limit_groups (
 
 CREATE TABLE IF NOT EXISTS limit_values (
   limit_group_id bigint NOT NULL REFERENCES limit_groups (id) ON DELETE CASCADE,
-  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id) ON DELETE CASCADE,
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
@@ -74,7 +79,7 @@ CREATE TABLE IF NOT EXISTS limit_values (
 
 CREATE TABLE IF NOT EXISTS user_limits (
   wallet_id text NOT NULL,
-  limit_type_id bigint NOT NULL REFERENCES limit_types (id),
+  limit_type_id bigint NOT NULL REFERENCES limit_types (id) ON DELETE CASCADE,
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   operator text NOT NULL CHECK (
@@ -106,8 +111,8 @@ WHERE
 -- ---------------------------------------------------------------------
 -- updated_at triggers
 -- ---------------------------------------------------------------------
-CREATE TRIGGER reference_codes_set_updated_at
-BEFORE UPDATE ON reference_codes FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
+CREATE TRIGGER units_set_updated_at
+BEFORE UPDATE ON units FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
 EXECUTE FUNCTION set_updated_at ();
 
 CREATE TRIGGER limit_types_set_updated_at
@@ -174,6 +179,6 @@ DROP TABLE IF EXISTS limit_groups;
 
 DROP TABLE IF EXISTS limit_types;
 
-DROP TABLE IF EXISTS reference_codes;
+DROP TABLE IF EXISTS units;
 
 DROP FUNCTION IF EXISTS set_updated_at ();

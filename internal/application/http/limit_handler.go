@@ -68,6 +68,7 @@ func pathID(c *gin.Context, name string) (int64, bool) {
 	}
 	return id, true
 }
+
 func bindJSON(c *gin.Context, v any) bool {
 	if err := c.ShouldBindJSON(v); err != nil {
 		handleError(c, badRequest(err, v))
@@ -75,6 +76,7 @@ func bindJSON(c *gin.Context, v any) bool {
 	}
 	return true
 }
+
 func bindPage(c *gin.Context) (limit.PageRequest, bool) {
 	var p limit.PageRequest
 	if err := c.ShouldBindQuery(&p); err != nil {
@@ -96,6 +98,7 @@ func (h *limitHandler) unitCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
+
 func (h *limitHandler) unitGet(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
@@ -108,6 +111,7 @@ func (h *limitHandler) unitGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) unitList(c *gin.Context) {
 	p, ok := bindPage(c)
 	if !ok {
@@ -120,6 +124,7 @@ func (h *limitHandler) unitList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) unitUpdate(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
@@ -136,6 +141,7 @@ func (h *limitHandler) unitUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) unitDelete(c *gin.Context) {
 	id, ok := pathID(c, "unitId")
 	if !ok {
@@ -164,6 +170,7 @@ func (h *limitHandler) typeCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
+
 func (h *limitHandler) typeGet(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
@@ -176,6 +183,7 @@ func (h *limitHandler) typeGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) typeList(c *gin.Context) {
 	p, ok := bindPage(c)
 	if !ok {
@@ -188,6 +196,7 @@ func (h *limitHandler) typeList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) typeUpdate(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
@@ -204,6 +213,7 @@ func (h *limitHandler) typeUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) typeDelete(c *gin.Context) {
 	id, ok := pathID(c, "typeId")
 	if !ok {
@@ -232,6 +242,7 @@ func (h *limitHandler) groupCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
+
 func (h *limitHandler) groupGet(c *gin.Context) {
 	id, ok := pathID(c, "groupId")
 	if !ok {
@@ -244,6 +255,7 @@ func (h *limitHandler) groupGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) groupDelete(c *gin.Context) {
 	id, ok := pathID(c, "groupId")
 	if !ok {
@@ -276,6 +288,7 @@ func (h *limitHandler) valueCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
+
 func (h *limitHandler) valueGet(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
@@ -292,6 +305,7 @@ func (h *limitHandler) valueGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) valueList(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
@@ -308,6 +322,7 @@ func (h *limitHandler) valueList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) valueUpdate(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
@@ -328,6 +343,7 @@ func (h *limitHandler) valueUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) valueDelete(c *gin.Context) {
 	g, ok := pathID(c, "groupId")
 	if !ok {
@@ -361,6 +377,7 @@ func (h *limitHandler) userCreate(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, v)
 }
+
 func (h *limitHandler) userGet(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")
@@ -374,6 +391,7 @@ func (h *limitHandler) userGet(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) userList(c *gin.Context) {
 	w := c.Param("walletId")
 	p, ok := bindPage(c)
@@ -387,6 +405,7 @@ func (h *limitHandler) userList(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) userUpdate(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")
@@ -404,6 +423,7 @@ func (h *limitHandler) userUpdate(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, v)
 }
+
 func (h *limitHandler) userDelete(c *gin.Context) {
 	w := c.Param("walletId")
 	id, ok := pathID(c, "userLimitId")

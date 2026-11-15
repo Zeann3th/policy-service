@@ -186,15 +186,19 @@ func audit(ctx context.Context, q *codegen.Queries, entity, key string, action l
 func toUnit(v codegen.Unit) limit.Unit {
 	return limit.Unit{ID: v.ID, Code: v.Code, Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
+
 func toType(v codegen.LimitType) limit.LimitType {
 	return limit.LimitType{ID: v.ID, Code: v.Code, Description: v.Description, UnitID: v.UnitID, Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
+
 func toGroup(v codegen.LimitGroup) limit.LimitGroup {
 	return limit.LimitGroup{ID: v.ID, WalletType: v.WalletType, Currency: v.Currency, Tier: v.Tier, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
+
 func toValue(v codegen.LimitValue) limit.LimitValue {
 	return limit.LimitValue{ID: v.ID, LimitGroupID: v.LimitGroupID, LimitTypeID: v.LimitTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Operator: limit.Operator(v.Operator), Value: v.Value, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
+
 func toUser(v codegen.UserLimit) limit.UserLimit {
 	return limit.UserLimit{ID: v.ID, WalletID: v.WalletID, LimitTypeID: v.LimitTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Operator: limit.Operator(v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
@@ -210,10 +214,12 @@ func (s *limitStoreImpl) CreateUnit(ctx context.Context, c limit.CreateUnitReque
 	})
 	return
 }
+
 func (s *limitStoreImpl) GetUnit(ctx context.Context, id int64) (limit.Unit, error) {
 	v, e := s.queries.GetUnitByID(ctx, id)
 	return toUnit(v), mapDBError(e)
 }
+
 func (s *limitStoreImpl) ListUnits(ctx context.Context, l, o int32) ([]limit.Unit, int64, error) {
 	vs, e := s.queries.ListUnits(ctx, codegen.ListUnitsParams{PageLimit: l, PageOffset: o})
 	if e != nil {
@@ -226,6 +232,7 @@ func (s *limitStoreImpl) ListUnits(ctx context.Context, l, o int32) ([]limit.Uni
 	}
 	return out, total, e
 }
+
 func (s *limitStoreImpl) UpdateUnit(ctx context.Context, id int64, active bool, actor string) (out limit.Unit, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
 		old, e := q.GetUnitByIDForUpdate(ctx, id)
@@ -241,6 +248,7 @@ func (s *limitStoreImpl) UpdateUnit(ctx context.Context, id int64, active bool, 
 	})
 	return
 }
+
 func (s *limitStoreImpl) DeleteUnit(ctx context.Context, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeleteUnit(ctx, id)
@@ -262,10 +270,12 @@ func (s *limitStoreImpl) CreateLimitType(ctx context.Context, c limit.CreateLimi
 	})
 	return
 }
+
 func (s *limitStoreImpl) GetLimitType(ctx context.Context, id int64) (limit.LimitType, error) {
 	v, e := s.queries.GetLimitTypeByID(ctx, id)
 	return toType(v), mapDBError(e)
 }
+
 func (s *limitStoreImpl) ListLimitTypes(ctx context.Context, l, o int32) ([]limit.LimitType, int64, error) {
 	vs, e := s.queries.ListLimitTypes(ctx, codegen.ListLimitTypesParams{PageLimit: l, PageOffset: o})
 	if e != nil {
@@ -278,6 +288,7 @@ func (s *limitStoreImpl) ListLimitTypes(ctx context.Context, l, o int32) ([]limi
 	}
 	return out, total, e
 }
+
 func (s *limitStoreImpl) UpdateLimitType(ctx context.Context, id int64, c limit.UpdateLimitTypeRequest) (out limit.LimitType, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
 		old, e := q.GetLimitTypeByIDForUpdate(ctx, id)
@@ -293,6 +304,7 @@ func (s *limitStoreImpl) UpdateLimitType(ctx context.Context, id int64, c limit.
 	})
 	return
 }
+
 func (s *limitStoreImpl) DeleteLimitType(ctx context.Context, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeleteLimitType(ctx, id)
@@ -314,10 +326,12 @@ func (s *limitStoreImpl) CreateLimitGroup(ctx context.Context, c limit.CreateLim
 	})
 	return
 }
+
 func (s *limitStoreImpl) GetLimitGroup(ctx context.Context, id int64) (limit.LimitGroup, error) {
 	v, e := s.queries.GetLimitGroupByID(ctx, id)
 	return toGroup(v), mapDBError(e)
 }
+
 func (s *limitStoreImpl) DeleteLimitGroup(ctx context.Context, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeleteLimitGroup(ctx, id)
@@ -339,10 +353,12 @@ func (s *limitStoreImpl) CreateLimitValue(ctx context.Context, g int64, c limit.
 	})
 	return
 }
+
 func (s *limitStoreImpl) GetLimitValue(ctx context.Context, g, id int64) (limit.LimitValue, error) {
 	v, e := s.queries.GetLimitValueByID(ctx, codegen.GetLimitValueByIDParams{LimitGroupID: g, ID: id})
 	return toValue(v), mapDBError(e)
 }
+
 func (s *limitStoreImpl) ListLimitValues(ctx context.Context, g int64, l, o int32) ([]limit.LimitValue, int64, error) {
 	vs, e := s.queries.ListLimitValues(ctx, codegen.ListLimitValuesParams{LimitGroupID: g, PageLimit: l, PageOffset: o})
 	if e != nil {
@@ -355,6 +371,7 @@ func (s *limitStoreImpl) ListLimitValues(ctx context.Context, g int64, l, o int3
 	}
 	return out, total, e
 }
+
 func (s *limitStoreImpl) UpdateLimitValue(ctx context.Context, g, id int64, c limit.UpdateLimitValueRequest) (out limit.LimitValue, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
 		old, e := q.GetLimitValueByIDForUpdate(ctx, codegen.GetLimitValueByIDForUpdateParams{LimitGroupID: g, ID: id})
@@ -370,6 +387,7 @@ func (s *limitStoreImpl) UpdateLimitValue(ctx context.Context, g, id int64, c li
 	})
 	return
 }
+
 func (s *limitStoreImpl) DeleteLimitValue(ctx context.Context, g, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeleteLimitValue(ctx, codegen.DeleteLimitValueParams{LimitGroupID: g, ID: id})
@@ -391,10 +409,12 @@ func (s *limitStoreImpl) CreateUserLimit(ctx context.Context, w string, c limit.
 	})
 	return
 }
+
 func (s *limitStoreImpl) GetUserLimit(ctx context.Context, w string, id int64) (limit.UserLimit, error) {
 	v, e := s.queries.GetUserLimitByID(ctx, codegen.GetUserLimitByIDParams{WalletID: w, ID: id})
 	return toUser(v), mapDBError(e)
 }
+
 func (s *limitStoreImpl) ListUserLimits(ctx context.Context, w string, l, o int32) ([]limit.UserLimit, int64, error) {
 	vs, e := s.queries.ListUserLimits(ctx, codegen.ListUserLimitsParams{WalletID: w, PageLimit: l, PageOffset: o})
 	if e != nil {
@@ -407,6 +427,7 @@ func (s *limitStoreImpl) ListUserLimits(ctx context.Context, w string, l, o int3
 	}
 	return out, total, e
 }
+
 func (s *limitStoreImpl) UpdateUserLimit(ctx context.Context, w string, id int64, c limit.UpdateUserLimitRequest) (out limit.UserLimit, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
 		old, e := q.GetUserLimitByIDForUpdate(ctx, codegen.GetUserLimitByIDForUpdateParams{WalletID: w, ID: id})
@@ -422,6 +443,7 @@ func (s *limitStoreImpl) UpdateUserLimit(ctx context.Context, w string, id int64
 	})
 	return
 }
+
 func (s *limitStoreImpl) DeleteUserLimit(ctx context.Context, w string, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeleteUserLimit(ctx, codegen.DeleteUserLimitParams{WalletID: w, ID: id})

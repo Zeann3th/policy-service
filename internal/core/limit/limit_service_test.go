@@ -440,6 +440,7 @@ func (s *limitStoreStub) CreateLimitValue(_ context.Context, _ int64, request Cr
 	s.createValue = request
 	return LimitValue{ID: 1, TransactionType: request.TransactionType, Channel: request.Channel}, nil
 }
+
 func (s *limitStoreStub) GetLimitGroup(context.Context, int64) (LimitGroup, error) {
 	return LimitGroup{}, nil
 }

@@ -34,6 +34,7 @@ func grpcError(err error) error {
 		return status.Error(codes.Internal, core.ErrInternal.Message)
 	}
 }
+
 func require(fields map[string]string) error {
 	for n, v := range fields {
 		if strings.TrimSpace(v) == "" {
@@ -42,12 +43,14 @@ func require(fields map[string]string) error {
 	}
 	return nil
 }
+
 func page(p, l int32) (limit.PageRequest, error) {
 	if p < 0 || p > limit.MaxPage || l < 0 || l > 100 {
 		return limit.PageRequest{}, status.Error(codes.InvalidArgument, "page must be positive and limit must be between 1 and 100")
 	}
 	return limit.PageRequest{Page: p, Limit: l}, nil
 }
+
 func dec(v string) (decimal.Decimal, error) {
 	d, e := decimal.NewFromString(v)
 	if e != nil {
@@ -55,6 +58,7 @@ func dec(v string) (decimal.Decimal, error) {
 	}
 	return d, nil
 }
+
 func mutation(actor string, ids ...uint64) error {
 	if strings.TrimSpace(actor) == "" {
 		return status.Error(codes.InvalidArgument, "updatedBy is required")
@@ -66,6 +70,7 @@ func mutation(actor string, ids ...uint64) error {
 	}
 	return nil
 }
+
 func positive(ids ...uint64) error {
 	for _, id := range ids {
 		if id < 1 {
@@ -74,18 +79,21 @@ func positive(ids ...uint64) error {
 	}
 	return nil
 }
+
 func intID(id uint64) (int64, error) {
 	if id == 0 || id > math.MaxInt64 {
 		return 0, status.Error(codes.InvalidArgument, "id is out of range")
 	}
 	return int64(id), nil
 }
+
 func operator(value string) error {
 	if !limit.Operator(value).Valid() {
 		return status.Error(codes.InvalidArgument, "operator is invalid")
 	}
 	return nil
 }
+
 func ts(v *timestamppb.Timestamp) (*time.Time, error) {
 	if v == nil {
 		return nil, nil
@@ -96,25 +104,32 @@ func ts(v *timestamppb.Timestamp) (*time.Time, error) {
 	t := v.AsTime()
 	return &t, nil
 }
+
 func outTS(v time.Time) *timestamppb.Timestamp { return timestamppb.New(v) }
+
 func outOptionalTS(v *time.Time) *timestamppb.Timestamp {
 	if v == nil {
 		return nil
 	}
 	return outTS(*v)
 }
+
 func outUnit(v limit.UnitResponse) *pb.Unit {
 	return &pb.Unit{Id: uint64(v.ID), Code: v.Code, Active: v.Active, CreatedAt: outTS(v.CreatedAt), UpdatedAt: outOptionalTS(v.UpdatedAt)}
 }
+
 func outType(v limit.LimitTypeResponse) *pb.LimitType {
 	return &pb.LimitType{Id: uint64(v.ID), Code: v.Code, Description: v.Description, UnitId: uint64(v.UnitID), Active: v.Active, CreatedAt: outTS(v.CreatedAt), UpdatedAt: outOptionalTS(v.UpdatedAt)}
 }
+
 func outGroup(v limit.LimitGroupResponse) *pb.LimitGroup {
 	return &pb.LimitGroup{Id: uint64(v.ID), WalletType: v.WalletType, Currency: v.Currency, Tier: v.Tier, CreatedAt: outTS(v.CreatedAt), UpdatedAt: outOptionalTS(v.UpdatedAt)}
 }
+
 func outValue(v limit.LimitValueResponse) *pb.LimitValue {
 	return &pb.LimitValue{Id: uint64(v.ID), LimitGroupId: uint64(v.LimitGroupID), LimitTypeId: uint64(v.LimitTypeID), TransactionType: v.TransactionType, Channel: v.Channel, Operator: string(v.Operator), Value: v.Value.String(), CreatedAt: outTS(v.CreatedAt), UpdatedAt: outOptionalTS(v.UpdatedAt)}
 }
+
 func outUser(v limit.UserLimitResponse) *pb.UserLimit {
 	return &pb.UserLimit{Id: uint64(v.ID), WalletId: v.WalletID, LimitTypeId: uint64(v.LimitTypeID), TransactionType: v.TransactionType, Channel: v.Channel, Operator: string(v.Operator), Value: v.Value.String(), EffectiveFrom: outTS(v.EffectiveFrom), EffectiveTo: outOptionalTS(v.EffectiveTo), Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: outTS(v.CreatedAt), UpdatedAt: outOptionalTS(v.UpdatedAt)}
 }
@@ -136,6 +151,7 @@ func (h *limitGRPCHandler) GetLimitConfig(ctx context.Context, r *pb.GetLimitCon
 	}
 	return out, nil
 }
+
 func (h *limitGRPCHandler) CreateUnit(ctx context.Context, r *pb.CreateUnitRequest) (*pb.Unit, error) {
 	if e := require(map[string]string{"code": r.Code, "updatedBy": r.UpdatedBy}); e != nil {
 		return nil, e
@@ -146,6 +162,7 @@ func (h *limitGRPCHandler) CreateUnit(ctx context.Context, r *pb.CreateUnitReque
 	}
 	return outUnit(v), nil
 }
+
 func (h *limitGRPCHandler) GetUnit(ctx context.Context, r *pb.IdRequest) (*pb.Unit, error) {
 	id, e := intID(r.Id)
 	if e != nil {
@@ -157,6 +174,7 @@ func (h *limitGRPCHandler) GetUnit(ctx context.Context, r *pb.IdRequest) (*pb.Un
 	}
 	return outUnit(v), nil
 }
+
 func (h *limitGRPCHandler) ListUnits(ctx context.Context, r *pb.PageRequest) (*pb.UnitPage, error) {
 	p, e := page(r.Page, r.Limit)
 	if e != nil {
@@ -172,6 +190,7 @@ func (h *limitGRPCHandler) ListUnits(ctx context.Context, r *pb.PageRequest) (*p
 	}
 	return out, nil
 }
+
 func (h *limitGRPCHandler) UpdateUnit(ctx context.Context, r *pb.UpdateUnitRequest) (*pb.Unit, error) {
 	if e := mutation(r.UpdatedBy, r.Id); e != nil {
 		return nil, e
@@ -189,6 +208,7 @@ func (h *limitGRPCHandler) UpdateUnit(ctx context.Context, r *pb.UpdateUnitReque
 	}
 	return outUnit(v), nil
 }
+
 func (h *limitGRPCHandler) DeleteUnit(ctx context.Context, r *pb.DeleteByIdRequest) (*pb.DeleteResponse, error) {
 	if e := mutation(r.UpdatedBy, r.Id); e != nil {
 		return nil, e
@@ -220,6 +240,7 @@ func (h *limitGRPCHandler) CreateLimitType(ctx context.Context, r *pb.CreateLimi
 	}
 	return outType(v), nil
 }
+
 func (h *limitGRPCHandler) GetLimitType(ctx context.Context, r *pb.IdRequest) (*pb.LimitType, error) {
 	if e := positive(r.Id); e != nil {
 		return nil, e
@@ -234,6 +255,7 @@ func (h *limitGRPCHandler) GetLimitType(ctx context.Context, r *pb.IdRequest) (*
 	}
 	return outType(v), nil
 }
+
 func (h *limitGRPCHandler) ListLimitTypes(ctx context.Context, r *pb.PageRequest) (*pb.LimitTypePage, error) {
 	p, e := page(r.Page, r.Limit)
 	if e != nil {
@@ -249,6 +271,7 @@ func (h *limitGRPCHandler) ListLimitTypes(ctx context.Context, r *pb.PageRequest
 	}
 	return out, nil
 }
+
 func (h *limitGRPCHandler) UpdateLimitType(ctx context.Context, r *pb.UpdateLimitTypeRequest) (*pb.LimitType, error) {
 	if e := mutation(r.UpdatedBy, r.Id); e != nil {
 		return nil, e
@@ -266,6 +289,7 @@ func (h *limitGRPCHandler) UpdateLimitType(ctx context.Context, r *pb.UpdateLimi
 	}
 	return outType(v), nil
 }
+
 func (h *limitGRPCHandler) DeleteLimitType(ctx context.Context, r *pb.DeleteByIdRequest) (*pb.DeleteResponse, error) {
 	if e := mutation(r.UpdatedBy, r.Id); e != nil {
 		return nil, e
@@ -293,6 +317,7 @@ func (h *limitGRPCHandler) CreateLimitGroup(ctx context.Context, r *pb.CreateLim
 	}
 	return outGroup(v), nil
 }
+
 func (h *limitGRPCHandler) GetLimitGroup(ctx context.Context, r *pb.IdRequest) (*pb.LimitGroup, error) {
 	if e := positive(r.Id); e != nil {
 		return nil, e
@@ -307,6 +332,7 @@ func (h *limitGRPCHandler) GetLimitGroup(ctx context.Context, r *pb.IdRequest) (
 	}
 	return outGroup(v), nil
 }
+
 func (h *limitGRPCHandler) DeleteLimitGroup(ctx context.Context, r *pb.DeleteByIdRequest) (*pb.DeleteResponse, error) {
 	if e := mutation(r.UpdatedBy, r.Id); e != nil {
 		return nil, e
@@ -346,6 +372,7 @@ func (h *limitGRPCHandler) CreateLimitValue(ctx context.Context, r *pb.CreateLim
 	}
 	return outValue(out), nil
 }
+
 func (h *limitGRPCHandler) GetLimitValue(ctx context.Context, r *pb.ScopedIdRequest) (*pb.LimitValue, error) {
 	if e := positive(r.ParentId, r.Id); e != nil {
 		return nil, e
@@ -364,6 +391,7 @@ func (h *limitGRPCHandler) GetLimitValue(ctx context.Context, r *pb.ScopedIdRequ
 	}
 	return outValue(v), nil
 }
+
 func (h *limitGRPCHandler) ListLimitValues(ctx context.Context, r *pb.ScopedPageRequest) (*pb.LimitValuePage, error) {
 	if e := positive(r.ParentId); e != nil {
 		return nil, e
@@ -386,6 +414,7 @@ func (h *limitGRPCHandler) ListLimitValues(ctx context.Context, r *pb.ScopedPage
 	}
 	return out, nil
 }
+
 func (h *limitGRPCHandler) UpdateLimitValue(ctx context.Context, r *pb.UpdateLimitValueRequest) (*pb.LimitValue, error) {
 	if e := mutation(r.UpdatedBy, r.GroupId, r.Id); e != nil {
 		return nil, e
@@ -411,6 +440,7 @@ func (h *limitGRPCHandler) UpdateLimitValue(ctx context.Context, r *pb.UpdateLim
 	}
 	return outValue(out), nil
 }
+
 func (h *limitGRPCHandler) DeleteLimitValue(ctx context.Context, r *pb.DeleteScopedRequest) (*pb.DeleteResponse, error) {
 	if e := mutation(r.UpdatedBy, r.ParentId, r.Id); e != nil {
 		return nil, e
@@ -461,6 +491,7 @@ func (h *limitGRPCHandler) CreateUserLimit(ctx context.Context, r *pb.CreateUser
 	}
 	return outUser(out), nil
 }
+
 func (h *limitGRPCHandler) GetUserLimit(ctx context.Context, r *pb.WalletIdRequest) (*pb.UserLimit, error) {
 	if e := require(map[string]string{"walletId": r.WalletId}); e != nil {
 		return nil, e
@@ -478,6 +509,7 @@ func (h *limitGRPCHandler) GetUserLimit(ctx context.Context, r *pb.WalletIdReque
 	}
 	return outUser(v), nil
 }
+
 func (h *limitGRPCHandler) ListUserLimits(ctx context.Context, r *pb.WalletPageRequest) (*pb.UserLimitPage, error) {
 	if e := require(map[string]string{"walletId": r.WalletId}); e != nil {
 		return nil, e
@@ -496,6 +528,7 @@ func (h *limitGRPCHandler) ListUserLimits(ctx context.Context, r *pb.WalletPageR
 	}
 	return out, nil
 }
+
 func (h *limitGRPCHandler) UpdateUserLimit(ctx context.Context, r *pb.UpdateUserLimitRequest) (*pb.UserLimit, error) {
 	if e := require(map[string]string{"walletId": r.WalletId, "updatedBy": r.UpdatedBy}); e != nil {
 		return nil, e
@@ -531,6 +564,7 @@ func (h *limitGRPCHandler) UpdateUserLimit(ctx context.Context, r *pb.UpdateUser
 	}
 	return outUser(out), nil
 }
+
 func (h *limitGRPCHandler) DeleteUserLimit(ctx context.Context, r *pb.DeleteUserLimitRequest) (*pb.DeleteResponse, error) {
 	if e := require(map[string]string{"walletId": r.WalletId, "updatedBy": r.UpdatedBy}); e != nil {
 		return nil, e

@@ -99,6 +99,9 @@ func (s *service) invalidate(ctx context.Context, namespaces ...string) {
 }
 
 func policyResponse(value Policy) PolicyResponse {
+	if value.WindowType == "" {
+		value.WindowType = WindowNone
+	}
 	return PolicyResponse{
 		ID:              value.ID,
 		PolicyGroupID:   value.PolicyGroupID,
@@ -106,6 +109,7 @@ func policyResponse(value Policy) PolicyResponse {
 		TransactionType: value.TransactionType,
 		Channel:         value.Channel,
 		Direction:       value.Direction,
+		WindowType:      value.WindowType,
 		Operator:        value.Operator,
 		Value:           value.Value,
 		CreatedAt:       value.CreatedAt,
@@ -114,6 +118,9 @@ func policyResponse(value Policy) PolicyResponse {
 }
 
 func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
+	if value.WindowType == "" {
+		value.WindowType = WindowNone
+	}
 	return CustomPolicyResponse{
 		ID:              value.ID,
 		WalletID:        value.WalletID,
@@ -121,6 +128,7 @@ func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
 		TransactionType: value.TransactionType,
 		Channel:         value.Channel,
 		Direction:       value.Direction,
+		WindowType:      value.WindowType,
 		Operator:        value.Operator,
 		Value:           value.Value,
 		EffectiveFrom:   value.EffectiveFrom,
@@ -163,6 +171,7 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 			TransactionType: value.TransactionType,
 			Channel:         value.Channel,
 			Direction:       value.Direction,
+			WindowType:      value.WindowType,
 			Operator:        value.Operator,
 			Value:           value.Value,
 			Source:          value.Source,
@@ -191,6 +200,11 @@ func (s *service) getActiveUnits(ctx context.Context) (map[int64]string, error) 
 func (s *service) getSystemPolicies(ctx context.Context, request GetConfigRequest) ([]Policy, error) {
 	key := s.key(ctx, cachecore.NamespacePolicyConfig, request.WalletType, request.Currency, request.Tier)
 	if cached, ok := cacheRead[[]Policy](s, ctx, key); ok {
+		for i := range cached {
+			if cached[i].WindowType == "" {
+				cached[i].WindowType = WindowNone
+			}
+		}
 		return cached, nil
 	}
 	groupID, err := s.store.GetGroupID(ctx, request.WalletType, request.Currency, request.Tier)
@@ -233,6 +247,7 @@ func mergePolicies(systemPolicies []Policy, customPolicies []CustomPolicy) []Pol
 			TransactionType: customPolicy.TransactionType,
 			Channel:         customPolicy.Channel,
 			Direction:       customPolicy.Direction,
+			WindowType:      customPolicy.WindowType,
 			Operator:        customPolicy.Operator,
 			Value:           customPolicy.Value,
 			Source:          SourceCustom,
@@ -270,6 +285,9 @@ func (s *service) CreatePolicy(ctx context.Context, groupID int64, request Creat
 	}
 	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
 	request.Direction = defaultDirection(request.Direction)
+	if request.WindowType == "" {
+		request.WindowType = WindowNone
+	}
 	value, err := s.store.CreatePolicy(ctx, groupID, request)
 	if err == nil {
 		s.invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
@@ -280,6 +298,9 @@ func (s *service) CreatePolicy(ctx context.Context, groupID int64, request Creat
 func (s *service) GetPolicy(ctx context.Context, groupID, id int64) (PolicyResponse, error) {
 	key := s.key(ctx, cachecore.NamespacePolicies, "item", groupID, id)
 	if cached, ok := cacheRead[PolicyResponse](s, ctx, key); ok {
+		if cached.WindowType == "" {
+			cached.WindowType = WindowNone
+		}
 		return cached, nil
 	}
 	value, err := s.store.GetPolicy(ctx, groupID, id)
@@ -294,6 +315,11 @@ func (s *service) ListPolicies(ctx context.Context, groupID int64, request core.
 	page, limit, offset := request.Values()
 	key := s.key(ctx, cachecore.NamespacePolicies, "list", groupID, page, limit)
 	if cached, ok := cacheRead[core.Page[PolicyResponse]](s, ctx, key); ok {
+		for i := range cached.Items {
+			if cached.Items[i].WindowType == "" {
+				cached.Items[i].WindowType = WindowNone
+			}
+		}
 		return cached, nil
 	}
 	values, total, err := s.store.ListPolicies(ctx, groupID, limit, offset)
@@ -342,6 +368,9 @@ func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, reque
 	}
 	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
 	request.Direction = defaultDirection(request.Direction)
+	if request.WindowType == "" {
+		request.WindowType = WindowNone
+	}
 	value, err := s.store.CreateCustomPolicy(ctx, walletID, request)
 	if err == nil {
 		s.invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
@@ -352,6 +381,9 @@ func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, reque
 func (s *service) GetCustomPolicy(ctx context.Context, walletID string, id int64) (CustomPolicyResponse, error) {
 	key := s.key(ctx, cachecore.NamespaceCustomPolicies, "item", walletID, id)
 	if cached, ok := cacheRead[CustomPolicyResponse](s, ctx, key); ok {
+		if cached.WindowType == "" {
+			cached.WindowType = WindowNone
+		}
 		return cached, nil
 	}
 	value, err := s.store.GetCustomPolicy(ctx, walletID, id)
@@ -366,6 +398,11 @@ func (s *service) ListCustomPolicies(ctx context.Context, walletID string, reque
 	page, limit, offset := request.Values()
 	key := s.key(ctx, cachecore.NamespaceCustomPolicies, "list", walletID, page, limit)
 	if cached, ok := cacheRead[core.Page[CustomPolicyResponse]](s, ctx, key); ok {
+		for i := range cached.Items {
+			if cached.Items[i].WindowType == "" {
+				cached.Items[i].WindowType = WindowNone
+			}
+		}
 		return cached, nil
 	}
 	values, total, err := s.store.ListCustomPolicies(ctx, walletID, limit, offset)

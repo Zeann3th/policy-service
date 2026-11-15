@@ -73,6 +73,31 @@ func TestReloadInvalidatesNamespacesWithoutScanning(t *testing.T) {
 	}
 }
 
+func TestReloadAllInvalidatesEveryNamespace(t *testing.T) {
+	cache := &cacheStub{}
+	response, err := newTestService(cache).Reload(context.Background(), ReloadRequest{
+		Namespaces: []string{NamespaceAll},
+		UpdatedBy:  "admin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		NamespaceUnits,
+		NamespacePolicyTypes,
+		NamespacePolicyGroups,
+		NamespacePolicies,
+		NamespaceCustomPolicies,
+		NamespacePolicyConfig,
+	}
+	if !reflect.DeepEqual(response.ReloadedNamespaces, want) {
+		t.Fatalf("namespaces = %#v, want %#v", response.ReloadedNamespaces, want)
+	}
+	if len(cache.incremented) != len(want) {
+		t.Fatalf("incremented = %#v", cache.incremented)
+	}
+}
+
 func TestReloadRejectsMixedOrUnknownTargets(t *testing.T) {
 	service := newTestService(&cacheStub{})
 	for _, request := range []ReloadRequest{

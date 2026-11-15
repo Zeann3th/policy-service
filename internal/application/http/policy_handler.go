@@ -30,7 +30,7 @@ func RegisterPolicyRoutes(routes *gin.RouterGroup, service policy.Service) {
 // getConfig godoc
 //
 //	@Summary		Resolve effective policies
-//	@Description	Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, and direction match.
+//	@Description	Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, direction, and window type match.
 //	@Tags			Policy Resolution
 //	@Produce		json
 //	@Param			walletType		query		string	true	"Wallet type"
@@ -277,7 +277,7 @@ func (h *policyHandler) listCustom(c *gin.Context) {
 // updateCustom godoc
 //
 //	@Summary		Update a custom wallet policy
-//	@Description	Wallet, policy type, transaction type, channel, direction, and creator are immutable.
+//	@Description	Wallet, policy type, transaction type, channel, direction, window type, and creator are immutable.
 //	@Tags			Custom Policies
 //	@Accept			json
 //	@Produce		json

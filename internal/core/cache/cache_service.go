@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	NamespaceAll            = "all"
 	NamespaceUnits          = "units"
 	NamespacePolicyTypes    = "policy:types"
 	NamespacePolicyGroups   = "policy:groups"
@@ -18,6 +19,15 @@ const (
 	NamespaceCustomPolicies = "policy:custom"
 	NamespacePolicyConfig   = "policy:config"
 )
+
+var namespaceOrder = []string{
+	NamespaceUnits,
+	NamespacePolicyTypes,
+	NamespacePolicyGroups,
+	NamespacePolicies,
+	NamespaceCustomPolicies,
+	NamespacePolicyConfig,
+}
 
 var namespaces = map[string]struct{}{
 	NamespaceUnits:          {},
@@ -30,7 +40,7 @@ var namespaces = map[string]struct{}{
 
 type ReloadRequest struct {
 	Key        string   `example:"policy:config:0:CU0001:VND:1" json:"key"`
-	Namespaces []string `enums:"units,policy:types,policy:groups,policies,policy:custom,policy:config" json:"namespaces"`
+	Namespaces []string `enums:"all,units,policy:types,policy:groups,policies,policy:custom,policy:config" json:"namespaces"`
 	UpdatedBy  string   `binding:"required" example:"admin" json:"updatedBy"`
 }
 
@@ -84,21 +94,33 @@ func (s *service) Reload(ctx context.Context, request ReloadRequest) (ReloadResp
 		return ReloadResponse{Evicted: evicted}, nil
 	}
 
-	seen := make(map[string]struct{}, len(request.Namespaces))
-	reloaded := make([]string, 0, len(request.Namespaces))
+	seen := make(map[string]struct{}, len(namespaceOrder))
+	reloaded := make([]string, 0, len(namespaceOrder))
 	for _, namespace := range request.Namespaces {
 		namespace = strings.TrimSpace(namespace)
+		if namespace == NamespaceAll {
+			for _, value := range namespaceOrder {
+				if _, ok := seen[value]; !ok {
+					seen[value] = struct{}{}
+					reloaded = append(reloaded, value)
+				}
+			}
+			continue
+		}
 		if _, ok := namespaces[namespace]; !ok {
 			return ReloadResponse{}, core.ErrBadRequest.WithMessage("unknown cache namespace: " + namespace)
 		}
 		if _, ok := seen[namespace]; ok {
 			continue
 		}
+		seen[namespace] = struct{}{}
+		reloaded = append(reloaded, namespace)
+	}
+
+	for _, namespace := range reloaded {
 		if _, err := s.cache.Increment(ctx, GenerationKey(s.serviceName, namespace)); err != nil {
 			return ReloadResponse{}, fmt.Errorf("reload cache namespace %s: %w", namespace, err)
 		}
-		seen[namespace] = struct{}{}
-		reloaded = append(reloaded, namespace)
 	}
 
 	s.logger.Info("reloaded cache namespaces", "namespaces", reloaded, "updatedBy", request.UpdatedBy)

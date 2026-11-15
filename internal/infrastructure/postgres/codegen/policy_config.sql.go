@@ -22,6 +22,7 @@ SELECT
   cp.transaction_type,
   cp.channel,
   cp.direction,
+  cp.window_type,
   cp.operator,
   cp.value,
   cp.effective_from,
@@ -57,6 +58,7 @@ type GetActiveCustomPoliciesRow struct {
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
+	WindowType      string          `json:"window_type"`
 	Operator        string          `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
 	EffectiveFrom   time.Time       `json:"effective_from"`
@@ -85,6 +87,7 @@ func (q *Queries) GetActiveCustomPolicies(ctx context.Context, walletID string) 
 			&i.TransactionType,
 			&i.Channel,
 			&i.Direction,
+			&i.WindowType,
 			&i.Operator,
 			&i.Value,
 			&i.EffectiveFrom,
@@ -114,6 +117,7 @@ SELECT
   p.transaction_type,
   p.channel,
   p.direction,
+  p.window_type,
   p.operator,
   p.value,
   p.created_at,
@@ -140,6 +144,7 @@ type GetPoliciesByGroupIDRow struct {
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
+	WindowType      string          `json:"window_type"`
 	Operator        string          `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
 	CreatedAt       time.Time       `json:"created_at"`
@@ -164,6 +169,7 @@ func (q *Queries) GetPoliciesByGroupID(ctx context.Context, policyGroupID int64)
 			&i.TransactionType,
 			&i.Channel,
 			&i.Direction,
+			&i.WindowType,
 			&i.Operator,
 			&i.Value,
 			&i.CreatedAt,

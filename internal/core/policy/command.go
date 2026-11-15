@@ -57,6 +57,7 @@ type PolicyResponse struct {
 	TransactionType string          `json:"transactionType"`
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
 	CreatedAt       time.Time       `format:"date-time" json:"createdAt"`
@@ -68,6 +69,7 @@ type CreatePolicyRequest struct {
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType       `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Operator        Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value           *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
 	UpdatedBy       string           `binding:"required" json:"updatedBy"`
@@ -86,6 +88,7 @@ type CustomPolicyResponse struct {
 	TransactionType string          `json:"transactionType"`
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
 	EffectiveFrom   time.Time       `format:"date-time" json:"effectiveFrom"`
@@ -101,6 +104,7 @@ type CreateCustomPolicyRequest struct {
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType       `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Operator        Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value           *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
 	EffectiveFrom   *time.Time       `format:"date-time" json:"effectiveFrom"`
@@ -136,6 +140,7 @@ type Rule struct {
 	TransactionType string          `json:"transactionType"`
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
 	Source          Source          `enums:"SYSTEM,USER" json:"source"`

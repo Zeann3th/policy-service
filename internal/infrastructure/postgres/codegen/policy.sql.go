@@ -24,11 +24,11 @@ func (q *Queries) CountPolicies(ctx context.Context, policyGroupID int64) (int64
 
 const createPolicy = `-- name: CreatePolicy :one
 INSERT INTO policies
-  (policy_group_id, policy_type_id, transaction_type, channel, direction, operator, value)
+  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value)
 VALUES
   ($1, $2, $3,
-   $4, $5, $6, $7)
-RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction
+   $4, $5, $6, $7, $8)
+RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type
 `
 
 type CreatePolicyParams struct {
@@ -37,6 +37,7 @@ type CreatePolicyParams struct {
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
+	WindowType      string          `json:"window_type"`
 	Operator        string          `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -48,6 +49,7 @@ func (q *Queries) CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Pol
 		arg.TransactionType,
 		arg.Channel,
 		arg.Direction,
+		arg.WindowType,
 		arg.Operator,
 		arg.Value,
 	)
@@ -63,12 +65,13 @@ func (q *Queries) CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Pol
 		&i.UpdatedAt,
 		&i.ID,
 		&i.Direction,
+		&i.WindowType,
 	)
 	return i, err
 }
 
 const deletePolicy = `-- name: DeletePolicy :one
-DELETE FROM policies WHERE policy_group_id = $1 AND id = $2 RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction
+DELETE FROM policies WHERE policy_group_id = $1 AND id = $2 RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type
 `
 
 type DeletePolicyParams struct {
@@ -90,12 +93,13 @@ func (q *Queries) DeletePolicy(ctx context.Context, arg DeletePolicyParams) (Pol
 		&i.UpdatedAt,
 		&i.ID,
 		&i.Direction,
+		&i.WindowType,
 	)
 	return i, err
 }
 
 const getPolicyByID = `-- name: GetPolicyByID :one
-SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction FROM policies WHERE policy_group_id = $1 AND id = $2
+SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type FROM policies WHERE policy_group_id = $1 AND id = $2
 `
 
 type GetPolicyByIDParams struct {
@@ -117,12 +121,13 @@ func (q *Queries) GetPolicyByID(ctx context.Context, arg GetPolicyByIDParams) (P
 		&i.UpdatedAt,
 		&i.ID,
 		&i.Direction,
+		&i.WindowType,
 	)
 	return i, err
 }
 
 const getPolicyByIDForUpdate = `-- name: GetPolicyByIDForUpdate :one
-SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction FROM policies WHERE policy_group_id = $1 AND id = $2 FOR UPDATE
+SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type FROM policies WHERE policy_group_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetPolicyByIDForUpdateParams struct {
@@ -144,12 +149,13 @@ func (q *Queries) GetPolicyByIDForUpdate(ctx context.Context, arg GetPolicyByIDF
 		&i.UpdatedAt,
 		&i.ID,
 		&i.Direction,
+		&i.WindowType,
 	)
 	return i, err
 }
 
 const listPolicies = `-- name: ListPolicies :many
-SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction FROM policies
+SELECT policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type FROM policies
 WHERE policy_group_id = $1
 ORDER BY id LIMIT $3 OFFSET $2
 `
@@ -180,6 +186,7 @@ func (q *Queries) ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]P
 			&i.UpdatedAt,
 			&i.ID,
 			&i.Direction,
+			&i.WindowType,
 		); err != nil {
 			return nil, err
 		}
@@ -195,7 +202,7 @@ const updatePolicy = `-- name: UpdatePolicy :one
 UPDATE policies
 SET operator = $1, value = $2, updated_at = now()
 WHERE policy_group_id = $3 AND id = $4
-RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction
+RETURNING policy_group_id, policy_type_id, transaction_type, channel, operator, value, created_at, updated_at, id, direction, window_type
 `
 
 type UpdatePolicyParams struct {
@@ -224,6 +231,7 @@ func (q *Queries) UpdatePolicy(ctx context.Context, arg UpdatePolicyParams) (Pol
 		&i.UpdatedAt,
 		&i.ID,
 		&i.Direction,
+		&i.WindowType,
 	)
 	return i, err
 }

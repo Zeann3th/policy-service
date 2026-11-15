@@ -95,6 +95,7 @@ func (s *policyStoreImpl) GetActiveCustomPolicies(ctx context.Context, walletID 
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Direction:       policy.Direction(row.Direction),
+			WindowType:      policy.WindowType(row.WindowType),
 			Operator:        policy.Operator(row.Operator),
 			Value:           row.Value,
 			EffectiveFrom:   row.EffectiveFrom,
@@ -128,6 +129,7 @@ func toPolicies(rows []codegen.GetPoliciesByGroupIDRow) []policy.Policy {
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Direction:       policy.Direction(row.Direction),
+			WindowType:      policy.WindowType(row.WindowType),
 			Operator:        policy.Operator(row.Operator),
 			Value:           row.Value,
 			CreatedAt:       row.CreatedAt,
@@ -207,11 +209,11 @@ func toPolicyGroup(v codegen.PolicyGroup) policy.PolicyGroup {
 }
 
 func toPolicy(v codegen.Policy) policy.Policy {
-	return policy.Policy{ID: v.ID, PolicyGroupID: v.PolicyGroupID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), Operator: policy.Operator(v.Operator), Value: v.Value, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+	return policy.Policy{ID: v.ID, PolicyGroupID: v.PolicyGroupID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Operator: policy.Operator(v.Operator), Value: v.Value, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func toCustomPolicy(v codegen.CustomPolicy) policy.CustomPolicy {
-	return policy.CustomPolicy{ID: v.ID, WalletID: v.WalletID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), Operator: policy.Operator(v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+	return policy.CustomPolicy{ID: v.ID, WalletID: v.WalletID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Operator: policy.Operator(v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func (s *policyStoreImpl) Create(ctx context.Context, c unit.CreateRequest) (out unit.Unit, err error) {
@@ -355,7 +357,7 @@ func (s *policyStoreImpl) DeleteGroup(ctx context.Context, id int64, actor strin
 
 func (s *policyStoreImpl) CreatePolicy(ctx context.Context, g int64, c policy.CreatePolicyRequest) (out policy.Policy, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreatePolicy(ctx, codegen.CreatePolicyParams{PolicyGroupID: g, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), Operator: string(c.Operator), Value: *c.Value})
+		v, e := q.CreatePolicy(ctx, codegen.CreatePolicyParams{PolicyGroupID: g, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Operator: string(c.Operator), Value: *c.Value})
 		if e != nil {
 			return e
 		}
@@ -411,7 +413,7 @@ func (s *policyStoreImpl) DeletePolicy(ctx context.Context, g, id int64, actor s
 
 func (s *policyStoreImpl) CreateCustomPolicy(ctx context.Context, w string, c policy.CreateCustomPolicyRequest) (out policy.CustomPolicy, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreateCustomPolicy(ctx, codegen.CreateCustomPolicyParams{WalletID: w, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), Operator: string(c.Operator), Value: *c.Value, EffectiveFrom: c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason, CreatedBy: c.UpdatedBy})
+		v, e := q.CreateCustomPolicy(ctx, codegen.CreateCustomPolicyParams{WalletID: w, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Operator: string(c.Operator), Value: *c.Value, EffectiveFrom: c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason, CreatedBy: c.UpdatedBy})
 		if e != nil {
 			return e
 		}

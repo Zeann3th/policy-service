@@ -17,10 +17,11 @@ import (
 
 type policyServiceStub struct {
 	policy.Service
-	request  policy.GetConfigRequest
-	response policy.GetConfigResponse
-	err      error
-	called   bool
+	request       policy.GetConfigRequest
+	response      policy.GetConfigResponse
+	customRequest policy.CreateCustomPolicyRequest
+	err           error
+	called        bool
 }
 
 func (s *policyServiceStub) GetConfig(_ context.Context, request policy.GetConfigRequest) (policy.GetConfigResponse, error) {
@@ -29,8 +30,14 @@ func (s *policyServiceStub) GetConfig(_ context.Context, request policy.GetConfi
 	return s.response, s.err
 }
 
+func (s *policyServiceStub) CreateCustomPolicy(_ context.Context, walletID string, request policy.CreateCustomPolicyRequest) (policy.CustomPolicyResponse, error) {
+	s.called = true
+	s.customRequest = request
+	return policy.CustomPolicyResponse{WalletID: walletID, WindowType: request.WindowType}, s.err
+}
+
 func TestGetPolicyConfigReturnsResponseDirectly(t *testing.T) {
-	service := &policyServiceStub{response: policy.GetConfigResponse{Rules: []policy.Rule{{PolicyType: "FEE_AMT", Unit: "AMOUNT", Direction: policy.DirectionOut, Source: policy.SourceSystem}}}}
+	service := &policyServiceStub{response: policy.GetConfigResponse{Rules: []policy.Rule{{PolicyType: "FEE_AMT", Unit: "AMOUNT", Direction: policy.DirectionOut, WindowType: policy.WindowDaily, Source: policy.SourceSystem}}}}
 	response := performPolicyRequest(service, "/v1/policies?walletType=PERSONAL&currency=USD&tier=TIER_1&walletId=wallet-123&transactionType=TRANSFER_OUT")
 
 	if response.Code != http.StatusOK {
@@ -40,7 +47,7 @@ func TestGetPolicyConfigReturnsResponseDirectly(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
-	if len(body.Rules) != 1 || body.Rules[0].PolicyType != "FEE_AMT" || body.Rules[0].Direction != policy.DirectionOut {
+	if len(body.Rules) != 1 || body.Rules[0].PolicyType != "FEE_AMT" || body.Rules[0].Direction != policy.DirectionOut || body.Rules[0].WindowType != policy.WindowDaily {
 		t.Fatalf("response = %s", response.Body.String())
 	}
 	if service.request.TransactionType != "TRANSFER_OUT" {
@@ -83,12 +90,39 @@ func TestGetPolicyConfigMapsErrors(t *testing.T) {
 	}
 }
 
+func TestCreateCustomPolicyAcceptsWindowType(t *testing.T) {
+	service := &policyServiceStub{}
+	response := performPolicyJSONRequest(service, http.MethodPost, "/v1/policies/custom/wallet-123", `{"policyTypeId":1,"windowType":"DAILY","operator":"LTE","value":"1000","updatedBy":"admin"}`)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("status/body = %d %s", response.Code, response.Body.String())
+	}
+	if !service.called || service.customRequest.WindowType != policy.WindowDaily {
+		t.Fatalf("request = %#v", service.customRequest)
+	}
+}
+
+func TestCreateCustomPolicyRejectsInvalidWindowType(t *testing.T) {
+	service := &policyServiceStub{}
+	response := performPolicyJSONRequest(service, http.MethodPost, "/v1/policies/custom/wallet-123", `{"policyTypeId":1,"windowType":"YEARLY","operator":"LTE","value":"1000","updatedBy":"admin"}`)
+
+	if response.Code != http.StatusBadRequest || service.called {
+		t.Fatalf("status/body/called = %d %s %t", response.Code, response.Body.String(), service.called)
+	}
+}
+
 func performPolicyRequest(service policy.Service, target string) *httptest.ResponseRecorder {
+	return performPolicyJSONRequest(service, http.MethodGet, target, "")
+}
+
+func performPolicyJSONRequest(service policy.Service, method, target, body string) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	RegisterPolicyRoutes(router.Group(""), service)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, target, nil))
+	request := httptest.NewRequest(method, target, strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(response, request)
 	return response
 }
 

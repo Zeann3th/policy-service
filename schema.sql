@@ -58,6 +58,9 @@ CREATE TABLE policies (
   direction text NOT NULL DEFAULT 'ALL' CHECK (
     direction IN ('ALL', 'OUT', 'IN')
   ),
+  window_type text NOT NULL DEFAULT 'NONE' CHECK (
+    window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME')
+  ),
   operator text NOT NULL CHECK (
     operator IN ('EQ', 'NEQ', 'GT', 'GTE', 'LT', 'LTE')
   ),
@@ -71,7 +74,8 @@ CREATE UNIQUE INDEX policies_identity_idx ON policies (
   policy_type_id,
   transaction_type,
   channel,
-  direction
+  direction,
+  window_type
 );
 
 CREATE INDEX policies_group_page_idx ON policies (policy_group_id, id);
@@ -84,6 +88,9 @@ CREATE TABLE custom_policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL' CHECK (
     direction IN ('ALL', 'OUT', 'IN')
+  ),
+  window_type text NOT NULL DEFAULT 'NONE' CHECK (
+    window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME')
   ),
   operator text NOT NULL CHECK (
     operator IN ('EQ', 'NEQ', 'GT', 'GTE', 'LT', 'LTE')
@@ -106,7 +113,8 @@ CREATE UNIQUE INDEX custom_policies_identity_idx ON custom_policies (
   policy_type_id,
   transaction_type,
   channel,
-  direction
+  direction,
+  window_type
 );
 
 CREATE INDEX custom_policies_wallet_page_idx ON custom_policies (wallet_id, id);
@@ -146,12 +154,12 @@ CREATE TABLE counters (
 );
 
 CREATE TABLE usage (
-  subject_id text NOT NULL,
+  wallet_id text NOT NULL,
   counter_id bigint NOT NULL,
   window_type text NOT NULL,
   window_start date NOT NULL,
   value numeric(24, 4) NOT NULL DEFAULT 0,
-  PRIMARY KEY (subject_id, counter_id, window_type, window_start),
+  PRIMARY KEY (wallet_id, counter_id, window_type, window_start),
   FOREIGN KEY (counter_id, window_type)
     REFERENCES counters (id, window_type) ON DELETE RESTRICT
 ) PARTITION BY LIST (window_type);

@@ -1,9 +1,9 @@
 -- name: CreatePolicy :one
 INSERT INTO policies
-  (policy_group_id, policy_type_id, transaction_type, channel, direction, operator, value)
+  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value)
 VALUES
   (sqlc.arg(policy_group_id), sqlc.arg(policy_type_id), sqlc.arg(transaction_type),
-   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(operator), sqlc.arg(value))
+   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type), sqlc.arg(operator), sqlc.arg(value))
 RETURNING *;
 
 -- name: GetPolicyByID :one

@@ -79,7 +79,7 @@
         },
         "/v1/policies": {
             "get": {
-                "description": "Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, and direction match.",
+                "description": "Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, direction, and window type match.",
                 "produces": [
                     "application/json"
                 ],
@@ -326,7 +326,7 @@
                 }
             },
             "put": {
-                "description": "Wallet, policy type, transaction type, channel, direction, and creator are immutable.",
+                "description": "Wallet, policy type, transaction type, channel, direction, window type, and creator are immutable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1494,6 +1494,7 @@
                     "items": {
                         "type": "string",
                         "enum": [
+                            "all",
                             "units",
                             "policy:types",
                             "policy:groups",
@@ -1709,6 +1710,19 @@
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -1786,6 +1800,19 @@
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -1911,6 +1938,19 @@
                 },
                 "walletId": {
                     "type": "string"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -2055,6 +2095,19 @@
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -2169,6 +2222,19 @@
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },

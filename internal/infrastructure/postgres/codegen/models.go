@@ -36,6 +36,7 @@ type CustomPolicy struct {
 	UpdatedAt       *time.Time      `json:"updated_at"`
 	ID              int64           `json:"id"`
 	Direction       string          `json:"direction"`
+	WindowType      string          `json:"window_type"`
 }
 
 type Policy struct {
@@ -49,6 +50,7 @@ type Policy struct {
 	UpdatedAt       *time.Time      `json:"updated_at"`
 	ID              int64           `json:"id"`
 	Direction       string          `json:"direction"`
+	WindowType      string          `json:"window_type"`
 }
 
 type PolicyAuditLog struct {
@@ -92,7 +94,7 @@ type Unit struct {
 }
 
 type Usage struct {
-	SubjectID   string          `json:"subject_id"`
+	WalletID    string          `json:"wallet_id"`
 	CounterID   int64           `json:"counter_id"`
 	WindowType  string          `json:"window_type"`
 	WindowStart pgtype.Date     `json:"window_start"`
@@ -100,7 +102,7 @@ type Usage struct {
 }
 
 type UsageDaily struct {
-	SubjectID   string          `json:"subject_id"`
+	WalletID    string          `json:"wallet_id"`
 	CounterID   int64           `json:"counter_id"`
 	WindowType  string          `json:"window_type"`
 	WindowStart pgtype.Date     `json:"window_start"`
@@ -108,7 +110,7 @@ type UsageDaily struct {
 }
 
 type UsageDailyTemplate struct {
-	SubjectID   string          `json:"subject_id"`
+	WalletID    string          `json:"wallet_id"`
 	CounterID   int64           `json:"counter_id"`
 	WindowType  string          `json:"window_type"`
 	WindowStart pgtype.Date     `json:"window_start"`
@@ -116,7 +118,7 @@ type UsageDailyTemplate struct {
 }
 
 type UsageLifetime struct {
-	SubjectID   string          `json:"subject_id"`
+	WalletID    string          `json:"wallet_id"`
 	CounterID   int64           `json:"counter_id"`
 	WindowType  string          `json:"window_type"`
 	WindowStart pgtype.Date     `json:"window_start"`
@@ -124,7 +126,7 @@ type UsageLifetime struct {
 }
 
 type UsageMonthly struct {
-	SubjectID   string          `json:"subject_id"`
+	WalletID    string          `json:"wallet_id"`
 	CounterID   int64           `json:"counter_id"`
 	WindowType  string          `json:"window_type"`
 	WindowStart pgtype.Date     `json:"window_start"`

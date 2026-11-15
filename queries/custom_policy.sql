@@ -1,9 +1,9 @@
 -- name: CreateCustomPolicy :one
 INSERT INTO custom_policies
-  (wallet_id, policy_type_id, transaction_type, channel, direction, operator, value,
+  (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value,
    effective_from, effective_to, reason, created_by)
 VALUES
-  (sqlc.arg(wallet_id), sqlc.arg(policy_type_id), sqlc.arg(transaction_type), sqlc.arg(channel), sqlc.arg(direction),
+  (sqlc.arg(wallet_id), sqlc.arg(policy_type_id), sqlc.arg(transaction_type), sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type),
    sqlc.arg(operator), sqlc.arg(value), COALESCE(CAST(sqlc.narg(effective_from) AS timestamptz), now()), sqlc.narg(effective_to),
    sqlc.narg(reason), sqlc.arg(created_by))
 RETURNING *;

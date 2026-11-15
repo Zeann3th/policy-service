@@ -123,6 +123,7 @@ type PolicyKey struct {
 	TransactionType string
 	Channel         string
 	Direction       Direction
+	WindowType      WindowType
 }
 
 type Policy struct {
@@ -134,6 +135,7 @@ type Policy struct {
 	TransactionType string
 	Channel         string
 	Direction       Direction
+	WindowType      WindowType
 	Operator        Operator
 	Value           decimal.Decimal
 	Source          Source
@@ -142,7 +144,7 @@ type Policy struct {
 }
 
 func (v Policy) Key() PolicyKey {
-	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction}
+	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType}
 }
 
 type CustomPolicy struct {
@@ -154,6 +156,7 @@ type CustomPolicy struct {
 	TransactionType string
 	Channel         string
 	Direction       Direction
+	WindowType      WindowType
 	Operator        Operator
 	Value           decimal.Decimal
 	EffectiveFrom   time.Time
@@ -165,7 +168,7 @@ type CustomPolicy struct {
 }
 
 func (v CustomPolicy) Key() PolicyKey {
-	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction}
+	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType}
 }
 
 type AuditAction string

@@ -96,6 +96,39 @@ func TestPolicySchemaUsesPolicyNamesAndCascadeForeignKeys(t *testing.T) {
 			t.Errorf("schema.sql missing %q", want)
 		}
 	}
+	policies := sql[strings.Index(sql, "CREATE TABLE policies ("):strings.Index(sql, "CREATE UNIQUE INDEX policies_identity_idx")]
+	if !strings.Contains(policies, "window_type text NOT NULL DEFAULT 'NONE'") {
+		t.Error("policies must define window_type")
+	}
+	usage := sql[strings.Index(sql, "CREATE TABLE usage ("):strings.Index(sql, "CREATE TABLE usage_daily")]
+	if !strings.Contains(usage, "wallet_id text NOT NULL") || strings.Contains(usage, "subject_id") {
+		t.Error("usage must use wallet_id")
+	}
+	customPolicies := sql[strings.Index(sql, "CREATE TABLE custom_policies ("):strings.Index(sql, "CREATE UNIQUE INDEX custom_policies_identity_idx")]
+	if !strings.Contains(customPolicies, "window_type text NOT NULL DEFAULT 'NONE'") {
+		t.Error("custom_policies must define window_type")
+	}
+}
+
+func TestCustomPolicyWindowMigration(t *testing.T) {
+	migration, err := os.ReadFile("../../../migrations/00006_custom_policy_window.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sql := string(migration)
+	for _, want := range []string{
+		"ALTER TABLE custom_policies",
+		"ADD COLUMN window_type text NOT NULL DEFAULT 'NONE'",
+		"CHECK (window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME'))",
+		"policy_group_id,\n  policy_type_id,\n  transaction_type,\n  channel,\n  direction,\n  window_type",
+		"wallet_id,\n  policy_type_id,\n  transaction_type,\n  channel,\n  direction,\n  window_type",
+		"ALTER TABLE custom_policies DROP COLUMN window_type",
+	} {
+		if !strings.Contains(sql, want) {
+			t.Errorf("custom policy window migration missing %q", want)
+		}
+	}
 }
 
 func TestPolicyRenameMigrationProtectsHistory(t *testing.T) {
@@ -112,6 +145,28 @@ func TestPolicyRenameMigrationProtectsHistory(t *testing.T) {
 		"REFERENCES policy_types (id, window_type) ON DELETE RESTRICT",
 		"REFERENCES counters (id, window_type) ON DELETE RESTRICT",
 		"DROP TABLE counters",
+	} {
+		if !strings.Contains(sql, want) {
+			t.Errorf("migration missing %q", want)
+		}
+	}
+}
+
+func TestPolicyWindowUsageWalletMigration(t *testing.T) {
+	migration, err := os.ReadFile("../../../migrations/00005_policy_window_usage_wallet.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(migration)
+	for _, want := range []string{
+		"ALTER TABLE policies",
+		"ADD COLUMN window_type text NOT NULL DEFAULT 'NONE'",
+		"CHECK (window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME'))",
+		"ALTER TABLE usage RENAME COLUMN subject_id TO wallet_id",
+		"ALTER TABLE usage_daily_template RENAME COLUMN subject_id TO wallet_id",
+		"ALTER TABLE usage_daily_template RENAME COLUMN wallet_id TO subject_id",
+		"ALTER TABLE usage RENAME COLUMN wallet_id TO subject_id",
+		"ALTER TABLE policies DROP COLUMN window_type",
 	} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("migration missing %q", want)
@@ -162,6 +217,7 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 		TransactionType: "TRANSFER_OUT",
 		Channel:         "USSD",
 		Direction:       "OUT",
+		WindowType:      "DAILY",
 		Operator:        "LTE",
 		Value:           decimal.RequireFromString("100000"),
 		EffectiveFrom:   time.Now(),
@@ -183,6 +239,7 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Direction != policy.DirectionOut ||
+		value.WindowType != policy.WindowDaily ||
 		value.Operator != policy.OpLTE ||
 		!value.Value.Equal(rows[0].Value) {
 		t.Fatalf("GetActiveCustomPolicies() value = %#v", value)
@@ -199,6 +256,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 			TransactionType: "TRANSFER",
 			Channel:         "MOBILE",
 			Direction:       "IN",
+			WindowType:      "DAILY",
 			Operator:        "LTE",
 			Value:           decimal.RequireFromString("1000.2500"),
 		},
@@ -217,6 +275,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Direction != policy.DirectionIn ||
+		value.WindowType != policy.WindowDaily ||
 		value.Operator != policy.OpLTE ||
 		!value.Value.Equal(rows[0].Value) {
 		t.Fatalf("toPolicies() value = %#v", value)

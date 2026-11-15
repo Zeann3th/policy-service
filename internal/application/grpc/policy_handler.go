@@ -26,7 +26,7 @@ func (h *policyHandler) GetPolicyConfig(ctx context.Context, request *pb.GetPoli
 	}
 	result := &pb.GetPolicyConfigResponse{Rules: make([]*pb.PolicyRule, len(response.Rules))}
 	for i, value := range response.Rules {
-		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Unit: value.Unit, TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), Operator: string(value.Operator), Value: value.Value.String(), Source: string(value.Source)}
+		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Unit: value.Unit, TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), Source: string(value.Source)}
 	}
 	return result, nil
 }
@@ -41,13 +41,16 @@ func (h *policyHandler) CreatePolicy(ctx context.Context, request *pb.CreatePoli
 	if err := direction(request.Direction); err != nil {
 		return nil, err
 	}
+	if err := policyTypeSelectors("", request.WindowType); err != nil {
+		return nil, err
+	}
 	groupID, _ := intID(request.GroupId)
 	typeID, _ := intID(request.PolicyTypeId)
 	value, err := dec(request.Value)
 	if err != nil {
 		return nil, err
 	}
-	response, err := h.service.CreatePolicy(ctx, groupID, policy.CreatePolicyRequest{PolicyTypeID: typeID, TransactionType: request.TransactionType, Channel: request.Channel, Direction: policy.Direction(request.Direction), Operator: policy.Operator(request.Operator), Value: &value, UpdatedBy: request.UpdatedBy})
+	response, err := h.service.CreatePolicy(ctx, groupID, policy.CreatePolicyRequest{PolicyTypeID: typeID, TransactionType: request.TransactionType, Channel: request.Channel, Direction: policy.Direction(request.Direction), WindowType: policy.WindowType(request.WindowType), Operator: policy.Operator(request.Operator), Value: &value, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}
@@ -131,6 +134,9 @@ func (h *policyHandler) CreateCustomPolicy(ctx context.Context, request *pb.Crea
 	if err := direction(request.Direction); err != nil {
 		return nil, err
 	}
+	if err := policyTypeSelectors("", request.WindowType); err != nil {
+		return nil, err
+	}
 	typeID, _ := intID(request.PolicyTypeId)
 	value, err := dec(request.Value)
 	if err != nil {
@@ -144,7 +150,7 @@ func (h *policyHandler) CreateCustomPolicy(ctx context.Context, request *pb.Crea
 	if err != nil {
 		return nil, err
 	}
-	response, err := h.service.CreateCustomPolicy(ctx, request.WalletId, policy.CreateCustomPolicyRequest{PolicyTypeID: typeID, TransactionType: request.TransactionType, Channel: request.Channel, Direction: policy.Direction(request.Direction), Operator: policy.Operator(request.Operator), Value: &value, EffectiveFrom: from, EffectiveTo: to, Reason: request.Reason, UpdatedBy: request.UpdatedBy})
+	response, err := h.service.CreateCustomPolicy(ctx, request.WalletId, policy.CreateCustomPolicyRequest{PolicyTypeID: typeID, TransactionType: request.TransactionType, Channel: request.Channel, Direction: policy.Direction(request.Direction), WindowType: policy.WindowType(request.WindowType), Operator: policy.Operator(request.Operator), Value: &value, EffectiveFrom: from, EffectiveTo: to, Reason: request.Reason, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}

@@ -82,7 +82,7 @@ const docTemplate = `{
         },
         "/v1/policies": {
             "get": {
-                "description": "Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, and direction match.",
+                "description": "Returns active system policies merged with active wallet-specific overrides. An override replaces only an exact policy type, transaction type, channel, direction, and window type match.",
                 "produces": [
                     "application/json"
                 ],
@@ -329,7 +329,7 @@ const docTemplate = `{
                 }
             },
             "put": {
-                "description": "Wallet, policy type, transaction type, channel, direction, and creator are immutable.",
+                "description": "Wallet, policy type, transaction type, channel, direction, window type, and creator are immutable.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1497,6 +1497,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string",
                         "enum": [
+                            "all",
                             "units",
                             "policy:types",
                             "policy:groups",
@@ -1712,6 +1713,19 @@ const docTemplate = `{
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -1789,6 +1803,19 @@ const docTemplate = `{
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -1914,6 +1941,19 @@ const docTemplate = `{
                 },
                 "walletId": {
                     "type": "string"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -2058,6 +2098,19 @@ const docTemplate = `{
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },
@@ -2172,6 +2225,19 @@ const docTemplate = `{
                 "value": {
                     "type": "string",
                     "example": "10000"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
                 }
             }
         },

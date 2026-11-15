@@ -636,6 +636,7 @@ type PolicyRule struct {
 	Value           string                 `protobuf:"bytes,6,opt,name=value,proto3" json:"value,omitempty"`
 	Source          string                 `protobuf:"bytes,7,opt,name=source,proto3" json:"source,omitempty"`
 	Direction       string                 `protobuf:"bytes,8,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowType      string                 `protobuf:"bytes,9,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -722,6 +723,13 @@ func (x *PolicyRule) GetSource() string {
 func (x *PolicyRule) GetDirection() string {
 	if x != nil {
 		return x.Direction
+	}
+	return ""
+}
+
+func (x *PolicyRule) GetWindowType() string {
+	if x != nil {
+		return x.WindowType
 	}
 	return ""
 }
@@ -1534,6 +1542,7 @@ type Policy struct {
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Direction       string                 `protobuf:"bytes,10,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowType      string                 `protobuf:"bytes,11,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1638,6 +1647,13 @@ func (x *Policy) GetDirection() string {
 	return ""
 }
 
+func (x *Policy) GetWindowType() string {
+	if x != nil {
+		return x.WindowType
+	}
+	return ""
+}
+
 type PolicyPage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*Policy              `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -1716,6 +1732,7 @@ type CreatePolicyRequest struct {
 	Value           string                 `protobuf:"bytes,6,opt,name=value,proto3" json:"value,omitempty"`
 	UpdatedBy       string                 `protobuf:"bytes,7,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	Direction       string                 `protobuf:"bytes,8,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowType      string                 `protobuf:"bytes,9,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1802,6 +1819,13 @@ func (x *CreatePolicyRequest) GetUpdatedBy() string {
 func (x *CreatePolicyRequest) GetDirection() string {
 	if x != nil {
 		return x.Direction
+	}
+	return ""
+}
+
+func (x *CreatePolicyRequest) GetWindowType() string {
+	if x != nil {
+		return x.WindowType
 	}
 	return ""
 }
@@ -1898,6 +1922,7 @@ type CustomPolicy struct {
 	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Direction       string                 `protobuf:"bytes,14,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowType      string                 `protobuf:"bytes,15,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2030,6 +2055,13 @@ func (x *CustomPolicy) GetDirection() string {
 	return ""
 }
 
+func (x *CustomPolicy) GetWindowType() string {
+	if x != nil {
+		return x.WindowType
+	}
+	return ""
+}
+
 type CustomPolicyPage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*CustomPolicy        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -2111,6 +2143,7 @@ type CreateCustomPolicyRequest struct {
 	Reason          *string                `protobuf:"bytes,9,opt,name=reason,proto3,oneof" json:"reason,omitempty"`
 	UpdatedBy       string                 `protobuf:"bytes,10,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	Direction       string                 `protobuf:"bytes,11,opt,name=direction,proto3" json:"direction,omitempty"`
+	WindowType      string                 `protobuf:"bytes,12,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2218,6 +2251,13 @@ func (x *CreateCustomPolicyRequest) GetUpdatedBy() string {
 func (x *CreateCustomPolicyRequest) GetDirection() string {
 	if x != nil {
 		return x.Direction
+	}
+	return ""
+}
+
+func (x *CreateCustomPolicyRequest) GetWindowType() string {
+	if x != nil {
+		return x.WindowType
 	}
 	return ""
 }
@@ -2479,7 +2519,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x12\n" +
 	"\x04tier\x18\x03 \x01(\tR\x04tier\x12\x1b\n" +
 	"\twallet_id\x18\x04 \x01(\tR\bwalletId\x12)\n" +
-	"\x10transaction_type\x18\x05 \x01(\tR\x0ftransactionType\"\xee\x01\n" +
+	"\x10transaction_type\x18\x05 \x01(\tR\x0ftransactionType\"\x8f\x02\n" +
 	"\n" +
 	"PolicyRule\x12\x1f\n" +
 	"\vpolicy_type\x18\x01 \x01(\tR\n" +
@@ -2490,7 +2530,9 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\boperator\x18\x05 \x01(\tR\boperator\x12\x14\n" +
 	"\x05value\x18\x06 \x01(\tR\x05value\x12\x16\n" +
 	"\x06source\x18\a \x01(\tR\x06source\x12\x1c\n" +
-	"\tdirection\x18\b \x01(\tR\tdirection\"K\n" +
+	"\tdirection\x18\b \x01(\tR\tdirection\x12\x1f\n" +
+	"\vwindow_type\x18\t \x01(\tR\n" +
+	"windowType\"K\n" +
 	"\x17GetPolicyConfigResponse\x120\n" +
 	"\x05rules\x18\x01 \x03(\v2\x1a.policy.ui.grpc.PolicyRuleR\x05rules\"\xb8\x01\n" +
 	"\x04Unit\x12\x0e\n" +
@@ -2574,7 +2616,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x12\n" +
 	"\x04tier\x18\x03 \x01(\tR\x04tier\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x04 \x01(\tR\tupdatedBy\"\xf1\x02\n" +
+	"updated_by\x18\x04 \x01(\tR\tupdatedBy\"\x92\x03\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12&\n" +
 	"\x0fpolicy_group_id\x18\x02 \x01(\x04R\rpolicyGroupId\x12$\n" +
@@ -2588,13 +2630,15 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1c\n" +
 	"\tdirection\x18\n" +
-	" \x01(\tR\tdirection\"z\n" +
+	" \x01(\tR\tdirection\x12\x1f\n" +
+	"\vwindow_type\x18\v \x01(\tR\n" +
+	"windowType\"z\n" +
 	"\n" +
 	"PolicyPage\x12,\n" +
 	"\x05items\x18\x01 \x03(\v2\x16.policy.ui.grpc.PolicyR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\x8a\x02\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\xab\x02\n" +
 	"\x13CreatePolicyRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\x04R\agroupId\x12$\n" +
 	"\x0epolicy_type_id\x18\x02 \x01(\x04R\fpolicyTypeId\x12)\n" +
@@ -2604,14 +2648,16 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x05value\x18\x06 \x01(\tR\x05value\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\a \x01(\tR\tupdatedBy\x12\x1c\n" +
-	"\tdirection\x18\b \x01(\tR\tdirection\"\x91\x01\n" +
+	"\tdirection\x18\b \x01(\tR\tdirection\x12\x1f\n" +
+	"\vwindow_type\x18\t \x01(\tR\n" +
+	"windowType\"\x91\x01\n" +
 	"\x13UpdatePolicyRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\x04R\agroupId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x04R\x02id\x12\x1a\n" +
 	"\boperator\x18\x03 \x01(\tR\boperator\x12\x14\n" +
 	"\x05value\x18\x04 \x01(\tR\x05value\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x05 \x01(\tR\tupdatedBy\"\xb5\x04\n" +
+	"updated_by\x18\x05 \x01(\tR\tupdatedBy\"\xd6\x04\n" +
 	"\fCustomPolicy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12$\n" +
@@ -2630,13 +2676,15 @@ const file_proto_policy_proto_rawDesc = "" +
 	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1c\n" +
-	"\tdirection\x18\x0e \x01(\tR\tdirectionB\t\n" +
+	"\tdirection\x18\x0e \x01(\tR\tdirection\x12\x1f\n" +
+	"\vwindow_type\x18\x0f \x01(\tR\n" +
+	"windowTypeB\t\n" +
 	"\a_reason\"\x86\x01\n" +
 	"\x10CustomPolicyPage\x122\n" +
 	"\x05items\x18\x01 \x03(\v2\x1c.policy.ui.grpc.CustomPolicyR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\xbc\x03\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\xdd\x03\n" +
 	"\x19CreateCustomPolicyRequest\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12$\n" +
 	"\x0epolicy_type_id\x18\x02 \x01(\x04R\fpolicyTypeId\x12)\n" +
@@ -2650,7 +2698,9 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\n" +
 	"updated_by\x18\n" +
 	" \x01(\tR\tupdatedBy\x12\x1c\n" +
-	"\tdirection\x18\v \x01(\tR\tdirectionB\t\n" +
+	"\tdirection\x18\v \x01(\tR\tdirection\x12\x1f\n" +
+	"\vwindow_type\x18\f \x01(\tR\n" +
+	"windowTypeB\t\n" +
 	"\a_reason\"\xc3\x02\n" +
 	"\x19UpdateCustomPolicyRequest\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x0e\n" +

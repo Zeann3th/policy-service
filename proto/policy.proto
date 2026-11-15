@@ -57,7 +57,7 @@ message DeleteCustomPolicyRequest { string wallet_id = 1; uint64 id = 2; string 
 message DeleteResponse {}
 
 message GetPolicyConfigRequest { string wallet_type = 1; string currency = 2; string tier = 3; string wallet_id = 4; string transaction_type = 5; }
-message PolicyRule { string policy_type = 1; string unit = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; string source = 7; string direction = 8; }
+message PolicyRule { string policy_type = 1; string unit = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; string source = 7; string direction = 8; string window_type = 9; }
 message GetPolicyConfigResponse { repeated PolicyRule rules = 1; }
 
 message Unit { uint64 id = 1; string code = 2; bool active = 3; google.protobuf.Timestamp created_at = 4; google.protobuf.Timestamp updated_at = 5; }
@@ -73,14 +73,14 @@ message UpdatePolicyTypeRequest { uint64 id = 1; optional string description = 2
 message PolicyGroup { uint64 id = 1; string wallet_type = 2; string currency = 3; string tier = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; }
 message CreatePolicyGroupRequest { string wallet_type = 1; string currency = 2; string tier = 3; string updated_by = 4; }
 
-message Policy { uint64 id = 1; uint64 policy_group_id = 2; uint64 policy_type_id = 3; string transaction_type = 4; string channel = 5; string operator = 6; string value = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; string direction = 10; }
+message Policy { uint64 id = 1; uint64 policy_group_id = 2; uint64 policy_type_id = 3; string transaction_type = 4; string channel = 5; string operator = 6; string value = 7; google.protobuf.Timestamp created_at = 8; google.protobuf.Timestamp updated_at = 9; string direction = 10; string window_type = 11; }
 message PolicyPage { repeated Policy items = 1; int32 page = 2; int32 limit = 3; int64 total = 4; }
-message CreatePolicyRequest { uint64 group_id = 1; uint64 policy_type_id = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; string updated_by = 7; string direction = 8; }
+message CreatePolicyRequest { uint64 group_id = 1; uint64 policy_type_id = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; string updated_by = 7; string direction = 8; string window_type = 9; }
 message UpdatePolicyRequest { uint64 group_id = 1; uint64 id = 2; string operator = 3; string value = 4; string updated_by = 5; }
 
-message CustomPolicy { uint64 id = 1; string wallet_id = 2; uint64 policy_type_id = 3; string transaction_type = 4; string channel = 5; string operator = 6; string value = 7; google.protobuf.Timestamp effective_from = 8; google.protobuf.Timestamp effective_to = 9; optional string reason = 10; string created_by = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; string direction = 14; }
+message CustomPolicy { uint64 id = 1; string wallet_id = 2; uint64 policy_type_id = 3; string transaction_type = 4; string channel = 5; string operator = 6; string value = 7; google.protobuf.Timestamp effective_from = 8; google.protobuf.Timestamp effective_to = 9; optional string reason = 10; string created_by = 11; google.protobuf.Timestamp created_at = 12; google.protobuf.Timestamp updated_at = 13; string direction = 14; string window_type = 15; }
 message CustomPolicyPage { repeated CustomPolicy items = 1; int32 page = 2; int32 limit = 3; int64 total = 4; }
-message CreateCustomPolicyRequest { string wallet_id = 1; uint64 policy_type_id = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; google.protobuf.Timestamp effective_from = 7; google.protobuf.Timestamp effective_to = 8; optional string reason = 9; string updated_by = 10; string direction = 11; }
+message CreateCustomPolicyRequest { string wallet_id = 1; uint64 policy_type_id = 2; string transaction_type = 3; string channel = 4; string operator = 5; string value = 6; google.protobuf.Timestamp effective_from = 7; google.protobuf.Timestamp effective_to = 8; optional string reason = 9; string updated_by = 10; string direction = 11; string window_type = 12; }
 message UpdateCustomPolicyRequest { string wallet_id = 1; uint64 id = 2; string operator = 3; string value = 4; google.protobuf.Timestamp effective_from = 5; google.protobuf.Timestamp effective_to = 6; optional string reason = 7; string updated_by = 8; }
 
 message ReloadCacheRequest { string key = 1; repeated string namespaces = 2; string updated_by = 3; }

@@ -10,14 +10,14 @@ import (
 
 func TestPolicyMappingsExposeBusinessSelectors(t *testing.T) {
 	typeMessage := outPolicyType(policy.PolicyTypeResponse{Kind: policy.KindFee, WindowType: policy.WindowDaily})
-	policyMessage := outPolicy(policy.PolicyResponse{Direction: policy.DirectionOut})
-	customMessage := outCustomPolicy(policy.CustomPolicyResponse{Direction: policy.DirectionIn})
+	policyMessage := outPolicy(policy.PolicyResponse{Direction: policy.DirectionOut, WindowType: policy.WindowMonthly})
+	customMessage := outCustomPolicy(policy.CustomPolicyResponse{Direction: policy.DirectionIn, WindowType: policy.WindowLifetime})
 
 	if typeMessage.Kind != "FEE" || typeMessage.WindowType != "DAILY" {
 		t.Fatalf("policy type = %#v", typeMessage)
 	}
-	if policyMessage.Direction != "OUT" || customMessage.Direction != "IN" {
-		t.Fatalf("directions = %q, %q", policyMessage.Direction, customMessage.Direction)
+	if policyMessage.Direction != "OUT" || policyMessage.WindowType != "MONTHLY" || customMessage.Direction != "IN" || customMessage.WindowType != "LIFETIME" {
+		t.Fatalf("policy/custom selectors = %#v, %#v", policyMessage, customMessage)
 	}
 }
 

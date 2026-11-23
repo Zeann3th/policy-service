@@ -90,20 +90,41 @@ type ProcessedEvent struct {
 }
 
 type Reservation struct {
-	ID               uuid.UUID       `json:"id"`
-	RequestID        string          `json:"request_id"`
-	Status           string          `json:"status"`
-	CommitSource     *string         `json:"commit_source"`
-	TransactionType  string          `json:"transaction_type"`
-	Channel          string          `json:"channel"`
-	Currency         string          `json:"currency"`
-	Amount           decimal.Decimal `json:"amount"`
-	SenderWalletID   string          `json:"sender_wallet_id"`
-	ReceiverWalletID string          `json:"receiver_wallet_id"`
-	Result           []byte          `json:"result"`
-	ExpiresAt        *time.Time      `json:"expires_at"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        *time.Time      `json:"updated_at"`
+	ID                 uuid.UUID       `json:"id"`
+	RequestID          string          `json:"request_id"`
+	Status             string          `json:"status"`
+	TransactionType    string          `json:"transaction_type"`
+	Channel            string          `json:"channel"`
+	Currency           string          `json:"currency"`
+	Amount             decimal.Decimal `json:"amount"`
+	SenderWalletID     string          `json:"sender_wallet_id"`
+	SenderWalletType   string          `json:"sender_wallet_type"`
+	SenderTier         string          `json:"sender_tier"`
+	ReceiverWalletID   string          `json:"receiver_wallet_id"`
+	ReceiverWalletType string          `json:"receiver_wallet_type"`
+	ReceiverTier       string          `json:"receiver_tier"`
+	Result             []byte          `json:"result"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          *time.Time      `json:"updated_at"`
+}
+
+type ReservationsTemplate struct {
+	ID                 uuid.UUID       `json:"id"`
+	RequestID          string          `json:"request_id"`
+	Status             string          `json:"status"`
+	TransactionType    string          `json:"transaction_type"`
+	Channel            string          `json:"channel"`
+	Currency           string          `json:"currency"`
+	Amount             decimal.Decimal `json:"amount"`
+	SenderWalletID     string          `json:"sender_wallet_id"`
+	SenderWalletType   string          `json:"sender_wallet_type"`
+	SenderTier         string          `json:"sender_tier"`
+	ReceiverWalletID   string          `json:"receiver_wallet_id"`
+	ReceiverWalletType string          `json:"receiver_wallet_type"`
+	ReceiverTier       string          `json:"receiver_tier"`
+	Result             []byte          `json:"result"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          *time.Time      `json:"updated_at"`
 }
 
 type Unit struct {
@@ -148,21 +169,23 @@ type UsageDailyTemplate struct {
 }
 
 type UsageLedger struct {
-	ReservationID   uuid.UUID       `json:"reservation_id"`
-	WalletID        string          `json:"wallet_id"`
-	PolicyTypeID    int64           `json:"policy_type_id"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Direction       string          `json:"direction"`
-	WindowType      string          `json:"window_type"`
-	WindowStart     pgtype.Date     `json:"window_start"`
-	Delta           decimal.Decimal `json:"delta"`
-	PolicyID        *int64          `json:"policy_id"`
-	PolicyTypeCode  string          `json:"policy_type_code"`
-	Operator        *string         `json:"operator"`
-	LimitValue      pgtype.Numeric  `json:"limit_value"`
-	ValueAfter      decimal.Decimal `json:"value_after"`
-	CreatedAt       time.Time       `json:"created_at"`
+	ReservationID        uuid.UUID        `json:"reservation_id"`
+	ReservationCreatedAt time.Time        `json:"reservation_created_at"`
+	EntryType            string           `json:"entry_type"`
+	WalletID             string           `json:"wallet_id"`
+	PolicyTypeID         int64            `json:"policy_type_id"`
+	TransactionType      string           `json:"transaction_type"`
+	Channel              string           `json:"channel"`
+	Direction            string           `json:"direction"`
+	WindowType           string           `json:"window_type"`
+	WindowStart          pgtype.Date      `json:"window_start"`
+	Delta                decimal.Decimal  `json:"delta"`
+	PolicyID             *int64           `json:"policy_id"`
+	PolicyTypeCode       string           `json:"policy_type_code"`
+	Operator             *string          `json:"operator"`
+	LimitValue           *decimal.Decimal `json:"limit_value"`
+	ValueAfter           decimal.Decimal  `json:"value_after"`
+	CreatedAt            time.Time        `json:"created_at"`
 }
 
 type UsageLifetime struct {

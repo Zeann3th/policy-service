@@ -16,7 +16,12 @@ type TypeService interface {
 }
 
 type typeService struct {
-	*service
+	store Store
+	cache *cachecore.Versioned
+}
+
+func NewTypeService(store Store, cache *cachecore.Versioned) TypeService {
+	return &typeService{store: store, cache: cache}
 }
 
 func policyTypeResponse(value PolicyType) PolicyTypeResponse {
@@ -42,28 +47,28 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicyTypes)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes)
 	}
 	return policyTypeResponse(value), err
 }
 
 func (s *typeService) Get(ctx context.Context, id int64) (PolicyTypeResponse, error) {
-	key := s.key(ctx, cachecore.NamespacePolicyTypes, "item", id)
-	if cached, ok := cacheRead[PolicyTypeResponse](s.service, ctx, key); ok {
+	key := s.cache.Key(ctx, cachecore.NamespacePolicyTypes, "item", id)
+	if cached, ok := cachecore.Read[PolicyTypeResponse](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	value, err := s.store.GetType(ctx, id)
 	response := policyTypeResponse(value)
 	if err == nil {
-		cacheWrite(s.service, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
 
 func (s *typeService) List(ctx context.Context, request core.PageRequest) (core.Page[PolicyTypeResponse], error) {
 	page, limit, offset := request.Values()
-	key := s.key(ctx, cachecore.NamespacePolicyTypes, "list", page, limit)
-	if cached, ok := cacheRead[core.Page[PolicyTypeResponse]](s.service, ctx, key); ok {
+	key := s.cache.Key(ctx, cachecore.NamespacePolicyTypes, "list", page, limit)
+	if cached, ok := cachecore.Read[core.Page[PolicyTypeResponse]](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	values, total, err := s.store.ListTypes(ctx, limit, offset)
@@ -72,7 +77,7 @@ func (s *typeService) List(ctx context.Context, request core.PageRequest) (core.
 		response.Items[i] = policyTypeResponse(value)
 	}
 	if err == nil {
-		cacheWrite(s.service, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
@@ -83,7 +88,7 @@ func (s *typeService) Update(ctx context.Context, id int64, request UpdatePolicy
 	}
 	value, err := s.store.UpdateType(ctx, id, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicyTypes, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes, cachecore.NamespacePolicyConfig)
 	}
 	return policyTypeResponse(value), err
 }
@@ -91,7 +96,7 @@ func (s *typeService) Update(ctx context.Context, id int64, request UpdatePolicy
 func (s *typeService) Delete(ctx context.Context, id int64, request core.ActorRequest) error {
 	err := s.store.DeleteType(ctx, id, request.UpdatedBy)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicyTypes, cachecore.NamespacePolicies, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes, cachecore.NamespacePolicies, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
 	}
 	return err
 }

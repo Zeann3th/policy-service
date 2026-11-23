@@ -6,9 +6,13 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 type Querier interface {
+	AddUsage(ctx context.Context, arg AddUsageParams) (decimal.Decimal, error)
 	CountCustomPolicies(ctx context.Context, walletID string) (int64, error)
 	CountPolicies(ctx context.Context, policyGroupID int64) (int64, error)
 	CountPolicyTypes(ctx context.Context) (int64, error)
@@ -18,7 +22,9 @@ type Querier interface {
 	CreatePolicyAuditLog(ctx context.Context, arg CreatePolicyAuditLogParams) (PolicyAuditLog, error)
 	CreatePolicyGroup(ctx context.Context, arg CreatePolicyGroupParams) (PolicyGroup, error)
 	CreatePolicyType(ctx context.Context, arg CreatePolicyTypeParams) (PolicyType, error)
+	CreateReservation(ctx context.Context, arg CreateReservationParams) (time.Time, error)
 	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
+	CreateUsageLedger(ctx context.Context, arg CreateUsageLedgerParams) error
 	DeleteCustomPolicy(ctx context.Context, arg DeleteCustomPolicyParams) (CustomPolicy, error)
 	DeletePolicy(ctx context.Context, arg DeletePolicyParams) (Policy, error)
 	DeletePolicyGroup(ctx context.Context, id int64) (PolicyGroup, error)
@@ -37,13 +43,16 @@ type Querier interface {
 	GetUnitByID(ctx context.Context, id int64) (Unit, error)
 	GetUnitByIDForUpdate(ctx context.Context, id int64) (Unit, error)
 	GetUnits(ctx context.Context) ([]Unit, error)
+	GetUsageValue(ctx context.Context, arg GetUsageValueParams) (decimal.Decimal, error)
 	ListCustomPolicies(ctx context.Context, arg ListCustomPoliciesParams) ([]CustomPolicy, error)
 	ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]Policy, error)
 	ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams) ([]PolicyType, error)
 	ListUnits(ctx context.Context, arg ListUnitsParams) ([]Unit, error)
+	LockWallet(ctx context.Context, walletID string) error
 	UpdateCustomPolicy(ctx context.Context, arg UpdateCustomPolicyParams) (CustomPolicy, error)
 	UpdatePolicy(ctx context.Context, arg UpdatePolicyParams) (Policy, error)
 	UpdatePolicyType(ctx context.Context, arg UpdatePolicyTypeParams) (PolicyType, error)
+	UpdateReservationStatus(ctx context.Context, arg UpdateReservationStatusParams) (int64, error)
 	UpdateUnit(ctx context.Context, arg UpdateUnitParams) (Unit, error)
 }
 

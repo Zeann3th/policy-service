@@ -18,6 +18,7 @@ SELECT
   cp.wallet_id,
   cp.policy_type_id,
   pt.code AS policy_type,
+  pt.kind,
   pt.unit_id,
   cp.transaction_type,
   cp.channel,
@@ -54,6 +55,7 @@ type GetActiveCustomPoliciesRow struct {
 	WalletID        string          `json:"wallet_id"`
 	PolicyTypeID    int64           `json:"policy_type_id"`
 	PolicyType      string          `json:"policy_type"`
+	Kind            string          `json:"kind"`
 	UnitID          int64           `json:"unit_id"`
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
@@ -83,6 +85,7 @@ func (q *Queries) GetActiveCustomPolicies(ctx context.Context, walletID string) 
 			&i.WalletID,
 			&i.PolicyTypeID,
 			&i.PolicyType,
+			&i.Kind,
 			&i.UnitID,
 			&i.TransactionType,
 			&i.Channel,
@@ -113,6 +116,7 @@ SELECT
   p.policy_group_id,
   p.policy_type_id,
   pt.code AS policy_type,
+  pt.kind,
   pt.unit_id,
   p.transaction_type,
   p.channel,
@@ -140,6 +144,7 @@ type GetPoliciesByGroupIDRow struct {
 	PolicyGroupID   int64           `json:"policy_group_id"`
 	PolicyTypeID    int64           `json:"policy_type_id"`
 	PolicyType      string          `json:"policy_type"`
+	Kind            string          `json:"kind"`
 	UnitID          int64           `json:"unit_id"`
 	TransactionType string          `json:"transaction_type"`
 	Channel         string          `json:"channel"`
@@ -165,6 +170,7 @@ func (q *Queries) GetPoliciesByGroupID(ctx context.Context, policyGroupID int64)
 			&i.PolicyGroupID,
 			&i.PolicyTypeID,
 			&i.PolicyType,
+			&i.Kind,
 			&i.UnitID,
 			&i.TransactionType,
 			&i.Channel,

@@ -4,16 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/zeann3th/policy-service/internal/core"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
-	cacheport "github.com/zeann3th/policy-service/internal/core/port/cache"
 	"github.com/zeann3th/policy-service/internal/core/unit"
 )
-
-const cacheTTL = 15 * time.Minute
 
 type Service interface {
 	GetConfig(context.Context, GetConfigRequest) (GetConfigResponse, error)
@@ -27,75 +23,17 @@ type Service interface {
 	ListCustomPolicies(context.Context, string, core.PageRequest) (core.Page[CustomPolicyResponse], error)
 	UpdateCustomPolicy(context.Context, string, int64, UpdateCustomPolicyRequest) (CustomPolicyResponse, error)
 	DeleteCustomPolicy(context.Context, string, int64, core.ActorRequest) error
+	Resolve(context.Context, ResolveRequest) ([]Policy, error)
 }
 
 type service struct {
-	logger      *slog.Logger
-	store       Store
-	unitStore   unit.Store
-	cache       cacheport.Cache
-	serviceName string
+	store Store
+	units unit.Store
+	cache *cachecore.Versioned
 }
 
-func NewServices(
-	logger *slog.Logger,
-	store Store,
-	unitStore unit.Store,
-	cache cacheport.Cache,
-	serviceName string,
-) (GroupService, TypeService, Service) {
-	service := &service{logger: logger, store: store, unitStore: unitStore, cache: cache, serviceName: serviceName}
-	return &groupService{service}, &typeService{service}, service
-}
-
-func (s *service) generation(ctx context.Context, namespace string) string {
-	generation, err := s.cache.Get(ctx, cachecore.GenerationKey(s.serviceName, namespace))
-	if err == nil {
-		return generation
-	}
-	if errors.Is(err, cacheport.ErrMiss) {
-		return "0"
-	}
-	s.logger.Warn("get policy cache generation", "namespace", namespace, "error", err)
-	return fmt.Sprintf("bypass-%d", time.Now().UnixNano())
-}
-
-func (s *service) key(ctx context.Context, namespace string, parts ...any) string {
-	args := []any{s.serviceName, namespace, s.generation(ctx, namespace)}
-	args = append(args, parts...)
-	return core.Join(args...)
-}
-
-func cacheRead[T any](s *service, ctx context.Context, key string) (T, bool) {
-	var zero T
-	encoded, err := s.cache.Get(ctx, key)
-	if err != nil {
-		return zero, false
-	}
-	value, err := core.Decode[T](encoded)
-	if err != nil {
-		s.logger.Warn("decode policy cache", "key", key, "error", err)
-		return zero, false
-	}
-	return *value, true
-}
-
-func cacheWrite[T any](s *service, ctx context.Context, key string, value T) {
-	encoded, err := core.Encode(&value)
-	if err == nil {
-		err = s.cache.SetWithTTL(ctx, key, encoded, cacheTTL)
-	}
-	if err != nil {
-		s.logger.Warn("cache policy response", "key", key, "error", err)
-	}
-}
-
-func (s *service) invalidate(ctx context.Context, namespaces ...string) {
-	for _, namespace := range namespaces {
-		if _, err := s.cache.Increment(ctx, cachecore.GenerationKey(s.serviceName, namespace)); err != nil {
-			s.logger.Warn("invalidate policy cache", "namespace", namespace, "error", err)
-		}
-	}
+func NewService(store Store, units unit.Store, cache *cachecore.Versioned) Service {
+	return &service{store: store, units: units, cache: cache}
 }
 
 func policyResponse(value Policy) PolicyResponse {
@@ -180,12 +118,43 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 	return response, nil
 }
 
+// Resolve returns the effective policies (system merged with the wallet's
+// custom overrides) that cover one side of a transaction, with unit codes.
+// A wallet without a policy group gets only its custom policies.
+func (s *service) Resolve(ctx context.Context, request ResolveRequest) ([]Policy, error) {
+	systemPolicies, err := s.getSystemPolicies(ctx, GetConfigRequest{WalletType: request.WalletType, Currency: request.Currency, Tier: request.Tier})
+	if err != nil && !errors.Is(err, core.ErrNotFound) {
+		return nil, err
+	}
+	customPolicies, err := s.store.GetActiveCustomPolicies(ctx, request.WalletID)
+	if err != nil {
+		return nil, fmt.Errorf("get active custom policies: %w", err)
+	}
+	units, err := s.getActiveUnits(ctx)
+	if err != nil {
+		return nil, err
+	}
+	matched := make([]Policy, 0)
+	for _, value := range mergePolicies(systemPolicies, customPolicies) {
+		if !value.Matches(request.TransactionType, request.Channel, request.Direction) {
+			continue
+		}
+		unitCode, ok := units[value.UnitID]
+		if !ok {
+			return nil, fmt.Errorf("unit %d not found", value.UnitID)
+		}
+		value.Unit = unitCode
+		matched = append(matched, value)
+	}
+	return matched, nil
+}
+
 func (s *service) getActiveUnits(ctx context.Context) (map[int64]string, error) {
-	key := s.key(ctx, cachecore.NamespaceUnits, "active")
-	if cached, ok := cacheRead[map[int64]string](s, ctx, key); ok {
+	key := s.cache.Key(ctx, cachecore.NamespaceUnits, "active")
+	if cached, ok := cachecore.Read[map[int64]string](ctx, s.cache, key); ok {
 		return cached, nil
 	}
-	items, err := s.unitStore.GetActive(ctx)
+	items, err := s.units.GetActive(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get active units: %w", err)
 	}
@@ -193,18 +162,13 @@ func (s *service) getActiveUnits(ctx context.Context) (map[int64]string, error) 
 	for _, item := range items {
 		units[item.ID] = item.Code
 	}
-	cacheWrite(s, ctx, key, units)
+	cachecore.Write(ctx, s.cache, key, units)
 	return units, nil
 }
 
 func (s *service) getSystemPolicies(ctx context.Context, request GetConfigRequest) ([]Policy, error) {
-	key := s.key(ctx, cachecore.NamespacePolicyConfig, request.WalletType, request.Currency, request.Tier)
-	if cached, ok := cacheRead[[]Policy](s, ctx, key); ok {
-		for i := range cached {
-			if cached[i].WindowType == "" {
-				cached[i].WindowType = WindowNone
-			}
-		}
+	key := s.cache.Key(ctx, cachecore.NamespacePolicyConfig, request.WalletType, request.Currency, request.Tier)
+	if cached, ok := cachecore.Read[[]Policy](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	groupID, err := s.store.GetGroupID(ctx, request.WalletType, request.Currency, request.Tier)
@@ -215,7 +179,7 @@ func (s *service) getSystemPolicies(ctx context.Context, request GetConfigReques
 	if err != nil {
 		return nil, fmt.Errorf("get policies: %w", err)
 	}
-	cacheWrite(s, ctx, key, policies)
+	cachecore.Write(ctx, s.cache, key, policies)
 	return policies, nil
 }
 
@@ -241,8 +205,10 @@ func mergePolicies(systemPolicies []Policy, customPolicies []CustomPolicy) []Pol
 	}
 	for _, customPolicy := range customPolicies {
 		value := Policy{
+			ID:              customPolicy.ID,
 			PolicyTypeID:    customPolicy.PolicyTypeID,
 			PolicyType:      customPolicy.PolicyType,
+			Kind:            customPolicy.Kind,
 			UnitID:          customPolicy.UnitID,
 			TransactionType: customPolicy.TransactionType,
 			Channel:         customPolicy.Channel,
@@ -290,36 +256,28 @@ func (s *service) CreatePolicy(ctx context.Context, groupID int64, request Creat
 	}
 	value, err := s.store.CreatePolicy(ctx, groupID, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
 	}
 	return policyResponse(value), err
 }
 
 func (s *service) GetPolicy(ctx context.Context, groupID, id int64) (PolicyResponse, error) {
-	key := s.key(ctx, cachecore.NamespacePolicies, "item", groupID, id)
-	if cached, ok := cacheRead[PolicyResponse](s, ctx, key); ok {
-		if cached.WindowType == "" {
-			cached.WindowType = WindowNone
-		}
+	key := s.cache.Key(ctx, cachecore.NamespacePolicies, "item", groupID, id)
+	if cached, ok := cachecore.Read[PolicyResponse](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	value, err := s.store.GetPolicy(ctx, groupID, id)
 	response := policyResponse(value)
 	if err == nil {
-		cacheWrite(s, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
 
 func (s *service) ListPolicies(ctx context.Context, groupID int64, request core.PageRequest) (core.Page[PolicyResponse], error) {
 	page, limit, offset := request.Values()
-	key := s.key(ctx, cachecore.NamespacePolicies, "list", groupID, page, limit)
-	if cached, ok := cacheRead[core.Page[PolicyResponse]](s, ctx, key); ok {
-		for i := range cached.Items {
-			if cached.Items[i].WindowType == "" {
-				cached.Items[i].WindowType = WindowNone
-			}
-		}
+	key := s.cache.Key(ctx, cachecore.NamespacePolicies, "list", groupID, page, limit)
+	if cached, ok := cachecore.Read[core.Page[PolicyResponse]](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	values, total, err := s.store.ListPolicies(ctx, groupID, limit, offset)
@@ -328,7 +286,7 @@ func (s *service) ListPolicies(ctx context.Context, groupID int64, request core.
 		response.Items[i] = policyResponse(value)
 	}
 	if err == nil {
-		cacheWrite(s, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
@@ -339,7 +297,7 @@ func (s *service) UpdatePolicy(ctx context.Context, groupID, id int64, request U
 	}
 	value, err := s.store.UpdatePolicy(ctx, groupID, id, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
 	}
 	return policyResponse(value), err
 }
@@ -347,7 +305,7 @@ func (s *service) UpdatePolicy(ctx context.Context, groupID, id int64, request U
 func (s *service) DeletePolicy(ctx context.Context, groupID, id int64, request core.ActorRequest) error {
 	err := s.store.DeletePolicy(ctx, groupID, id, request.UpdatedBy)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
 	}
 	return err
 }
@@ -373,36 +331,28 @@ func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, reque
 	}
 	value, err := s.store.CreateCustomPolicy(ctx, walletID, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
 	}
 	return customPolicyResponse(value), err
 }
 
 func (s *service) GetCustomPolicy(ctx context.Context, walletID string, id int64) (CustomPolicyResponse, error) {
-	key := s.key(ctx, cachecore.NamespaceCustomPolicies, "item", walletID, id)
-	if cached, ok := cacheRead[CustomPolicyResponse](s, ctx, key); ok {
-		if cached.WindowType == "" {
-			cached.WindowType = WindowNone
-		}
+	key := s.cache.Key(ctx, cachecore.NamespaceCustomPolicies, "item", walletID, id)
+	if cached, ok := cachecore.Read[CustomPolicyResponse](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	value, err := s.store.GetCustomPolicy(ctx, walletID, id)
 	response := customPolicyResponse(value)
 	if err == nil {
-		cacheWrite(s, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
 
 func (s *service) ListCustomPolicies(ctx context.Context, walletID string, request core.PageRequest) (core.Page[CustomPolicyResponse], error) {
 	page, limit, offset := request.Values()
-	key := s.key(ctx, cachecore.NamespaceCustomPolicies, "list", walletID, page, limit)
-	if cached, ok := cacheRead[core.Page[CustomPolicyResponse]](s, ctx, key); ok {
-		for i := range cached.Items {
-			if cached.Items[i].WindowType == "" {
-				cached.Items[i].WindowType = WindowNone
-			}
-		}
+	key := s.cache.Key(ctx, cachecore.NamespaceCustomPolicies, "list", walletID, page, limit)
+	if cached, ok := cachecore.Read[core.Page[CustomPolicyResponse]](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	values, total, err := s.store.ListCustomPolicies(ctx, walletID, limit, offset)
@@ -411,7 +361,7 @@ func (s *service) ListCustomPolicies(ctx context.Context, walletID string, reque
 		response.Items[i] = customPolicyResponse(value)
 	}
 	if err == nil {
-		cacheWrite(s, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
@@ -428,7 +378,7 @@ func (s *service) UpdateCustomPolicy(ctx context.Context, walletID string, id in
 	}
 	value, err := s.store.UpdateCustomPolicy(ctx, walletID, id, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
 	}
 	return customPolicyResponse(value), err
 }
@@ -436,7 +386,7 @@ func (s *service) UpdateCustomPolicy(ctx context.Context, walletID string, id in
 func (s *service) DeleteCustomPolicy(ctx context.Context, walletID string, id int64, request core.ActorRequest) error {
 	err := s.store.DeleteCustomPolicy(ctx, walletID, id, request.UpdatedBy)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
 	}
 	return err
 }

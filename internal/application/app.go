@@ -14,6 +14,7 @@ import (
 	httpserver "github.com/zeann3th/policy-service/internal/application/http"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/core/unit"
 	rediscache "github.com/zeann3th/policy-service/internal/infrastructure/cache"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
@@ -44,18 +45,21 @@ func Run() error {
 	defer redisClient.Close()
 
 	applicationCache := rediscache.New(redisClient)
-	unitStore := postgres.NewUnitStore(db)
-	policyStore := postgres.NewPolicyStore(db)
-	unitService := unit.NewService(logger, unitStore, applicationCache, cfg.ServiceName)
-	groupService, typeService, policyService := policy.NewServices(logger, policyStore, unitStore, applicationCache, cfg.ServiceName)
+	responseCache := cachecore.NewVersioned(logger, applicationCache, cfg.ServiceName)
+	store := postgres.NewStore(db)
+	unitService := unit.NewService(store, responseCache)
+	groupService := policy.NewGroupService(store, responseCache)
+	typeService := policy.NewTypeService(store, responseCache)
+	policyService := policy.NewService(store, store, responseCache)
+	reservationService := reservation.NewService(postgres.NewReservationStore(db), policyService)
 	cacheService := cachecore.NewService(logger, applicationCache, cfg.ServiceName)
 
-	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService)
+	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create HTTP server: %w", err)
 	}
 
-	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService)
+	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}

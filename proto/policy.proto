@@ -45,6 +45,10 @@ service CacheService {
   rpc ReloadCache(ReloadCacheRequest) returns (ReloadCacheResponse);
 }
 
+service ReservationService {
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+}
+
 message PageRequest { int32 page = 1; int32 limit = 2; }
 message IdRequest { uint64 id = 1; }
 message DeleteByIdRequest { uint64 id = 1; string updated_by = 2; }
@@ -85,3 +89,9 @@ message UpdateCustomPolicyRequest { string wallet_id = 1; uint64 id = 2; string 
 
 message ReloadCacheRequest { string key = 1; repeated string namespaces = 2; string updated_by = 3; }
 message ReloadCacheResponse { bool evicted = 1; repeated string reloaded_namespaces = 2; }
+
+message ReservationParty { string wallet_id = 1; string wallet_type = 2; string tier = 3; }
+message ReserveRequest { string request_id = 1; string transaction_type = 2; string channel = 3; string currency = 4; string amount = 5; ReservationParty sender = 6; ReservationParty receiver = 7; }
+message AppliedPolicy { uint64 policy_id = 1; string policy_type = 2; string kind = 3; string unit = 4; string source = 5; string transaction_type = 6; string channel = 7; string direction = 8; string window_type = 9; string window_start = 10; string operator = 11; string value = 12; optional string usage = 13; bool violated = 14; }
+message PartyResult { string wallet_id = 1; bool is_violated = 2; string fee = 3; string discount = 4; string tax = 5; repeated AppliedPolicy applied_policies = 6; }
+message ReserveResponse { string reservation_id = 1; string request_id = 2; string status = 3; PartyResult sender = 4; PartyResult receiver = 5; google.protobuf.Timestamp response_time = 6; }

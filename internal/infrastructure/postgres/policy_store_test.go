@@ -100,8 +100,12 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 		"REFERENCES policy_groups (id) ON DELETE CASCADE",
 		"REFERENCES policy_types (id) ON DELETE CASCADE",
 		"REFERENCES policy_types (id) ON DELETE RESTRICT",
-		"REFERENCES reservations (id) ON DELETE RESTRICT",
-		"id uuid PRIMARY KEY",
+		"REFERENCES reservations (id, created_at) ON DELETE RESTRICT",
+		"id uuid NOT NULL",
+		"p_parent_table := 'public.reservations'",
+		"p_parent_table := 'public.usage_ledger'",
+		"ALTER TABLE reservations_template ADD UNIQUE (request_id)",
+		"entry_type text NOT NULL",
 	} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("schema.sql missing %q", want)
@@ -161,7 +165,7 @@ func (q *fakePolicyQueries) GetPoliciesByGroupID(context.Context, int64) ([]code
 }
 
 func TestGetPolicyGroupIDReturnsNotFound(t *testing.T) {
-	store := &policyStoreImpl{resolverQueries: &fakePolicyQueries{groupErr: pgx.ErrNoRows}}
+	store := &Store{resolverQueries: &fakePolicyQueries{groupErr: pgx.ErrNoRows}}
 
 	_, err := store.GetGroupID(context.Background(), "PERSONAL", "USD", "TIER_1")
 	if !errors.Is(err, core.ErrNotFound) || !errors.Is(err, pgx.ErrNoRows) {
@@ -185,7 +189,7 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 		EffectiveFrom:   time.Now(),
 		EffectiveTo:     &effectiveTo,
 	}}
-	store := &policyStoreImpl{resolverQueries: &fakePolicyQueries{userRows: rows}}
+	store := &Store{resolverQueries: &fakePolicyQueries{userRows: rows}}
 
 	values, err := store.GetActiveCustomPolicies(context.Background(), "wallet-123")
 	if err != nil {
@@ -246,7 +250,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 
 func TestGetActiveUnitsMapsGeneratedRows(t *testing.T) {
 	rows := []codegen.Unit{{ID: 3, Code: "AMOUNT", Active: true}}
-	store := &policyStoreImpl{resolverQueries: &fakePolicyQueries{unitRows: rows}}
+	store := &Store{resolverQueries: &fakePolicyQueries{unitRows: rows}}
 
 	units, err := store.GetActive(context.Background())
 	if err != nil {
@@ -285,7 +289,7 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	store := &policyStoreImpl{db: pool}
+	store := &Store{db: pool}
 	code := fmt.Sprintf("ROLLBACK_%d", time.Now().UnixNano())
 
 	err = store.transact(ctx, func(q *codegen.Queries) error {

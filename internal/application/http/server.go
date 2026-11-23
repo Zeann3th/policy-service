@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	docs "github.com/zeann3th/policy-service/docs"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/core/unit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -32,12 +34,13 @@ func New(
 	typeService policy.TypeService,
 	policyService policy.Service,
 	cacheService cachecore.Service,
+	reservationService reservation.Service,
 ) (*Server, error) {
-	gin.SetMode(cfg.HttpConfig.GinMode)
+	gin.SetMode(cfg.HTTP.GinMode)
 
-	router := gin.Default()
+	router := gin.New()
 
-	router.Use(otelgin.Middleware(cfg.ServiceName))
+	router.Use(otelgin.Middleware(cfg.ServiceName), requestLogger(logger), gin.CustomRecoveryWithWriter(io.Discard, recoverPanic))
 
 	prefixGroup := router.Group(fmt.Sprintf("/%s/api", cfg.ServiceName))
 	docs.SwaggerInfo.BasePath = fmt.Sprintf("/%s/api", cfg.ServiceName)
@@ -48,9 +51,10 @@ func New(
 	RegisterPolicyTypeRoutes(prefixGroup, typeService)
 	RegisterPolicyRoutes(prefixGroup, policyService)
 	RegisterCacheRoutes(prefixGroup, cacheService)
+	RegisterReservationRoutes(prefixGroup, reservationService)
 	prefixGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
-	addr := fmt.Sprintf(":%s", cfg.HttpConfig.Port)
+	addr := fmt.Sprintf(":%s", cfg.HTTP.Port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err

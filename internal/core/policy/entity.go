@@ -130,7 +130,9 @@ type Policy struct {
 	PolicyGroupID   int64
 	PolicyTypeID    int64
 	PolicyType      string
+	Kind            Kind
 	UnitID          int64
+	Unit            string
 	TransactionType string
 	Channel         string
 	Direction       Direction
@@ -146,11 +148,19 @@ func (v Policy) Key() PolicyKey {
 	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType}
 }
 
+// Matches reports whether the policy's selectors cover a transaction.
+func (v Policy) Matches(transactionType, channel string, direction Direction) bool {
+	return (v.TransactionType == All || v.TransactionType == transactionType) &&
+		(v.Channel == All || v.Channel == channel) &&
+		(v.Direction == DirectionAll || v.Direction == direction)
+}
+
 type CustomPolicy struct {
 	ID              int64
 	WalletID        string
 	PolicyTypeID    int64
 	PolicyType      string
+	Kind            Kind
 	UnitID          int64
 	TransactionType string
 	Channel         string

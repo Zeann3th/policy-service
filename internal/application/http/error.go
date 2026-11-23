@@ -9,6 +9,7 @@ import (
 )
 
 func handleError(c *gin.Context, err error) {
+	_ = c.Error(err) // logged once by requestLogger
 	switch {
 	case errors.Is(err, core.ErrBadRequest):
 		var appErr *core.AppError

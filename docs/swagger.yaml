@@ -581,6 +581,169 @@ definitions:
     - WindowDaily
     - WindowMonthly
     - WindowLifetime
+  reservation.AppliedPolicy:
+    properties:
+      channel:
+        type: string
+      direction:
+        allOf:
+        - $ref: '#/definitions/policy.Direction'
+        enum:
+        - ALL
+        - OUT
+        - IN
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - FEE
+        - TAX
+        - DISCOUNT
+      operator:
+        allOf:
+        - $ref: '#/definitions/policy.Operator'
+        enum:
+        - EQ
+        - NEQ
+        - GT
+        - GTE
+        - LT
+        - LTE
+      policyId:
+        type: integer
+      policyType:
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/policy.Source'
+        enum:
+        - SYSTEM
+        - USER
+      transactionType:
+        type: string
+      unit:
+        type: string
+      usage:
+        description: Usage is the window total including this request (not stored
+          when rejected).
+        type: string
+      value:
+        type: string
+      violated:
+        type: boolean
+      windowStart:
+        example: "2026-11-23"
+        type: string
+      windowType:
+        allOf:
+        - $ref: '#/definitions/policy.WindowType'
+        enum:
+        - NONE
+        - DAILY
+        - MONTHLY
+        - LIFETIME
+    type: object
+  reservation.PartyRequest:
+    properties:
+      tier:
+        example: TIER_1
+        type: string
+      walletId:
+        example: wallet-123
+        type: string
+      walletType:
+        example: PERSONAL
+        type: string
+    required:
+    - tier
+    - walletId
+    - walletType
+    type: object
+  reservation.PartyResult:
+    properties:
+      appliedPolicies:
+        items:
+          $ref: '#/definitions/reservation.AppliedPolicy'
+        type: array
+      discount:
+        example: "0"
+        type: string
+      fee:
+        example: "1100"
+        type: string
+      isViolated:
+        type: boolean
+      tax:
+        example: "0"
+        type: string
+      walletId:
+        type: string
+    type: object
+  reservation.ReserveRequest:
+    properties:
+      amount:
+        example: "100000"
+        type: string
+      channel:
+        example: APP
+        type: string
+      currency:
+        example: VND
+        type: string
+      receiver:
+        $ref: '#/definitions/reservation.PartyRequest'
+      requestId:
+        example: 0193a7e2-5c1f-7b3a-9d2e-1f4c5b6a7d8e
+        type: string
+      sender:
+        $ref: '#/definitions/reservation.PartyRequest'
+      transactionType:
+        example: TRANSFER
+        type: string
+    required:
+    - amount
+    - currency
+    - receiver
+    - requestId
+    - sender
+    - transactionType
+    type: object
+  reservation.ReserveResponse:
+    properties:
+      receiver:
+        $ref: '#/definitions/reservation.PartyResult'
+      requestId:
+        type: string
+      reservationId:
+        type: string
+      responseTime:
+        format: date-time
+        type: string
+      sender:
+        $ref: '#/definitions/reservation.PartyResult'
+      status:
+        allOf:
+        - $ref: '#/definitions/reservation.Status'
+        enum:
+        - RESERVED
+        - REJECTED
+    type: object
+  reservation.Status:
+    enum:
+    - PROCESSING
+    - RESERVED
+    - RELEASED
+    - REJECTED
+    - FAILED
+    type: string
+    x-enum-varnames:
+    - StatusProcessing
+    - StatusReserved
+    - StatusReleased
+    - StatusRejected
+    - StatusFailed
   unit.CreateRequest:
     properties:
       active:
@@ -1437,6 +1600,47 @@ paths:
       summary: Update a policy type
       tags:
       - Policy Types
+  /v1/reservations:
+    post:
+      consumes:
+      - application/json
+      description: Evaluates the transaction against the sender's (OUT) and receiver's
+        (IN) effective policies. When no limit is violated the usage is added and
+        the status is RESERVED; otherwise nothing is added and the status is REJECTED.
+        requestId is unique per month.
+      parameters:
+      - description: Reservation
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/reservation.ReserveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/reservation.ReserveResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Reserve a transaction
+      tags:
+      - Reservations
   /v1/units:
     get:
       parameters:

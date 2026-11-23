@@ -1,0 +1,61 @@
+package reservation
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
+	"github.com/zeann3th/policy-service/internal/core/policy"
+)
+
+type PartyRequest struct {
+	WalletID   string `binding:"required" example:"wallet-123" json:"walletId"`
+	WalletType string `binding:"required" example:"PERSONAL" json:"walletType"`
+	Tier       string `binding:"required" example:"TIER_1" json:"tier"`
+}
+
+type ReserveRequest struct {
+	RequestID       string           `binding:"required" example:"0193a7e2-5c1f-7b3a-9d2e-1f4c5b6a7d8e" json:"requestId"`
+	TransactionType string           `binding:"required" example:"TRANSFER" json:"transactionType"`
+	Channel         string           `example:"APP" json:"channel"`
+	Currency        string           `binding:"required,iso4217" example:"VND" json:"currency"`
+	Amount          *decimal.Decimal `binding:"required" example:"100000" json:"amount" swaggertype:"string"`
+	Sender          PartyRequest     `binding:"required" json:"sender"`
+	Receiver        PartyRequest     `binding:"required" json:"receiver"`
+}
+
+type ReserveResponse struct {
+	ReservationID uuid.UUID   `json:"reservationId" swaggertype:"string"`
+	RequestID     string      `json:"requestId"`
+	Status        Status      `enums:"RESERVED,REJECTED" json:"status"`
+	Sender        PartyResult `json:"sender"`
+	Receiver      PartyResult `json:"receiver"`
+	ResponseTime  time.Time   `format:"date-time" json:"responseTime"`
+}
+
+type PartyResult struct {
+	WalletID        string          `json:"walletId"`
+	IsViolated      bool            `json:"isViolated"`
+	Fee             decimal.Decimal `example:"1100" json:"fee" swaggertype:"string"`
+	Discount        decimal.Decimal `example:"0" json:"discount" swaggertype:"string"`
+	Tax             decimal.Decimal `example:"0" json:"tax" swaggertype:"string"`
+	AppliedPolicies []AppliedPolicy `json:"appliedPolicies"`
+}
+
+type AppliedPolicy struct {
+	PolicyID        int64             `json:"policyId"`
+	PolicyType      string            `json:"policyType"`
+	Kind            policy.Kind       `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
+	Unit            string            `json:"unit"`
+	Source          policy.Source     `enums:"SYSTEM,USER" json:"source"`
+	TransactionType string            `json:"transactionType"`
+	Channel         string            `json:"channel"`
+	Direction       policy.Direction  `enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      policy.WindowType `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowStart     string            `example:"2026-11-23" json:"windowStart,omitempty"`
+	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Value           decimal.Decimal   `json:"value" swaggertype:"string"`
+	// Usage is the window total including this request (not stored when rejected).
+	Usage    *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
+	Violated bool             `json:"violated"`
+}

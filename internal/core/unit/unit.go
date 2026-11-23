@@ -7,6 +7,14 @@ import (
 	"github.com/zeann3th/policy-service/internal/core"
 )
 
+// Codes of the seeded units.
+const (
+	CodeBalance = "BALANCE"
+	CodeAmount  = "AMOUNT"
+	CodeCount   = "COUNT"
+	CodePercent = "PERCENT"
+)
+
 type Unit struct {
 	ID        int64
 	Code      string

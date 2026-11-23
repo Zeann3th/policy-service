@@ -152,7 +152,7 @@ SELECT
 -- selectors of the matched policy, never from a policy id, so usage
 -- outlives policy edits. Stateless policies (window NONE) have no row.
 -- window_start: the day (DAILY), the first day of the month (MONTHLY) or
--- 1970-01-01 (LIFETIME), in Asia/Ho_Chi_Minh.
+-- 1970-01-01 (LIFETIME), in UTC.
 -- value: COUNT adds 1, AMOUNT adds the transaction amount.
 -- List partitions reject any window_type other than the three below.
 -- ---------------------------------------------------------------------
@@ -203,43 +203,66 @@ SELECT
   );
 
 -- ---------------------------------------------------------------------
--- reservations: one row per request.
--- status: PENDING | RESERVED | COMMITTED | RELEASED | EXPIRED | REJECTED
--- commit_source: EVENT | AUTO
+-- reservations: one row per request, partitioned monthly on created_at.
+-- request_id is unique per partition (via the template table): Postgres
+-- cannot enforce a unique index without the partition key on the parent.
+-- status: PROCESSING | RESERVED | RELEASED | REJECTED | FAILED
 -- ---------------------------------------------------------------------
 CREATE TABLE reservations (
-  id uuid PRIMARY KEY, -- UUIDv7 from the application
-  request_id text NOT NULL UNIQUE, -- the caller's requestId (uuid string or any string)
+  id uuid NOT NULL, -- UUIDv7 from the application
+  request_id text NOT NULL, -- the caller's requestId (uuid string or any string)
   status text NOT NULL,
-  commit_source text,
   transaction_type text NOT NULL,
-  channel text NOT NULL,
+  channel text NOT NULL DEFAULT 'ALL',
   currency varchar(3) NOT NULL,
   amount numeric(24, 4) NOT NULL,
   sender_wallet_id text NOT NULL,
+  sender_wallet_type text NOT NULL,
+  sender_tier text NOT NULL,
   receiver_wallet_id text NOT NULL,
-  result jsonb, -- null while PENDING
-  expires_at timestamptz, -- set when it becomes RESERVED
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz
-);
+  receiver_wallet_type text NOT NULL,
+  receiver_tier text NOT NULL,
+  result jsonb, -- the response; null while PROCESSING
+  created_at timestamptz NOT NULL DEFAULT now(), -- partition key, must be NOT NULL
+  updated_at timestamptz,
+  PRIMARY KEY (id, created_at)
+)
+PARTITION BY
+  RANGE (created_at);
 
-CREATE INDEX reservations_expiry_idx ON reservations (expires_at)
+CREATE INDEX reservations_processing_idx ON reservations (created_at)
 WHERE
-  status = 'RESERVED';
+  status = 'PROCESSING';
 
-CREATE INDEX reservations_pending_idx ON reservations (created_at)
-WHERE
-  status = 'PENDING';
+CREATE TABLE reservations_template
+  (LIKE reservations INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+
+ALTER TABLE reservations_template ADD UNIQUE (request_id);
+
+SELECT
+  partman.create_parent (
+    p_parent_table := 'public.reservations',
+    p_control := 'created_at',
+    p_interval := '1 month',
+    p_premake := 4,
+    p_template_table := 'public.reservations_template'
+  );
 
 -- ---------------------------------------------------------------------
--- usage_ledger: immutable, one row per reservation x wallet x scope that
--- was added to. It copies the full key of the usages row it touched, so
--- it is self-contained, plus a snapshot of the policy that applied.
--- Snapshot columns have no foreign keys on purpose.
+-- usage_ledger: immutable journal of every change to usages, one row per
+-- reservation x entry_type x wallet x scope. RESERVE adds delta, RELEASE
+-- records the reversal with a negative delta, so for every usages row
+-- value = sum(delta) of its ledger rows. Each row copies the full key of
+-- the usages row it touched plus a snapshot of the policy that applied;
+-- snapshot columns have no foreign keys on purpose.
+-- Partitioned monthly on reservation_created_at, so every entry of a
+-- reservation lives in the same month as the reservation itself.
+-- entry_type: RESERVE | RELEASE
 -- ---------------------------------------------------------------------
 CREATE TABLE usage_ledger (
-  reservation_id uuid NOT NULL REFERENCES reservations (id) ON DELETE RESTRICT,
+  reservation_id uuid NOT NULL,
+  reservation_created_at timestamptz NOT NULL,
+  entry_type text NOT NULL,
   wallet_id text NOT NULL,
   policy_type_id bigint NOT NULL REFERENCES policy_types (id) ON DELETE RESTRICT,
   transaction_type text NOT NULL,
@@ -247,7 +270,7 @@ CREATE TABLE usage_ledger (
   direction text NOT NULL,
   window_type text NOT NULL,
   window_start date NOT NULL,
-  delta numeric(24, 4) NOT NULL, -- 1 for COUNT, the amount for AMOUNT
+  delta numeric(24, 4) NOT NULL, -- RESERVE: 1 for COUNT, the amount for AMOUNT; RELEASE: the negation
   -- audit snapshot
   policy_id bigint, -- id in policies or custom_policies (shared policy_id_seq)
   policy_type_code text NOT NULL,
@@ -257,14 +280,28 @@ CREATE TABLE usage_ledger (
   created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (
     reservation_id,
+    reservation_created_at,
+    entry_type,
     wallet_id,
     policy_type_id,
     transaction_type,
     channel,
     direction,
     window_type
-  )
-);
+  ),
+  FOREIGN KEY (reservation_id, reservation_created_at)
+    REFERENCES reservations (id, created_at) ON DELETE RESTRICT
+)
+PARTITION BY
+  RANGE (reservation_created_at);
+
+SELECT
+  partman.create_parent (
+    p_parent_table := 'public.usage_ledger',
+    p_control := 'reservation_created_at',
+    p_interval := '1 month',
+    p_premake := 4
+  );
 
 CREATE TABLE processed_events (
   event_id text PRIMARY KEY,

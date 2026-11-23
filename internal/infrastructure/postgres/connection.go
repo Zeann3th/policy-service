@@ -13,7 +13,7 @@ import (
 )
 
 func New(cfg *config.Config, log *slog.Logger) (*pgxpool.Pool, error) {
-	poolCfg, err := pgxpool.ParseConfig(cfg.DatabaseConfig.URL)
+	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database config: %w", err)
 	}

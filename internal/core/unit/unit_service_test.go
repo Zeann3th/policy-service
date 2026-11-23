@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/zeann3th/policy-service/internal/core"
+	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 )
 
 type storeStub struct {
@@ -39,7 +40,7 @@ func (*cacheStub) Increment(context.Context, string) (int64, error) {
 
 func TestListDefaultsToFirstTwenty(t *testing.T) {
 	store := &storeStub{}
-	service := NewService(slog.New(slog.NewTextHandler(io.Discard, nil)), store, &cacheStub{}, "policy-service")
+	service := NewService(store, cachecore.NewVersioned(slog.New(slog.NewTextHandler(io.Discard, nil)), &cacheStub{}, "policy-service"))
 	response, err := service.List(context.Background(), core.PageRequest{})
 	if err != nil {
 		t.Fatal(err)

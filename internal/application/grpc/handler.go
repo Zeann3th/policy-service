@@ -18,16 +18,18 @@ import (
 )
 
 func grpcError(err error) error {
+	var value *status.Status
 	switch {
 	case errors.Is(err, core.ErrBadRequest):
-		return status.Error(codes.InvalidArgument, err.Error())
+		value = status.New(codes.InvalidArgument, err.Error())
 	case errors.Is(err, core.ErrNotFound):
-		return status.Error(codes.NotFound, core.ErrNotFound.Message)
+		value = status.New(codes.NotFound, core.ErrNotFound.Message)
 	case errors.Is(err, core.ErrConflict):
-		return status.Error(codes.AlreadyExists, core.ErrConflict.Message)
+		value = status.New(codes.AlreadyExists, core.ErrConflict.Message)
 	default:
-		return status.Error(codes.Internal, core.ErrInternal.Message)
+		value = status.New(codes.Internal, core.ErrInternal.Message)
 	}
+	return &statusError{status: value, cause: err}
 }
 
 func require(fields map[string]string) error {

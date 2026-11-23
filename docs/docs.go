@@ -1213,6 +1213,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/reservations": {
+            "post": {
+                "description": "Evaluates the transaction against the sender's (OUT) and receiver's (IN) effective policies. When no limit is violated the usage is added and the status is RESERVED; otherwise nothing is added and the status is REJECTED. requestId is unique per month.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Reserve a transaction",
+                "parameters": [
+                    {
+                        "description": "Reservation",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/reservation.ReserveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/reservation.ReserveResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/units": {
             "get": {
                 "produces": [
@@ -2333,6 +2391,244 @@ const docTemplate = `{
                 "WindowDaily",
                 "WindowMonthly",
                 "WindowLifetime"
+            ]
+        },
+        "reservation.AppliedPolicy": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "string"
+                },
+                "direction": {
+                    "enum": [
+                        "ALL",
+                        "OUT",
+                        "IN"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Direction"
+                        }
+                    ]
+                },
+                "kind": {
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "FEE",
+                        "TAX",
+                        "DISCOUNT"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
+                "operator": {
+                    "enum": [
+                        "EQ",
+                        "NEQ",
+                        "GT",
+                        "GTE",
+                        "LT",
+                        "LTE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Operator"
+                        }
+                    ]
+                },
+                "policyId": {
+                    "type": "integer"
+                },
+                "policyType": {
+                    "type": "string"
+                },
+                "source": {
+                    "enum": [
+                        "SYSTEM",
+                        "USER"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Source"
+                        }
+                    ]
+                },
+                "transactionType": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "usage": {
+                    "description": "Usage is the window total including this request (not stored when rejected).",
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                },
+                "violated": {
+                    "type": "boolean"
+                },
+                "windowStart": {
+                    "type": "string",
+                    "example": "2026-11-23"
+                },
+                "windowType": {
+                    "enum": [
+                        "NONE",
+                        "DAILY",
+                        "MONTHLY",
+                        "LIFETIME"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.WindowType"
+                        }
+                    ]
+                }
+            }
+        },
+        "reservation.PartyRequest": {
+            "type": "object",
+            "required": [
+                "tier",
+                "walletId",
+                "walletType"
+            ],
+            "properties": {
+                "tier": {
+                    "type": "string",
+                    "example": "TIER_1"
+                },
+                "walletId": {
+                    "type": "string",
+                    "example": "wallet-123"
+                },
+                "walletType": {
+                    "type": "string",
+                    "example": "PERSONAL"
+                }
+            }
+        },
+        "reservation.PartyResult": {
+            "type": "object",
+            "properties": {
+                "appliedPolicies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/reservation.AppliedPolicy"
+                    }
+                },
+                "discount": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "fee": {
+                    "type": "string",
+                    "example": "1100"
+                },
+                "isViolated": {
+                    "type": "boolean"
+                },
+                "tax": {
+                    "type": "string",
+                    "example": "0"
+                },
+                "walletId": {
+                    "type": "string"
+                }
+            }
+        },
+        "reservation.ReserveRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "currency",
+                "receiver",
+                "requestId",
+                "sender",
+                "transactionType"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "100000"
+                },
+                "channel": {
+                    "type": "string",
+                    "example": "APP"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "VND"
+                },
+                "receiver": {
+                    "$ref": "#/definitions/reservation.PartyRequest"
+                },
+                "requestId": {
+                    "type": "string",
+                    "example": "0193a7e2-5c1f-7b3a-9d2e-1f4c5b6a7d8e"
+                },
+                "sender": {
+                    "$ref": "#/definitions/reservation.PartyRequest"
+                },
+                "transactionType": {
+                    "type": "string",
+                    "example": "TRANSFER"
+                }
+            }
+        },
+        "reservation.ReserveResponse": {
+            "type": "object",
+            "properties": {
+                "receiver": {
+                    "$ref": "#/definitions/reservation.PartyResult"
+                },
+                "requestId": {
+                    "type": "string"
+                },
+                "reservationId": {
+                    "type": "string"
+                },
+                "responseTime": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "sender": {
+                    "$ref": "#/definitions/reservation.PartyResult"
+                },
+                "status": {
+                    "enum": [
+                        "RESERVED",
+                        "REJECTED"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/reservation.Status"
+                        }
+                    ]
+                }
+            }
+        },
+        "reservation.Status": {
+            "type": "string",
+            "enum": [
+                "PROCESSING",
+                "RESERVED",
+                "RELEASED",
+                "REJECTED",
+                "FAILED"
+            ],
+            "x-enum-varnames": [
+                "StatusProcessing",
+                "StatusReserved",
+                "StatusReleased",
+                "StatusRejected",
+                "StatusFailed"
             ]
         },
         "unit.CreateRequest": {

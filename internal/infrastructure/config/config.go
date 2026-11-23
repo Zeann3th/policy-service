@@ -10,33 +10,28 @@ import (
 )
 
 type Config struct {
-	ServiceName      string
-	Environment      string
-	HttpConfig       HttpConfig
-	GrpcConfig       GrpcConfig
-	DatabaseConfig   DatabaseConfig
-	LocalCacheConfig LocalCacheConfig
-	RedisConfig      RedisConfig
+	ServiceName string
+	Environment string
+	HTTP        HTTP
+	GRPC        GRPC
+	Database    Database
+	Redis       Redis
 }
 
-type HttpConfig struct {
+type HTTP struct {
 	Port    string
 	GinMode string
 }
 
-type GrpcConfig struct {
+type GRPC struct {
 	Port string
 }
 
-type DatabaseConfig struct {
+type Database struct {
 	URL string
 }
 
-type LocalCacheConfig struct {
-	Capacity uint32
-}
-
-type RedisConfig struct {
+type Redis struct {
 	Addrs      []string
 	Username   string
 	Password   string
@@ -70,17 +65,17 @@ func Load() (*Config, error) {
 	return &Config{
 		ServiceName: serviceName,
 		Environment: getOrDefault("ENVIRONMENT", "release"),
-		HttpConfig: HttpConfig{
+		HTTP: HTTP{
 			Port:    getOrDefault("HTTP_PORT", "8080"),
 			GinMode: getOrDefault("GIN_MODE", "release"),
 		},
-		GrpcConfig: GrpcConfig{
+		GRPC: GRPC{
 			Port: getOrDefault("GRPC_PORT", "8081"),
 		},
-		DatabaseConfig: DatabaseConfig{
+		Database: Database{
 			URL: dbURL,
 		},
-		RedisConfig: RedisConfig{
+		Redis: Redis{
 			Addrs:      redisAddrs,
 			Username:   getOrDefault("REDIS_USERNAME", ""),
 			Password:   getOrDefault("REDIS_PASSWORD", ""),
@@ -115,19 +110,6 @@ func getIntOrDefault(key string, defaultValue int) (int, error) {
 		return 0, fmt.Errorf("malformed %s: %w", key, err)
 	}
 	return parsed, nil
-}
-
-func getUint32OrDefault(key string, defaultValue uint32) (uint32, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue, nil
-	}
-
-	parsed, err := strconv.ParseUint(value, 10, 32)
-	if err != nil {
-		return 0, fmt.Errorf("malformed %s: %w", key, err)
-	}
-	return uint32(parsed), nil
 }
 
 func getListOrDefault(key string, defaultValue []string) ([]string, error) {

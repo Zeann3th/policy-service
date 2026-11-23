@@ -128,6 +128,16 @@ type GetConfigRequest struct {
 	TransactionType string `form:"transactionType" json:"transactionType,omitempty"`
 }
 
+type ResolveRequest struct {
+	WalletID        string
+	WalletType      string
+	Currency        string
+	Tier            string
+	TransactionType string
+	Channel         string
+	Direction       Direction
+}
+
 type GetConfigResponse struct {
 	Rules []Rule `json:"rules"`
 }

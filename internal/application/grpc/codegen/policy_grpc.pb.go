@@ -1287,3 +1287,105 @@ var CacheService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/policy.proto",
 }
+
+const (
+	ReservationService_Reserve_FullMethodName = "/policy.ui.grpc.ReservationService/Reserve"
+)
+
+// ReservationServiceClient is the client API for ReservationService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ReservationServiceClient interface {
+	Reserve(ctx context.Context, in *ReserveRequest, opts ...grpc.CallOption) (*ReserveResponse, error)
+}
+
+type reservationServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewReservationServiceClient(cc grpc.ClientConnInterface) ReservationServiceClient {
+	return &reservationServiceClient{cc}
+}
+
+func (c *reservationServiceClient) Reserve(ctx context.Context, in *ReserveRequest, opts ...grpc.CallOption) (*ReserveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReserveResponse)
+	err := c.cc.Invoke(ctx, ReservationService_Reserve_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ReservationServiceServer is the server API for ReservationService service.
+// All implementations must embed UnimplementedReservationServiceServer
+// for forward compatibility.
+type ReservationServiceServer interface {
+	Reserve(context.Context, *ReserveRequest) (*ReserveResponse, error)
+	mustEmbedUnimplementedReservationServiceServer()
+}
+
+// UnimplementedReservationServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedReservationServiceServer struct{}
+
+func (UnimplementedReservationServiceServer) Reserve(context.Context, *ReserveRequest) (*ReserveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Reserve not implemented")
+}
+func (UnimplementedReservationServiceServer) mustEmbedUnimplementedReservationServiceServer() {}
+func (UnimplementedReservationServiceServer) testEmbeddedByValue()                            {}
+
+// UnsafeReservationServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ReservationServiceServer will
+// result in compilation errors.
+type UnsafeReservationServiceServer interface {
+	mustEmbedUnimplementedReservationServiceServer()
+}
+
+func RegisterReservationServiceServer(s grpc.ServiceRegistrar, srv ReservationServiceServer) {
+	// If the following call panics, it indicates UnimplementedReservationServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ReservationService_ServiceDesc, srv)
+}
+
+func _ReservationService_Reserve_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReserveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReservationServiceServer).Reserve(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ReservationService_Reserve_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReservationServiceServer).Reserve(ctx, req.(*ReserveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ReservationService_ServiceDesc is the grpc.ServiceDesc for ReservationService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ReservationService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "policy.ui.grpc.ReservationService",
+	HandlerType: (*ReservationServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Reserve",
+			Handler:    _ReservationService_Reserve_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/policy.proto",
+}

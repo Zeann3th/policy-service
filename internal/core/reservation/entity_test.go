@@ -2,16 +2,18 @@ package reservation
 
 import "testing"
 
-func TestStatusAndCommitSourceValid(t *testing.T) {
-	for _, status := range []Status{StatusPending, StatusReserved, StatusCommitted, StatusReleased, StatusExpired, StatusRejected} {
+func TestStatusAndEntryTypeValid(t *testing.T) {
+	for _, status := range []Status{StatusProcessing, StatusReserved, StatusReleased, StatusRejected, StatusFailed} {
 		if !status.Valid() {
 			t.Errorf("%q must be valid", status)
 		}
 	}
-	if Status("CANCELLED").Valid() {
-		t.Error("CANCELLED must be invalid")
+	for _, status := range []Status{"PENDING", "COMMITTED", "EXPIRED"} {
+		if status.Valid() {
+			t.Errorf("%q must be invalid", status)
+		}
 	}
-	if !CommitSourceEvent.Valid() || !CommitSourceAuto.Valid() || CommitSource("MANUAL").Valid() {
-		t.Error("commit source validation is wrong")
+	if !EntryReserve.Valid() || !EntryRelease.Valid() || EntryType("ADJUST").Valid() {
+		t.Error("entry type validation is wrong")
 	}
 }

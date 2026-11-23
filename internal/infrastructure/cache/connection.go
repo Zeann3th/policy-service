@@ -18,11 +18,11 @@ var _ cacheport.Cache = (*redisCache)(nil)
 
 func NewRedisClient(cfg *config.Config) redis.UniversalClient {
 	return redis.NewUniversalClient(&redis.UniversalOptions{
-		Addrs:      cfg.RedisConfig.Addrs,
-		Username:   cfg.RedisConfig.Username,
-		Password:   cfg.RedisConfig.Password,
-		DB:         cfg.RedisConfig.DB,
-		MasterName: cfg.RedisConfig.MasterName,
+		Addrs:      cfg.Redis.Addrs,
+		Username:   cfg.Redis.Username,
+		Password:   cfg.Redis.Password,
+		DB:         cfg.Redis.DB,
+		MasterName: cfg.Redis.MasterName,
 	})
 }
 

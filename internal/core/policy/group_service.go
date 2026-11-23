@@ -14,7 +14,12 @@ type GroupService interface {
 }
 
 type groupService struct {
-	*service
+	store Store
+	cache *cachecore.Versioned
+}
+
+func NewGroupService(store Store, cache *cachecore.Versioned) GroupService {
+	return &groupService{store: store, cache: cache}
 }
 
 func policyGroupResponse(value PolicyGroup) PolicyGroupResponse {
@@ -31,20 +36,20 @@ func policyGroupResponse(value PolicyGroup) PolicyGroupResponse {
 func (s *groupService) Create(ctx context.Context, request CreatePolicyGroupRequest) (PolicyGroupResponse, error) {
 	value, err := s.store.CreateGroup(ctx, request)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicyGroups)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicyGroups)
 	}
 	return policyGroupResponse(value), err
 }
 
 func (s *groupService) Get(ctx context.Context, id int64) (PolicyGroupResponse, error) {
-	key := s.key(ctx, cachecore.NamespacePolicyGroups, "item", id)
-	if cached, ok := cacheRead[PolicyGroupResponse](s.service, ctx, key); ok {
+	key := s.cache.Key(ctx, cachecore.NamespacePolicyGroups, "item", id)
+	if cached, ok := cachecore.Read[PolicyGroupResponse](ctx, s.cache, key); ok {
 		return cached, nil
 	}
 	value, err := s.store.GetGroup(ctx, id)
 	response := policyGroupResponse(value)
 	if err == nil {
-		cacheWrite(s.service, ctx, key, response)
+		cachecore.Write(ctx, s.cache, key, response)
 	}
 	return response, err
 }
@@ -52,7 +57,7 @@ func (s *groupService) Get(ctx context.Context, id int64) (PolicyGroupResponse, 
 func (s *groupService) Delete(ctx context.Context, id int64, request core.ActorRequest) error {
 	err := s.store.DeleteGroup(ctx, id, request.UpdatedBy)
 	if err == nil {
-		s.invalidate(ctx, cachecore.NamespacePolicyGroups, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
+		s.cache.Invalidate(ctx, cachecore.NamespacePolicyGroups, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
 	}
 	return err
 }

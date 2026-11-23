@@ -1,30 +1,42 @@
 package reservation
 
-import "github.com/zeann3th/policy-service/internal/core/policy"
+import (
+	"errors"
 
-// limitStrategy marks a policy violated when its operator fails on the
-// transaction's contribution (the amount, or 1 for COUNT), or with a window
-// on the usage including it. BALANCE limits are skipped: the request carries
-// no balance.
+	"github.com/zeann3th/policy-service/internal/core/policy"
+)
+
+// limitStrategy marks a policy violated when its operator fails on what the
+// transaction measures in the policy's unit (the amount, or 1 for COUNT),
+// or with a window on the usage including it.
 type limitStrategy struct{}
 
 func (limitStrategy) kind() policy.Kind { return policy.KindLimit }
 
+func (limitStrategy) check(spec policy.Spec) error {
+	switch {
+	case spec.Unit == "":
+		return errors.New("LIMIT policies need a unit")
+	case spec.Operator == "":
+		return errors.New("LIMIT policies need an operator")
+	case spec.Base != "":
+		return errors.New("LIMIT policies take no base")
+	case spec.Cap != nil:
+		return errors.New("LIMIT policies take no cap: the value is the bound")
+	}
+	return nil
+}
+
 func (limitStrategy) process(e *evaluation, policies []policy.Policy) error {
 	for _, p := range policies {
-		if p.Unit == policy.UnitBalance {
-			continue
+		m, ok := measureOf(p.Unit)
+		if !ok {
+			continue // a unit the code does not measure does nothing
 		}
 		applied := appliedPolicy(p)
-		actual, err := contribution(p, e.amount)
-		if err != nil {
-			return err
-		}
+		actual := m.add(e.amount)
 		if tracked(p) {
-			if _, err := e.track(p, &applied); err != nil {
-				return err
-			}
-			actual = *applied.Usage
+			actual = e.track(p, actual, p.Value, &applied).Add(actual)
 		}
 		applied.Violated = !p.Operator.Satisfied(actual, p.Value)
 		e.apply(applied)

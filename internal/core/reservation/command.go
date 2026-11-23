@@ -41,19 +41,26 @@ type ReleaseResponse struct {
 }
 
 type PartyResult struct {
-	WalletID        string          `json:"walletId"`
-	IsViolated      bool            `json:"isViolated"`
-	Fee             decimal.Decimal `example:"1100" json:"fee" swaggertype:"string"`
-	Discount        decimal.Decimal `example:"0" json:"discount" swaggertype:"string"`
-	Tax             decimal.Decimal `example:"0" json:"tax" swaggertype:"string"`
+	WalletID   string `json:"walletId"`
+	IsViolated bool   `json:"isViolated"`
+	// Charges is what each AUXILIARY policy type charges this side, in type
+	// order; a discount is negative. The side pays their sum.
+	Charges         []Charge        `json:"charges"`
 	AppliedPolicies []AppliedPolicy `json:"appliedPolicies"`
+}
+
+// Charge is one policy type's total for a side: positive is paid, negative
+// (a discount) is taken off.
+type Charge struct {
+	PolicyType string          `example:"TXN_FEE" json:"policyType"`
+	Amount     decimal.Decimal `example:"1100" json:"amount" swaggertype:"string"`
 }
 
 type AppliedPolicy struct {
 	PolicyID        int64             `json:"policyId"`
 	PolicyType      string            `json:"policyType"`
-	Kind            policy.Kind       `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
-	Unit            policy.Unit       `enums:"AMOUNT,COUNT,BALANCE" json:"unit,omitempty"`
+	Kind            policy.Kind       `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
+	Unit            string            `example:"AMOUNT" json:"unit,omitempty"`
 	Base            policy.Base       `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
 	Source          policy.Source     `enums:"SYSTEM,USER" json:"source"`
 	TransactionType string            `json:"transactionType"`
@@ -63,10 +70,12 @@ type AppliedPolicy struct {
 	WindowStart     string            `example:"2026-11-23" json:"windowStart,omitempty"`
 	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal   `json:"value" swaggertype:"string"`
+	Cap             *decimal.Decimal  `json:"cap,omitempty" swaggertype:"string"`
 	// Usage is the window total including this request (not stored when rejected).
 	Usage *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
-	// Charge is what this FEE, DISCOUNT or TAX line computed, before the
-	// side's caps (discounts) and waiver (fees) are applied to the totals.
+	// Charge is what this AUXILIARY line charges, signed like Charges, after
+	// its window cap and before the type's own caps (a discount at most the
+	// fee) are applied to the totals.
 	Charge   *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`
 	Violated bool             `json:"violated"`
 }

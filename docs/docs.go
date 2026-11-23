@@ -1417,6 +1417,273 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/units": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Units"
+                ],
+                "summary": "List units",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.unitPageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Create a unit",
+                "parameters": [
+                    {
+                        "description": "Unit",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/unit.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/unit.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/units/{unitId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Get a unit",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Unit ID",
+                        "name": "unitId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/unit.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "The unit code is immutable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Update a unit",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Unit ID",
+                        "name": "unitId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Mutable unit fields",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/unit.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/unit.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Units"
+                ],
+                "summary": "Delete a unit",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Unit ID",
+                        "name": "unitId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Audit actor",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/core.ActorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1436,6 +1703,7 @@ const docTemplate = `{
                         "type": "string",
                         "enum": [
                             "all",
+                            "units",
                             "policy:types",
                             "policy:groups",
                             "policies",
@@ -1582,20 +1850,15 @@ const docTemplate = `{
                         "$ref": "#/definitions/reservation.AppliedPolicy"
                     }
                 },
-                "discount": {
-                    "type": "string",
-                    "example": "0"
-                },
-                "fee": {
-                    "type": "string",
-                    "example": "1100"
+                "charges": {
+                    "description": "Charges is what each AUXILIARY policy type charges this side, in type\norder; a discount is negative. The side pays their sum.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/reservation.Charge"
+                    }
                 },
                 "isViolated": {
                     "type": "boolean"
-                },
-                "tax": {
-                    "type": "string",
-                    "example": "0"
                 },
                 "usage": {
                     "type": "array",
@@ -1730,6 +1993,29 @@ const docTemplate = `{
                 }
             }
         },
+        "http.unitPageResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/unit.Response"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "policy.Base": {
             "type": "string",
             "enum": [
@@ -1757,7 +2043,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.",
+                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -1768,6 +2054,11 @@ const docTemplate = `{
                             "$ref": "#/definitions/policy.Base"
                         }
                     ]
+                },
+                "cap": {
+                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "type": "string",
+                    "example": "50000"
                 },
                 "channel": {
                     "type": "string"
@@ -1785,6 +2076,7 @@ const docTemplate = `{
                     ]
                 },
                 "effectiveFrom": {
+                    "description": "EffectiveFrom defaults to now on create and is required on update.",
                     "type": "string",
                     "format": "date-time"
                 },
@@ -1817,18 +2109,9 @@ const docTemplate = `{
                 "transactionType": {
                     "type": "string"
                 },
-                "unit": {
-                    "description": "Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.",
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                "unitId": {
+                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\nAUXILIARY cap counts; required for LIMIT and WAIVER.",
+                    "type": "integer"
                 },
                 "updatedBy": {
                     "type": "string"
@@ -1884,7 +2167,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.",
+                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -1895,6 +2178,11 @@ const docTemplate = `{
                             "$ref": "#/definitions/policy.Base"
                         }
                     ]
+                },
+                "cap": {
+                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "type": "string",
+                    "example": "50000"
                 },
                 "channel": {
                     "type": "string"
@@ -1912,6 +2200,7 @@ const docTemplate = `{
                     ]
                 },
                 "effectiveFrom": {
+                    "description": "EffectiveFrom defaults to now on create and is required on update.",
                     "type": "string",
                     "format": "date-time"
                 },
@@ -1941,18 +2230,9 @@ const docTemplate = `{
                 "transactionType": {
                     "type": "string"
                 },
-                "unit": {
-                    "description": "Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.",
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                "unitId": {
+                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\nAUXILIARY cap counts; required for LIMIT and WAIVER.",
+                    "type": "integer"
                 },
                 "updatedBy": {
                     "type": "string"
@@ -1992,14 +2272,16 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced defaults to true; false stores and serves the type's\npolicies without evaluating them on reserve.",
+                    "type": "boolean"
+                },
                 "kind": {
-                    "description": "Kind defaults to LIMIT; it must be declared in shapes.",
+                    "description": "Kind defaults to LIMIT.",
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "FEE",
-                        "TAX",
-                        "DISCOUNT"
+                        "AUXILIARY"
                     ],
                     "allOf": [
                         {
@@ -2026,6 +2308,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/policy.Base"
                         }
                     ]
+                },
+                "cap": {
+                    "type": "string"
                 },
                 "channel": {
                     "type": "string"
@@ -2084,17 +2369,8 @@ const docTemplate = `{
                 "transactionType": {
                     "type": "string"
                 },
-                "unit": {
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                "unitId": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "type": "string",
@@ -2151,16 +2427,17 @@ const docTemplate = `{
             "enum": [
                 "LIMIT",
                 "WAIVER",
-                "FEE",
-                "TAX",
-                "DISCOUNT"
+                "AUXILIARY"
             ],
+            "x-enum-comments": {
+                "KindAuxiliary": "charges: fee, discount, tax, ... by type code",
+                "KindLimit": "blocks a transaction that breaks a bound",
+                "KindWaiver": "waives the fee while usage is under a bound"
+            },
             "x-enum-varnames": [
                 "KindLimit",
                 "KindWaiver",
-                "KindFee",
-                "KindTax",
-                "KindDiscount"
+                "KindAuxiliary"
             ]
         },
         "policy.Operator": {
@@ -2222,6 +2499,9 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cap": {
+                    "type": "string"
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2276,17 +2556,8 @@ const docTemplate = `{
                 "transactionType": {
                     "type": "string"
                 },
-                "unit": {
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                "unitId": {
+                    "type": "integer"
                 },
                 "updatedAt": {
                     "type": "string",
@@ -2330,13 +2601,14 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "isEnforced": {
+                    "type": "boolean"
+                },
                 "kind": {
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "FEE",
-                        "TAX",
-                        "DISCOUNT"
+                        "AUXILIARY"
                     ],
                     "allOf": [
                         {
@@ -2365,6 +2637,9 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cap": {
+                    "type": "string"
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2384,9 +2659,7 @@ const docTemplate = `{
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "FEE",
-                        "TAX",
-                        "DISCOUNT"
+                        "AUXILIARY"
                     ],
                     "allOf": [
                         {
@@ -2427,16 +2700,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                    "type": "string",
+                    "example": "AMOUNT"
                 },
                 "value": {
                     "type": "string",
@@ -2468,33 +2733,15 @@ const docTemplate = `{
                 "SourceCustom"
             ]
         },
-        "policy.Unit": {
-            "type": "string",
-            "enum": [
-                "AMOUNT",
-                "COUNT",
-                "BALANCE"
-            ],
-            "x-enum-comments": {
-                "UnitAmount": "the transaction amount",
-                "UnitBalance": "the wallet balance (not evaluated on reserve)",
-                "UnitCount": "the number of transactions"
-            },
-            "x-enum-varnames": [
-                "UnitAmount",
-                "UnitCount",
-                "UnitBalance"
-            ]
-        },
         "policy.UpdateCustomPolicyRequest": {
             "type": "object",
             "required": [
-                "effectiveFrom",
                 "updatedBy",
                 "value"
             ],
             "properties": {
                 "base": {
+                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -2506,7 +2753,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cap": {
+                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "type": "string",
+                    "example": "50000"
+                },
                 "effectiveFrom": {
+                    "description": "EffectiveFrom defaults to now on create and is required on update.",
                     "type": "string",
                     "format": "date-time"
                 },
@@ -2515,6 +2768,7 @@ const docTemplate = `{
                     "format": "date-time"
                 },
                 "operator": {
+                    "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
                         "EQ",
                         "NEQ",
@@ -2544,12 +2798,12 @@ const docTemplate = `{
         "policy.UpdatePolicyRequest": {
             "type": "object",
             "required": [
-                "effectiveFrom",
                 "updatedBy",
                 "value"
             ],
             "properties": {
                 "base": {
+                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -2561,7 +2815,13 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cap": {
+                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "type": "string",
+                    "example": "50000"
+                },
                 "effectiveFrom": {
+                    "description": "EffectiveFrom defaults to now on create and is required on update.",
                     "type": "string",
                     "format": "date-time"
                 },
@@ -2570,6 +2830,7 @@ const docTemplate = `{
                     "format": "date-time"
                 },
                 "operator": {
+                    "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
                         "EQ",
                         "NEQ",
@@ -2606,6 +2867,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced keeps the current value when absent.",
+                    "type": "boolean"
+                },
                 "updatedBy": {
                     "type": "string"
                 }
@@ -2641,11 +2906,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "cap": {
+                    "type": "string"
+                },
                 "channel": {
                     "type": "string"
                 },
                 "charge": {
-                    "description": "Charge is what this FEE, DISCOUNT or TAX line computed, before the\nside's caps (discounts) and waiver (fees) are applied to the totals.",
+                    "description": "Charge is what this AUXILIARY line charges, signed like Charges, after\nits window cap and before the type's own caps (a discount at most the\nfee) are applied to the totals.",
                     "type": "string"
                 },
                 "direction": {
@@ -2664,9 +2932,7 @@ const docTemplate = `{
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "FEE",
-                        "TAX",
-                        "DISCOUNT"
+                        "AUXILIARY"
                     ],
                     "allOf": [
                         {
@@ -2710,16 +2976,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "enum": [
-                        "AMOUNT",
-                        "COUNT",
-                        "BALANCE"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Unit"
-                        }
-                    ]
+                    "type": "string",
+                    "example": "AMOUNT"
                 },
                 "usage": {
                     "description": "Usage is the window total including this request (not stored when rejected).",
@@ -2747,6 +3005,19 @@ const docTemplate = `{
                             "$ref": "#/definitions/policy.WindowType"
                         }
                     ]
+                }
+            }
+        },
+        "reservation.Charge": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string",
+                    "example": "1100"
+                },
+                "policyType": {
+                    "type": "string",
+                    "example": "TXN_FEE"
                 }
             }
         },
@@ -2781,20 +3052,15 @@ const docTemplate = `{
                         "$ref": "#/definitions/reservation.AppliedPolicy"
                     }
                 },
-                "discount": {
-                    "type": "string",
-                    "example": "0"
-                },
-                "fee": {
-                    "type": "string",
-                    "example": "1100"
+                "charges": {
+                    "description": "Charges is what each AUXILIARY policy type charges this side, in type\norder; a discount is negative. The side pays their sum.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/reservation.Charge"
+                    }
                 },
                 "isViolated": {
                     "type": "boolean"
-                },
-                "tax": {
-                    "type": "string",
-                    "example": "0"
                 },
                 "walletId": {
                     "type": "string"
@@ -2913,6 +3179,74 @@ const docTemplate = `{
                 "StatusRejected",
                 "StatusFailed"
             ]
+        },
+        "unit.CreateRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "updatedBy"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "AMOUNT"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "unit.Response": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "AMOUNT"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            }
+        },
+        "unit.UpdateRequest": {
+            "type": "object",
+            "required": [
+                "active",
+                "updatedBy"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
         }
     }
 }`

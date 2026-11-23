@@ -17,11 +17,11 @@ type TypeService interface {
 }
 
 type typeService struct {
-	store Store
+	store TypeStore
 	cache *cachecore.Versioned
 }
 
-func NewTypeService(store Store, cache *cachecore.Versioned) TypeService {
+func NewTypeService(store TypeStore, cache *cachecore.Versioned) TypeService {
 	return &typeService{store: store, cache: cache}
 }
 
@@ -31,6 +31,7 @@ func policyTypeResponse(value PolicyType) PolicyTypeResponse {
 		Code:        value.Code,
 		Description: value.Description,
 		Kind:        value.Kind,
+		IsEnforced:  value.IsEnforced,
 		Active:      value.Active,
 		CreatedAt:   value.CreatedAt,
 		UpdatedAt:   value.UpdatedAt,
@@ -48,6 +49,15 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 	if !request.Kind.Valid() {
 		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage(fmt.Sprintf("kind must be one of %v", Kinds()))
 	}
+	code, ok := core.Code(request.Code)
+	if !ok {
+		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage("code must be letters, digits and underscores, starting with a letter")
+	}
+	request.Code = code
+	if request.IsEnforced == nil {
+		enforced := true
+		request.IsEnforced = &enforced
+	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {
 		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes)
@@ -57,37 +67,31 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 
 func (s *typeService) Get(ctx context.Context, id int64) (PolicyTypeResponse, error) {
 	key := s.cache.Key(ctx, cachecore.NamespacePolicyTypes, "item", id)
-	if cached, ok := cachecore.Read[PolicyTypeResponse](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	value, err := s.store.GetType(ctx, id)
-	response := policyTypeResponse(value)
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (PolicyTypeResponse, error) {
+		value, err := s.store.GetType(ctx, id)
+		return policyTypeResponse(value), err
+	})
 }
 
 func (s *typeService) List(ctx context.Context, request core.PageRequest) (core.Page[PolicyTypeResponse], error) {
 	page, limit, offset := request.Values()
 	key := s.cache.Key(ctx, cachecore.NamespacePolicyTypes, "list", page, limit)
-	if cached, ok := cachecore.Read[core.Page[PolicyTypeResponse]](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	values, total, err := s.store.ListTypes(ctx, limit, offset)
-	response := core.Page[PolicyTypeResponse]{Items: make([]PolicyTypeResponse, len(values)), Page: page, Limit: limit, Total: total}
-	for i, value := range values {
-		response.Items[i] = policyTypeResponse(value)
-	}
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (core.Page[PolicyTypeResponse], error) {
+		values, total, err := s.store.ListTypes(ctx, limit, offset)
+		return core.MapPage(values, page, limit, total, policyTypeResponse), err
+	})
 }
 
 func (s *typeService) Update(ctx context.Context, id int64, request UpdatePolicyTypeRequest) (PolicyTypeResponse, error) {
 	if request.Active == nil {
 		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage("active is required")
+	}
+	if request.IsEnforced == nil {
+		current, err := s.store.GetType(ctx, id)
+		if err != nil {
+			return PolicyTypeResponse{}, err
+		}
+		request.IsEnforced = &current.IsEnforced
 	}
 	value, err := s.store.UpdateType(ctx, id, request)
 	if err == nil {

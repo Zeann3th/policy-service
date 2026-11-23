@@ -1,11 +1,11 @@
 -- name: CreatePolicy :one
 INSERT INTO policies
-  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator,
-   value, effective_from, effective_to)
+  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, base, operator,
+   value, cap, effective_from, effective_to)
 VALUES
   (sqlc.arg(policy_group_id), sqlc.arg(policy_type_id), sqlc.arg(transaction_type),
-   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type), sqlc.narg(unit), sqlc.narg(base),
-   sqlc.narg(operator), sqlc.arg(value),
+   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type), sqlc.narg(unit_id), sqlc.narg(base),
+   sqlc.narg(operator), sqlc.arg(value), sqlc.narg(cap),
    COALESCE(CAST(sqlc.narg(effective_from) AS timestamptz), now()), sqlc.narg(effective_to))
 RETURNING *;
 
@@ -25,7 +25,7 @@ SELECT count(*) FROM policies WHERE policy_group_id = $1;
 
 -- name: UpdatePolicy :one
 UPDATE policies
-SET base = sqlc.narg(base), operator = sqlc.narg(operator), value = sqlc.arg(value),
+SET base = sqlc.narg(base), operator = sqlc.narg(operator), value = sqlc.arg(value), cap = sqlc.narg(cap),
     effective_from = sqlc.arg(effective_from), effective_to = sqlc.narg(effective_to), updated_at = now()
 WHERE policy_group_id = sqlc.arg(policy_group_id) AND id = sqlc.arg(id)
 RETURNING *;

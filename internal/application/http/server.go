@@ -19,6 +19,7 @@ import (
 	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
+	"github.com/zeann3th/policy-service/internal/core/unit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
@@ -32,6 +33,7 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
+	unitService unit.Service,
 	groupService policy.GroupService,
 	typeService policy.TypeService,
 	policyService policy.Service,
@@ -51,6 +53,7 @@ func New(
 	prefixGroup := router.Group(fmt.Sprintf("/%s/api", cfg.ServiceName))
 
 	RegisterUtilityRoutes(prefixGroup)
+	RegisterUnitRoutes(prefixGroup, unitService)
 	RegisterPolicyGroupRoutes(prefixGroup, groupService)
 	RegisterPolicyTypeRoutes(prefixGroup, typeService)
 	RegisterPolicyRoutes(prefixGroup, policyService)

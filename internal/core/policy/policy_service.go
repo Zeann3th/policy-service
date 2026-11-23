@@ -26,12 +26,13 @@ type Service interface {
 }
 
 type service struct {
-	store Store
+	store PolicyStore
+	rules Rules
 	cache *cachecore.Versioned
 }
 
-func NewService(store Store, cache *cachecore.Versioned) Service {
-	return &service{store: store, cache: cache}
+func NewService(store PolicyStore, rules Rules, cache *cachecore.Versioned) Service {
+	return &service{store: store, rules: rules, cache: cache}
 }
 
 func policyResponse(value Policy) PolicyResponse {
@@ -46,10 +47,11 @@ func policyResponse(value Policy) PolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
-		Unit:            value.Unit,
+		UnitID:          value.UnitID,
 		Base:            value.Base,
 		Operator:        value.Operator,
 		Value:           value.Value,
+		Cap:             value.Cap,
 		EffectiveFrom:   value.EffectiveFrom,
 		EffectiveTo:     value.EffectiveTo,
 		CreatedAt:       value.CreatedAt,
@@ -69,10 +71,11 @@ func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
-		Unit:            value.Unit,
+		UnitID:          value.UnitID,
 		Base:            value.Base,
 		Operator:        value.Operator,
 		Value:           value.Value,
+		Cap:             value.Cap,
 		EffectiveFrom:   value.EffectiveFrom,
 		EffectiveTo:     value.EffectiveTo,
 		Reason:          value.Reason,
@@ -107,6 +110,7 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 			Base:            value.Base,
 			Operator:        value.Operator,
 			Value:           value.Value,
+			Cap:             value.Cap,
 			Source:          value.Source,
 		}
 	}
@@ -205,10 +209,13 @@ func mergePolicies(systemPolicies []Policy, customPolicies []CustomPolicy) []Pol
 			Channel:         customPolicy.Channel,
 			Direction:       customPolicy.Direction,
 			WindowType:      customPolicy.WindowType,
+			UnitID:          customPolicy.UnitID,
 			Unit:            customPolicy.Unit,
 			Base:            customPolicy.Base,
 			Operator:        customPolicy.Operator,
 			Value:           customPolicy.Value,
+			Cap:             customPolicy.Cap,
+			IsEnforced:      customPolicy.IsEnforced,
 			Source:          SourceCustom,
 		}
 		if index, ok := indexes[customPolicy.Key()]; ok {
@@ -239,18 +246,7 @@ func defaultDirection(direction Direction) Direction {
 }
 
 func (s *service) CreatePolicy(ctx context.Context, groupID int64, request CreatePolicyRequest) (PolicyResponse, error) {
-	if request.Value == nil {
-		return PolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
-	}
-	if err := validateEffective(request.EffectiveFrom, request.EffectiveTo); err != nil {
-		return PolicyResponse{}, err
-	}
-	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
-	request.Direction = defaultDirection(request.Direction)
-	if request.WindowType == "" {
-		request.WindowType = WindowNone
-	}
-	if err := s.checkShape(ctx, request.PolicyTypeID, request.Unit, request.Base, request.Operator, request.WindowType); err != nil {
+	if err := s.prepareNew(ctx, &request.PolicyFields); err != nil {
 		return PolicyResponse{}, err
 	}
 	value, err := s.store.CreatePolicy(ctx, groupID, request)
@@ -262,49 +258,27 @@ func (s *service) CreatePolicy(ctx context.Context, groupID int64, request Creat
 
 func (s *service) GetPolicy(ctx context.Context, groupID, id int64) (PolicyResponse, error) {
 	key := s.cache.Key(ctx, cachecore.NamespacePolicies, "item", groupID, id)
-	if cached, ok := cachecore.Read[PolicyResponse](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	value, err := s.store.GetPolicy(ctx, groupID, id)
-	response := policyResponse(value)
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (PolicyResponse, error) {
+		value, err := s.store.GetPolicy(ctx, groupID, id)
+		return policyResponse(value), err
+	})
 }
 
 func (s *service) ListPolicies(ctx context.Context, groupID int64, request core.PageRequest) (core.Page[PolicyResponse], error) {
 	page, limit, offset := request.Values()
 	key := s.cache.Key(ctx, cachecore.NamespacePolicies, "list", groupID, page, limit)
-	if cached, ok := cachecore.Read[core.Page[PolicyResponse]](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	values, total, err := s.store.ListPolicies(ctx, groupID, limit, offset)
-	response := core.Page[PolicyResponse]{Items: make([]PolicyResponse, len(values)), Page: page, Limit: limit, Total: total}
-	for i, value := range values {
-		response.Items[i] = policyResponse(value)
-	}
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (core.Page[PolicyResponse], error) {
+		values, total, err := s.store.ListPolicies(ctx, groupID, limit, offset)
+		return core.MapPage(values, page, limit, total, policyResponse), err
+	})
 }
 
 func (s *service) UpdatePolicy(ctx context.Context, groupID, id int64, request UpdatePolicyRequest) (PolicyResponse, error) {
-	if request.Value == nil {
-		return PolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
-	}
-	if request.EffectiveFrom == nil {
-		return PolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom is required")
-	}
-	if !validWindow(*request.EffectiveFrom, request.EffectiveTo) {
-		return PolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
-	}
 	current, err := s.store.GetPolicy(ctx, groupID, id)
 	if err != nil {
 		return PolicyResponse{}, err
 	}
-	if err := s.checkShape(ctx, current.PolicyTypeID, current.Unit, request.Base, request.Operator, current.WindowType); err != nil {
+	if err := s.checkChange(ctx, current.PolicyTypeID, current.UnitID, current.WindowType, request.PolicyChange); err != nil {
 		return PolicyResponse{}, err
 	}
 	value, err := s.store.UpdatePolicy(ctx, groupID, id, request)
@@ -322,10 +296,43 @@ func (s *service) DeletePolicy(ctx context.Context, groupID, id int64, request c
 	return err
 }
 
-// checkShape rejects value fields that do not fit the kind of the policy
-// type. The kind and the policy's unit and window are immutable, so reading
-// them before the write cannot race with it.
-func (s *service) checkShape(ctx context.Context, typeID int64, unit Unit, base Base, operator Operator, window WindowType) error {
+// prepareNew fills the defaults of a new system or custom policy and
+// validates it: value, effective range, and the rules of its type's kind.
+func (s *service) prepareNew(ctx context.Context, fields *PolicyFields) error {
+	if fields.Value == nil {
+		return core.ErrBadRequest.WithMessage("value is required")
+	}
+	if err := validateEffective(fields.EffectiveFrom, fields.EffectiveTo); err != nil {
+		return err
+	}
+	fields.TransactionType, fields.Channel = defaults(fields.TransactionType, fields.Channel)
+	fields.Direction = defaultDirection(fields.Direction)
+	if fields.WindowType == "" {
+		fields.WindowType = WindowNone
+	}
+	return s.check(ctx, fields.PolicyTypeID, fields.UnitID, fields.spec(fields.WindowType))
+}
+
+// checkChange validates a change to an existing policy, whose type, unit
+// and window stay as they are.
+func (s *service) checkChange(ctx context.Context, typeID int64, unitID *int64, window WindowType, change PolicyChange) error {
+	if change.Value == nil {
+		return core.ErrBadRequest.WithMessage("value is required")
+	}
+	if change.EffectiveFrom == nil {
+		return core.ErrBadRequest.WithMessage("effectiveFrom is required")
+	}
+	if !validWindow(*change.EffectiveFrom, change.EffectiveTo) {
+		return core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
+	}
+	return s.check(ctx, typeID, unitID, change.spec(window))
+}
+
+// check validates a policy against the rules of its type's kind, with the
+// type and unit codes resolved from the catalog. A policy's type, unit and
+// window are immutable, so reading them before the write cannot race with
+// it.
+func (s *service) check(ctx context.Context, typeID int64, unitID *int64, spec Spec) error {
 	policyType, err := s.store.GetType(ctx, typeID)
 	if errors.Is(err, core.ErrNotFound) {
 		return core.ErrBadRequest.WithMessage(fmt.Sprintf("policy type %d not found", typeID))
@@ -333,7 +340,18 @@ func (s *service) checkShape(ctx context.Context, typeID int64, unit Unit, base 
 	if err != nil {
 		return err
 	}
-	if err := policyType.Kind.Check(unit, base, operator, window); err != nil {
+	spec.Kind, spec.Type = policyType.Kind, policyType.Code
+	if unitID != nil {
+		code, err := s.store.GetUnitCode(ctx, *unitID)
+		if errors.Is(err, core.ErrNotFound) {
+			return core.ErrBadRequest.WithMessage(fmt.Sprintf("unit %d not found", *unitID))
+		}
+		if err != nil {
+			return err
+		}
+		spec.Unit = code
+	}
+	if err := s.rules.Check(spec); err != nil {
 		return core.ErrBadRequest.WithMessage(err.Error())
 	}
 	return nil
@@ -356,18 +374,7 @@ func validateEffective(from, to *time.Time) error {
 }
 
 func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, request CreateCustomPolicyRequest) (CustomPolicyResponse, error) {
-	if request.Value == nil {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
-	}
-	if err := validateEffective(request.EffectiveFrom, request.EffectiveTo); err != nil {
-		return CustomPolicyResponse{}, err
-	}
-	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
-	request.Direction = defaultDirection(request.Direction)
-	if request.WindowType == "" {
-		request.WindowType = WindowNone
-	}
-	if err := s.checkShape(ctx, request.PolicyTypeID, request.Unit, request.Base, request.Operator, request.WindowType); err != nil {
+	if err := s.prepareNew(ctx, &request.PolicyFields); err != nil {
 		return CustomPolicyResponse{}, err
 	}
 	value, err := s.store.CreateCustomPolicy(ctx, walletID, request)
@@ -379,49 +386,27 @@ func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, reque
 
 func (s *service) GetCustomPolicy(ctx context.Context, walletID string, id int64) (CustomPolicyResponse, error) {
 	key := s.cache.Key(ctx, cachecore.NamespaceCustomPolicies, "item", walletID, id)
-	if cached, ok := cachecore.Read[CustomPolicyResponse](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	value, err := s.store.GetCustomPolicy(ctx, walletID, id)
-	response := customPolicyResponse(value)
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (CustomPolicyResponse, error) {
+		value, err := s.store.GetCustomPolicy(ctx, walletID, id)
+		return customPolicyResponse(value), err
+	})
 }
 
 func (s *service) ListCustomPolicies(ctx context.Context, walletID string, request core.PageRequest) (core.Page[CustomPolicyResponse], error) {
 	page, limit, offset := request.Values()
 	key := s.cache.Key(ctx, cachecore.NamespaceCustomPolicies, "list", walletID, page, limit)
-	if cached, ok := cachecore.Read[core.Page[CustomPolicyResponse]](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	values, total, err := s.store.ListCustomPolicies(ctx, walletID, limit, offset)
-	response := core.Page[CustomPolicyResponse]{Items: make([]CustomPolicyResponse, len(values)), Page: page, Limit: limit, Total: total}
-	for i, value := range values {
-		response.Items[i] = customPolicyResponse(value)
-	}
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (core.Page[CustomPolicyResponse], error) {
+		values, total, err := s.store.ListCustomPolicies(ctx, walletID, limit, offset)
+		return core.MapPage(values, page, limit, total, customPolicyResponse), err
+	})
 }
 
 func (s *service) UpdateCustomPolicy(ctx context.Context, walletID string, id int64, request UpdateCustomPolicyRequest) (CustomPolicyResponse, error) {
-	if request.Value == nil {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
-	}
-	if request.EffectiveFrom == nil {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom is required")
-	}
-	if !validWindow(*request.EffectiveFrom, request.EffectiveTo) {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
-	}
 	current, err := s.store.GetCustomPolicy(ctx, walletID, id)
 	if err != nil {
 		return CustomPolicyResponse{}, err
 	}
-	if err := s.checkShape(ctx, current.PolicyTypeID, current.Unit, request.Base, request.Operator, current.WindowType); err != nil {
+	if err := s.checkChange(ctx, current.PolicyTypeID, current.UnitID, current.WindowType, request.PolicyChange); err != nil {
 		return CustomPolicyResponse{}, err
 	}
 	value, err := s.store.UpdateCustomPolicy(ctx, walletID, id, request)
@@ -437,4 +422,9 @@ func (s *service) DeleteCustomPolicy(ctx context.Context, walletID string, id in
 		s.cache.Invalidate(ctx, cachecore.NamespaceCustomPolicies, cachecore.NamespacePolicyConfig)
 	}
 	return err
+}
+
+// spec is how the change reads its value, in a policy with window.
+func (c PolicyChange) spec(window WindowType) Spec {
+	return Spec{Base: c.Base, Operator: c.Operator, Window: window, Value: *c.Value, Cap: c.Cap}
 }

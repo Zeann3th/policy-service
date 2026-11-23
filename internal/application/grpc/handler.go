@@ -10,6 +10,7 @@ import (
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/core/unit"
 	"golang.org/x/text/currency"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -92,11 +93,20 @@ func isoCurrency(value string) error {
 	return nil
 }
 
-func unitCode(value string) error {
-	if value != "" && !policy.Unit(value).Valid() {
-		return status.Error(codes.InvalidArgument, "unit is invalid")
+func outOptionalID(value *int64) *uint64 {
+	if value == nil {
+		return nil
 	}
-	return nil
+	id := uint64(*value)
+	return &id
+}
+
+func outOptionalDec(value *decimal.Decimal) *string {
+	if value == nil {
+		return nil
+	}
+	text := value.String()
+	return &text
 }
 
 func base(value string) error {
@@ -149,8 +159,12 @@ func outOptionalTS(value *time.Time) *timestamppb.Timestamp {
 	return outTS(*value)
 }
 
+func outUnit(value unit.Response) *pb.Unit {
+	return &pb.Unit{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+}
+
 func outPolicyType(value policy.PolicyTypeResponse) *pb.PolicyType {
-	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Kind: string(value.Kind), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Kind: string(value.Kind), IsEnforced: value.IsEnforced, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
@@ -158,9 +172,9 @@ func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
 }
 
 func outPolicy(value policy.PolicyResponse) *pb.Policy {
-	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Unit: string(value.Unit), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outCustomPolicy(value policy.CustomPolicyResponse) *pb.CustomPolicy {
-	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Unit: string(value.Unit), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }

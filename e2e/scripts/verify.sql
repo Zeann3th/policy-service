@@ -3,7 +3,7 @@
 \pset footer off
 \echo '== invariants (all must PASS) =='
 WITH ledger AS (
-  SELECT wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, window_start,
+  SELECT wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, window_start,
          sum(delta) AS total
   FROM usage_ledger
   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
@@ -11,7 +11,7 @@ WITH ledger AS (
   -- usage is exactly the sum of its ledger deltas
   SELECT 'usage = sum(ledger delta)', count(*)
   FROM usages u
-  FULL JOIN ledger l USING (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, window_start)
+  FULL JOIN ledger l USING (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, window_start)
   WHERE coalesce(u.value, 0) <> coalesce(l.total, 0)
   UNION ALL
   SELECT 'no negative usage', count(*) FROM usages WHERE value < 0
@@ -34,7 +34,7 @@ WITH ledger AS (
     SELECT l.reservation_id
     FROM reservations r JOIN usage_ledger l ON l.reservation_id = r.id AND l.reservation_created_at = r.created_at
     WHERE r.status = 'RELEASED'
-    GROUP BY l.reservation_id, l.wallet_id, l.policy_type_id, l.transaction_type, l.channel, l.direction, l.window_type, l.unit
+    GROUP BY l.reservation_id, l.wallet_id, l.policy_type_id, l.transaction_type, l.channel, l.direction, l.window_type, l.unit_id
     HAVING sum(l.delta) <> 0 OR count(*) <> 2
   ) unbalanced
   UNION ALL

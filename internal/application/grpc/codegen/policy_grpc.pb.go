@@ -19,6 +19,260 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	UnitService_CreateUnit_FullMethodName = "/policy.ui.grpc.UnitService/CreateUnit"
+	UnitService_GetUnit_FullMethodName    = "/policy.ui.grpc.UnitService/GetUnit"
+	UnitService_ListUnits_FullMethodName  = "/policy.ui.grpc.UnitService/ListUnits"
+	UnitService_UpdateUnit_FullMethodName = "/policy.ui.grpc.UnitService/UpdateUnit"
+	UnitService_DeleteUnit_FullMethodName = "/policy.ui.grpc.UnitService/DeleteUnit"
+)
+
+// UnitServiceClient is the client API for UnitService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type UnitServiceClient interface {
+	CreateUnit(ctx context.Context, in *CreateUnitRequest, opts ...grpc.CallOption) (*Unit, error)
+	GetUnit(ctx context.Context, in *IdRequest, opts ...grpc.CallOption) (*Unit, error)
+	ListUnits(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*UnitPage, error)
+	UpdateUnit(ctx context.Context, in *UpdateUnitRequest, opts ...grpc.CallOption) (*Unit, error)
+	DeleteUnit(ctx context.Context, in *DeleteByIdRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+}
+
+type unitServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUnitServiceClient(cc grpc.ClientConnInterface) UnitServiceClient {
+	return &unitServiceClient{cc}
+}
+
+func (c *unitServiceClient) CreateUnit(ctx context.Context, in *CreateUnitRequest, opts ...grpc.CallOption) (*Unit, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Unit)
+	err := c.cc.Invoke(ctx, UnitService_CreateUnit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *unitServiceClient) GetUnit(ctx context.Context, in *IdRequest, opts ...grpc.CallOption) (*Unit, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Unit)
+	err := c.cc.Invoke(ctx, UnitService_GetUnit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *unitServiceClient) ListUnits(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*UnitPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnitPage)
+	err := c.cc.Invoke(ctx, UnitService_ListUnits_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *unitServiceClient) UpdateUnit(ctx context.Context, in *UpdateUnitRequest, opts ...grpc.CallOption) (*Unit, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Unit)
+	err := c.cc.Invoke(ctx, UnitService_UpdateUnit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *unitServiceClient) DeleteUnit(ctx context.Context, in *DeleteByIdRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, UnitService_DeleteUnit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UnitServiceServer is the server API for UnitService service.
+// All implementations must embed UnimplementedUnitServiceServer
+// for forward compatibility.
+type UnitServiceServer interface {
+	CreateUnit(context.Context, *CreateUnitRequest) (*Unit, error)
+	GetUnit(context.Context, *IdRequest) (*Unit, error)
+	ListUnits(context.Context, *PageRequest) (*UnitPage, error)
+	UpdateUnit(context.Context, *UpdateUnitRequest) (*Unit, error)
+	DeleteUnit(context.Context, *DeleteByIdRequest) (*DeleteResponse, error)
+	mustEmbedUnimplementedUnitServiceServer()
+}
+
+// UnimplementedUnitServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedUnitServiceServer struct{}
+
+func (UnimplementedUnitServiceServer) CreateUnit(context.Context, *CreateUnitRequest) (*Unit, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateUnit not implemented")
+}
+func (UnimplementedUnitServiceServer) GetUnit(context.Context, *IdRequest) (*Unit, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUnit not implemented")
+}
+func (UnimplementedUnitServiceServer) ListUnits(context.Context, *PageRequest) (*UnitPage, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUnits not implemented")
+}
+func (UnimplementedUnitServiceServer) UpdateUnit(context.Context, *UpdateUnitRequest) (*Unit, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateUnit not implemented")
+}
+func (UnimplementedUnitServiceServer) DeleteUnit(context.Context, *DeleteByIdRequest) (*DeleteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteUnit not implemented")
+}
+func (UnimplementedUnitServiceServer) mustEmbedUnimplementedUnitServiceServer() {}
+func (UnimplementedUnitServiceServer) testEmbeddedByValue()                     {}
+
+// UnsafeUnitServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UnitServiceServer will
+// result in compilation errors.
+type UnsafeUnitServiceServer interface {
+	mustEmbedUnimplementedUnitServiceServer()
+}
+
+func RegisterUnitServiceServer(s grpc.ServiceRegistrar, srv UnitServiceServer) {
+	// If the following call panics, it indicates UnimplementedUnitServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&UnitService_ServiceDesc, srv)
+}
+
+func _UnitService_CreateUnit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateUnitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UnitServiceServer).CreateUnit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UnitService_CreateUnit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UnitServiceServer).CreateUnit(ctx, req.(*CreateUnitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UnitService_GetUnit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UnitServiceServer).GetUnit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UnitService_GetUnit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UnitServiceServer).GetUnit(ctx, req.(*IdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UnitService_ListUnits_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UnitServiceServer).ListUnits(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UnitService_ListUnits_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UnitServiceServer).ListUnits(ctx, req.(*PageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UnitService_UpdateUnit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUnitRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UnitServiceServer).UpdateUnit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UnitService_UpdateUnit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UnitServiceServer).UpdateUnit(ctx, req.(*UpdateUnitRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UnitService_DeleteUnit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UnitServiceServer).DeleteUnit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UnitService_DeleteUnit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UnitServiceServer).DeleteUnit(ctx, req.(*DeleteByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// UnitService_ServiceDesc is the grpc.ServiceDesc for UnitService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var UnitService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "policy.ui.grpc.UnitService",
+	HandlerType: (*UnitServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateUnit",
+			Handler:    _UnitService_CreateUnit_Handler,
+		},
+		{
+			MethodName: "GetUnit",
+			Handler:    _UnitService_GetUnit_Handler,
+		},
+		{
+			MethodName: "ListUnits",
+			Handler:    _UnitService_ListUnits_Handler,
+		},
+		{
+			MethodName: "UpdateUnit",
+			Handler:    _UnitService_UpdateUnit_Handler,
+		},
+		{
+			MethodName: "DeleteUnit",
+			Handler:    _UnitService_DeleteUnit_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/policy.proto",
+}
+
+const (
 	PolicyTypeService_CreatePolicyType_FullMethodName = "/policy.ui.grpc.PolicyTypeService/CreatePolicyType"
 	PolicyTypeService_GetPolicyType_FullMethodName    = "/policy.ui.grpc.PolicyTypeService/GetPolicyType"
 	PolicyTypeService_ListPolicyTypes_FullMethodName  = "/policy.ui.grpc.PolicyTypeService/ListPolicyTypes"

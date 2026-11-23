@@ -27,13 +27,18 @@ func windowStart(window policy.WindowType, at time.Time) time.Time {
 	return lifetimeStart
 }
 
-// tracked reports whether a policy accumulates usage: a windowed policy
-// that measures AMOUNT or COUNT.
+// tracked reports whether a policy accumulates usage: it is enforced, has
+// a window and a unit this service measures.
 func tracked(p policy.Policy) bool {
-	return p.WindowType != policy.WindowNone && (p.Unit == policy.UnitAmount || p.Unit == policy.UnitCount)
+	_, measured := measureOf(p.Unit)
+	return p.IsEnforced && p.WindowType != policy.WindowNone && p.UnitID != nil && measured
 }
 
 func usageKey(walletID string, p policy.Policy, at time.Time) UsageKey {
+	var unitID int64
+	if p.UnitID != nil {
+		unitID = *p.UnitID
+	}
 	return UsageKey{
 		WalletID:        walletID,
 		PolicyTypeID:    p.PolicyTypeID,
@@ -41,20 +46,9 @@ func usageKey(walletID string, p policy.Policy, at time.Time) UsageKey {
 		Channel:         p.Channel,
 		Direction:       p.Direction,
 		WindowType:      p.WindowType,
-		Unit:            p.Unit,
+		UnitID:          unitID,
 		WindowStart:     windowStart(p.WindowType, at),
 	}
-}
-
-// contribution is what one transaction adds to a policy's measure.
-func contribution(p policy.Policy, amount decimal.Decimal) (decimal.Decimal, error) {
-	switch p.Unit {
-	case policy.UnitAmount:
-		return amount, nil
-	case policy.UnitCount:
-		return one, nil
-	}
-	return decimal.Zero, fmt.Errorf("policy %d (%s): unit %q cannot be measured", p.ID, p.PolicyType, p.Unit)
 }
 
 func appliedPolicy(p policy.Policy) AppliedPolicy {
@@ -71,6 +65,7 @@ func appliedPolicy(p policy.Policy) AppliedPolicy {
 		WindowType:      p.WindowType,
 		Operator:        p.Operator,
 		Value:           p.Value,
+		Cap:             p.Cap,
 	}
 }
 
@@ -82,26 +77,25 @@ type evaluation struct {
 	amount   decimal.Decimal
 	at       time.Time
 	usage    map[UsageKey]decimal.Decimal
-	// bases holds the charge bases computed so far, by the strategies that
-	// own them: AMOUNT at the start, FEE after FEE, NET_FEE after DISCOUNT.
+	// bases holds the charge bases computed so far, by the charge types
+	// that own them: AMOUNT at the start, FEE after the fee, NET_FEE after
+	// the discount.
 	bases   map[policy.Base]decimal.Decimal
 	waived  bool
 	result  PartyResult
 	entries []LedgerEntry
 }
 
-func (e *evaluation) apply(applied AppliedPolicy) {
+func (e *evaluation) apply(applied AppliedPolicy) int {
 	e.result.IsViolated = e.result.IsViolated || applied.Violated
 	e.result.AppliedPolicies = append(e.result.AppliedPolicies, applied)
+	return len(e.result.AppliedPolicies) - 1
 }
 
-// track adds a windowed policy's contribution to its usage and records the
-// RESERVE entry. It returns the usage before this transaction.
-func (e *evaluation) track(p policy.Policy, applied *AppliedPolicy) (decimal.Decimal, error) {
-	delta, err := contribution(p, e.amount)
-	if err != nil {
-		return decimal.Zero, err
-	}
+// track adds delta to a tracked policy's window and records the RESERVE
+// entry; bound is the policy's limit (its value, or its cap for a charge).
+// It returns the usage before this transaction.
+func (e *evaluation) track(p policy.Policy, delta, bound decimal.Decimal, applied *AppliedPolicy) decimal.Decimal {
 	key := usageKey(e.walletID, p, e.at)
 	current := e.usage[key]
 	total := current.Add(delta)
@@ -111,45 +105,18 @@ func (e *evaluation) track(p policy.Policy, applied *AppliedPolicy) (decimal.Dec
 	if p.Operator != "" {
 		operator = &p.Operator
 	}
-	e.entries = append(e.entries, LedgerEntry{
-		EntryType:      EntryReserve,
-		UsageKey:       key,
-		Delta:          delta,
-		PolicyID:       &p.ID,
-		PolicyTypeCode: p.PolicyType,
-		Operator:       operator,
-		LimitValue:     &p.Value,
-	})
-	return current, nil
-}
-
-// charge is the policy's flat value, or a percentage of its base.
-func (e *evaluation) charge(p policy.Policy) (decimal.Decimal, error) {
-	if p.Base == "" {
-		return p.Value, nil
+	if !delta.IsZero() {
+		e.entries = append(e.entries, LedgerEntry{
+			EntryType:      EntryReserve,
+			UsageKey:       key,
+			Delta:          delta,
+			PolicyID:       &p.ID,
+			PolicyTypeCode: p.PolicyType,
+			Operator:       operator,
+			LimitValue:     &bound,
+		})
 	}
-	base, ok := e.bases[p.Base]
-	if !ok {
-		return decimal.Zero, fmt.Errorf("policy %d (%s): base %s is not computed before %s", p.ID, p.PolicyType, p.Base, p.Kind)
-	}
-	return base.Mul(p.Value).Div(hundred), nil
-}
-
-// sum applies policies as charges and returns their total.
-func (e *evaluation) sum(policies []policy.Policy) (decimal.Decimal, error) {
-	total := decimal.Zero
-	for _, p := range policies {
-		value, err := e.charge(p)
-		if err != nil {
-			return decimal.Zero, err
-		}
-		total = total.Add(value)
-		applied := appliedPolicy(p)
-		charge := value.Round(moneyPlaces)
-		applied.Charge = &charge
-		e.apply(applied)
-	}
-	return total, nil
+	return current
 }
 
 // UsageKeys returns the usage window each tracked policy reads at time at,
@@ -182,10 +149,15 @@ func evaluate(walletID string, amount decimal.Decimal, policies []policy.Policy,
 		at:       at,
 		usage:    usage,
 		bases:    map[policy.Base]decimal.Decimal{policy.BaseAmount: amount},
-		result:   PartyResult{WalletID: walletID, Fee: decimal.Zero, Discount: decimal.Zero, Tax: decimal.Zero, AppliedPolicies: make([]AppliedPolicy, 0, len(policies))},
+		result:   PartyResult{WalletID: walletID, Charges: []Charge{}, AppliedPolicies: make([]AppliedPolicy, 0, len(policies))},
 	}
 	if err := strategies.process(e, policies); err != nil {
 		return PartyResult{}, nil, err
 	}
 	return e.result, e.entries, nil
+}
+
+// errorf prefixes an evaluation error with the policy it is about.
+func errorf(p policy.Policy, format string, args ...any) error {
+	return fmt.Errorf("policy %d (%s): %s", p.ID, p.PolicyType, fmt.Sprintf(format, args...))
 }

@@ -137,7 +137,7 @@ func usage(ctx context.Context, q *codegen.Queries, key reservation.UsageKey) (d
 		Channel:         key.Channel,
 		Direction:       string(key.Direction),
 		WindowType:      string(key.WindowType),
-		Unit:            string(key.Unit),
+		UnitID:          key.UnitID,
 		WindowStart:     date(key.WindowStart),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -154,7 +154,7 @@ func (t *reservationTx) Apply(ctx context.Context, entry reservation.LedgerEntry
 		Channel:         entry.Channel,
 		Direction:       string(entry.Direction),
 		WindowType:      string(entry.WindowType),
-		Unit:            string(entry.Unit),
+		UnitID:          entry.UnitID,
 		WindowStart:     date(entry.WindowStart),
 		Delta:           entry.Delta,
 	})
@@ -176,7 +176,7 @@ func (t *reservationTx) Apply(ctx context.Context, entry reservation.LedgerEntry
 		Channel:              entry.Channel,
 		Direction:            string(entry.Direction),
 		WindowType:           string(entry.WindowType),
-		Unit:                 string(entry.Unit),
+		UnitID:               entry.UnitID,
 		WindowStart:          date(entry.WindowStart),
 		Delta:                entry.Delta,
 		PolicyID:             entry.PolicyID,
@@ -241,7 +241,7 @@ func (t *reservationTx) Entries(ctx context.Context, id uuid.UUID, createdAt tim
 				Channel:         row.Channel,
 				Direction:       policy.Direction(row.Direction),
 				WindowType:      policy.WindowType(row.WindowType),
-				Unit:            policy.Unit(row.Unit),
+				UnitID:          row.UnitID,
 				WindowStart:     row.WindowStart.Time,
 			},
 			Delta:          row.Delta,

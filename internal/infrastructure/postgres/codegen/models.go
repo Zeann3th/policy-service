@@ -13,23 +13,24 @@ import (
 )
 
 type CustomPolicy struct {
-	ID              int64           `json:"id"`
-	WalletID        string          `json:"wallet_id"`
-	PolicyTypeID    int64           `json:"policy_type_id"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Direction       string          `json:"direction"`
-	WindowType      string          `json:"window_type"`
-	Unit            *string         `json:"unit"`
-	Base            *string         `json:"base"`
-	Operator        *string         `json:"operator"`
-	Value           decimal.Decimal `json:"value"`
-	EffectiveFrom   time.Time       `json:"effective_from"`
-	EffectiveTo     *time.Time      `json:"effective_to"`
-	Reason          *string         `json:"reason"`
-	CreatedBy       string          `json:"created_by"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64            `json:"id"`
+	WalletID        string           `json:"wallet_id"`
+	PolicyTypeID    int64            `json:"policy_type_id"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	WindowType      string           `json:"window_type"`
+	UnitID          *int64           `json:"unit_id"`
+	Base            *string          `json:"base"`
+	Operator        *string          `json:"operator"`
+	Value           decimal.Decimal  `json:"value"`
+	Cap             *decimal.Decimal `json:"cap"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+	Reason          *string          `json:"reason"`
+	CreatedBy       string           `json:"created_by"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       *time.Time       `json:"updated_at"`
 }
 
 type Outbox struct {
@@ -42,21 +43,22 @@ type Outbox struct {
 }
 
 type Policy struct {
-	ID              int64           `json:"id"`
-	PolicyGroupID   int64           `json:"policy_group_id"`
-	PolicyTypeID    int64           `json:"policy_type_id"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Direction       string          `json:"direction"`
-	WindowType      string          `json:"window_type"`
-	Unit            *string         `json:"unit"`
-	Base            *string         `json:"base"`
-	Operator        *string         `json:"operator"`
-	Value           decimal.Decimal `json:"value"`
-	EffectiveFrom   time.Time       `json:"effective_from"`
-	EffectiveTo     *time.Time      `json:"effective_to"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64            `json:"id"`
+	PolicyGroupID   int64            `json:"policy_group_id"`
+	PolicyTypeID    int64            `json:"policy_type_id"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	WindowType      string           `json:"window_type"`
+	UnitID          *int64           `json:"unit_id"`
+	Base            *string          `json:"base"`
+	Operator        *string          `json:"operator"`
+	Value           decimal.Decimal  `json:"value"`
+	Cap             *decimal.Decimal `json:"cap"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       *time.Time       `json:"updated_at"`
 }
 
 type PolicyAuditLog struct {
@@ -84,6 +86,7 @@ type PolicyType struct {
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
 	Kind        string     `json:"kind"`
+	IsEnforced  bool       `json:"is_enforced"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
@@ -127,6 +130,15 @@ type ReservationsTemplate struct {
 	UpdatedAt          *time.Time      `json:"updated_at"`
 }
 
+type Unit struct {
+	ID          int64      `json:"id"`
+	Code        string     `json:"code"`
+	Description *string    `json:"description"`
+	Active      bool       `json:"active"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at"`
+}
+
 type Usage struct {
 	WalletID        string          `json:"wallet_id"`
 	PolicyTypeID    int64           `json:"policy_type_id"`
@@ -134,7 +146,7 @@ type Usage struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -146,7 +158,7 @@ type UsageDaily struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -158,7 +170,7 @@ type UsageDailyTemplate struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -173,7 +185,7 @@ type UsageLedger struct {
 	Channel              string           `json:"channel"`
 	Direction            string           `json:"direction"`
 	WindowType           string           `json:"window_type"`
-	Unit                 string           `json:"unit"`
+	UnitID               int64            `json:"unit_id"`
 	WindowStart          pgtype.Date      `json:"window_start"`
 	Delta                decimal.Decimal  `json:"delta"`
 	PolicyID             *int64           `json:"policy_id"`
@@ -191,7 +203,7 @@ type UsageLifetime struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -203,7 +215,7 @@ type UsageMonthly struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }

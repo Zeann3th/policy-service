@@ -45,6 +45,15 @@ func (r resolverStub) Resolve(_ context.Context, request policy.ResolveRequest) 
 	return matched, nil
 }
 
+func unitID(t *testing.T, pool *pgxpool.Pool, code string) *int64 {
+	t.Helper()
+	var id int64
+	if err := pool.QueryRow(context.Background(), "SELECT id FROM units WHERE code = $1", code).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return &id
+}
+
 func policyTypeID(t *testing.T, pool *pgxpool.Pool, code string) int64 {
 	t.Helper()
 	var id int64
@@ -58,8 +67,8 @@ func policyTypeID(t *testing.T, pool *pgxpool.Pool, code string) int64 {
 func dailyLimit(t *testing.T, pool *pgxpool.Pool, limit string) resolverStub {
 	return resolverStub{{
 		ID: 1, PolicyTypeID: policyTypeID(t, pool, "TOTAL_MAX"), PolicyType: "TOTAL_MAX",
-		Kind: policy.KindLimit, Unit: policy.UnitAmount, TransactionType: policy.All, Channel: policy.All,
-		Direction: policy.DirectionAll, WindowType: policy.WindowDaily, Operator: policy.OpLTE, Value: decimal.RequireFromString(limit),
+		Kind: policy.KindLimit, UnitID: unitID(t, pool, policy.UnitAmount), Unit: policy.UnitAmount, TransactionType: policy.All, Channel: policy.All,
+		Direction: policy.DirectionAll, WindowType: policy.WindowDaily, Operator: policy.OpLTE, Value: decimal.RequireFromString(limit), IsEnforced: true,
 	}}
 }
 

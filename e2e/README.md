@@ -47,13 +47,17 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
 
 * 6 policy groups: PERSONAL / MERCHANT x T1 / T2 / T3, VND. Limits scale by
   tier (T1 1x, T2 5x, T3 20x).
-* System policies per group. Every policy type is a baseline one; how a
-  value is read is on the policy row: `unit` (what a LIMIT or WAIVER
-  measures), `base` (what a FEE / DISCOUNT / TAX percentage is of; empty
-  means a flat amount) and `operator` (LIMIT only).
+* System policies per group. Units and policy types come from the
+  baseline catalog. A policy's kind (from its type) picks the strategy:
+  LIMIT, WAIVER or AUXILIARY (charges: TXN_FEE, TXN_DISCOUNT, TXN_TAX). The
+  row says how its value is read: `unit` (what a LIMIT / WAIVER measures, or
+  what an AUXILIARY cap counts), `base` (what a charge percentage is of;
+  empty = flat), `operator` (LIMIT only), `cap` (most a charge takes per
+  window). Responses list each side's `charges` by type, discounts negative.
 
   | Type | Selector | Window | Unit / base | Rule |
   |---|---|---|---|---|
+  | COIN_MIN | OUT | - | unit BALANCE | >= 0; config for accounting (type is_enforced false: not evaluated here) |
   | TXN_MIN | OUT | - | unit AMOUNT | >= 1,000 |
   | TXN_MAX | OUT | - | unit AMOUNT | <= 20M x tier |
   | TOTAL_MAX | OUT | DAILY | unit AMOUNT | <= 100M x tier |
@@ -62,8 +66,9 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
   | NO_FEE_TRANSACTION | TRANSFER OUT | MONTHLY | unit COUNT | first 5 free |
   | TXN_FEE | TRANSFER OUT | - | flat | 1,100 |
   | TXN_FEE | PAYMENT OUT | - | base AMOUNT | 0.5% of the amount |
-  | TXN_DISCOUNT | OUT, T3 only | - | base FEE | 10% off the fee (capped at the fee) |
+  | TXN_DISCOUNT | OUT, T3 only | - | base FEE | 10% off the fee (at most the fee) |
   | TXN_TAX | OUT | - | base NET_FEE | 10% of fee minus fee discounts |
+  | COIN_MAX | IN | - | unit BALANCE | <= 100B; config for accounting |
   | TOTAL_MAX | IN | DAILY | unit AMOUNT | <= 500M x tier (x10 merchant) |
   | TXN_FEE | PAYMENT IN, merchants | - | base AMOUNT | 1% |
 
@@ -71,13 +76,14 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
   (1 T1, 2 T2, 0 T3). `k6/lib.js` uses the same formula.
 * Custom policies for wallets 1..500, by profile i % 5: 0 TIGHT (daily cap
   2M, which produces REJECTED), 1 VIP (10B daily, 500M per transaction),
-  2 FEE_FREE (plus 1% cashback: TXN_DISCOUNT on base AMOUNT, PAYMENT only),
+  2 FEE_FREE (plus 1% cashback on PAYMENT: TXN_DISCOUNT on base AMOUNT,
+  at most 50,000 a month: window MONTHLY, unit AMOUNT, cap 50,000),
   3 PROMO (flat fee 2,000, 50% fee discount), 4 APP_CAP (APP channel
   5M/day, 50 transactions/day). Every 50th wallet also has an expired
   override that must be ignored.
 * A custom policy overrides the system one with the same identity: type,
-  selectors, window and unit. The base is not part of it, so a custom flat
-  fee replaces a system percentage fee of the same scope.
+  selectors, window and unit. The base and cap are not part of it, so a
+  custom flat fee replaces a system percentage fee of the same scope.
 
 ## Suites
 

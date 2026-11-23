@@ -70,7 +70,7 @@ type UsageKey struct {
 	Channel         string
 	Direction       policy.Direction
 	WindowType      policy.WindowType
-	Unit            policy.Unit
+	UnitID          int64
 	WindowStart     time.Time
 }
 

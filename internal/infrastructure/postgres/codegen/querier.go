@@ -17,17 +17,20 @@ type Querier interface {
 	CountPolicies(ctx context.Context, policyGroupID int64) (int64, error)
 	CountPolicyGroups(ctx context.Context) (int64, error)
 	CountPolicyTypes(ctx context.Context) (int64, error)
+	CountUnits(ctx context.Context) (int64, error)
 	CreateCustomPolicy(ctx context.Context, arg CreateCustomPolicyParams) (CustomPolicy, error)
 	CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Policy, error)
 	CreatePolicyAuditLog(ctx context.Context, arg CreatePolicyAuditLogParams) (PolicyAuditLog, error)
 	CreatePolicyGroup(ctx context.Context, arg CreatePolicyGroupParams) (PolicyGroup, error)
 	CreatePolicyType(ctx context.Context, arg CreatePolicyTypeParams) (PolicyType, error)
 	CreateReservation(ctx context.Context, arg CreateReservationParams) (time.Time, error)
+	CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, error)
 	CreateUsageLedger(ctx context.Context, arg CreateUsageLedgerParams) error
 	DeleteCustomPolicy(ctx context.Context, arg DeleteCustomPolicyParams) (CustomPolicy, error)
 	DeletePolicy(ctx context.Context, arg DeletePolicyParams) (Policy, error)
 	DeletePolicyGroup(ctx context.Context, id int64) (PolicyGroup, error)
 	DeletePolicyType(ctx context.Context, id int64) (PolicyType, error)
+	DeleteUnit(ctx context.Context, id int64) (Unit, error)
 	GetActiveCustomPolicies(ctx context.Context, walletID string) ([]GetActiveCustomPoliciesRow, error)
 	GetCustomPolicyByID(ctx context.Context, arg GetCustomPolicyByIDParams) (CustomPolicy, error)
 	GetCustomPolicyByIDForUpdate(ctx context.Context, arg GetCustomPolicyByIDForUpdateParams) (CustomPolicy, error)
@@ -42,11 +45,14 @@ type Querier interface {
 	GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (PolicyType, error)
 	// request_id is unique per monthly partition; the latest one wins.
 	GetReservationByRequestID(ctx context.Context, requestID string) (Reservation, error)
+	GetUnitByID(ctx context.Context, id int64) (Unit, error)
+	GetUnitByIDForUpdate(ctx context.Context, id int64) (Unit, error)
 	GetUsageValue(ctx context.Context, arg GetUsageValueParams) (decimal.Decimal, error)
 	ListCustomPolicies(ctx context.Context, arg ListCustomPoliciesParams) ([]CustomPolicy, error)
 	ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]Policy, error)
 	ListPolicyGroups(ctx context.Context, arg ListPolicyGroupsParams) ([]PolicyGroup, error)
 	ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams) ([]PolicyType, error)
+	ListUnits(ctx context.Context, arg ListUnitsParams) ([]Unit, error)
 	ListUsageLedger(ctx context.Context, arg ListUsageLedgerParams) ([]UsageLedger, error)
 	Lock(ctx context.Context, key int64) error
 	// updated_at is set by the trigger: the time of the transition.
@@ -55,6 +61,7 @@ type Querier interface {
 	UpdatePolicy(ctx context.Context, arg UpdatePolicyParams) (Policy, error)
 	UpdatePolicyType(ctx context.Context, arg UpdatePolicyTypeParams) (PolicyType, error)
 	UpdateReservationStatus(ctx context.Context, arg UpdateReservationStatusParams) (int64, error)
+	UpdateUnit(ctx context.Context, arg UpdateUnitParams) (Unit, error)
 }
 
 var _ Querier = (*Queries)(nil)

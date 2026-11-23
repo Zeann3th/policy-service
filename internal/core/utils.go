@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -31,4 +32,14 @@ func Decode[T any](value string) (*T, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+var codePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+// Code normalizes a catalog code (unit, policy type) to upper case and
+// reports whether it is well formed: a letter, then letters, digits or
+// underscores ("TXN_FEE", not "COIN MAX").
+func Code(value string) (string, bool) {
+	code := strings.ToUpper(strings.TrimSpace(value))
+	return code, codePattern.MatchString(code)
 }

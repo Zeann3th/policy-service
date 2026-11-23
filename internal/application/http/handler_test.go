@@ -157,6 +157,8 @@ func TestSwaggerDocumentsEveryRoute(t *testing.T) {
 		"/v1/policies/groups/{groupId}/policies/{policyId}": {http.MethodGet, http.MethodPut, http.MethodDelete},
 		"/v1/policies/types":                                {http.MethodGet, http.MethodPost},
 		"/v1/policies/types/{typeId}":                       {http.MethodGet, http.MethodPut, http.MethodDelete},
+		"/v1/units":                                         {http.MethodGet, http.MethodPost},
+		"/v1/units/{unitId}":                                {http.MethodGet, http.MethodPut, http.MethodDelete},
 	}
 	for path, methods := range expected {
 		for _, method := range methods {
@@ -170,7 +172,7 @@ func TestSwaggerDocumentsEveryRoute(t *testing.T) {
 func TestSwaggerRouteFollowsConfig(t *testing.T) {
 	for enabled, want := range map[bool]int{false: http.StatusNotFound, true: http.StatusOK} {
 		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, SwaggerEnabled: enabled}}
-		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -195,7 +197,7 @@ func TestCORSFollowsAllowedOrigins(t *testing.T) {
 		{[]string{"*"}, "https://anything.example", "*"},
 	} {
 		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, CORSOrigins: test.origins}}
-		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

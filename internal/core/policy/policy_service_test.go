@@ -81,37 +81,3 @@ func TestCacheTTLStopsAtNextEffectiveBoundary(t *testing.T) {
 		}
 	}
 }
-
-func TestKindCheckEnforcesShape(t *testing.T) {
-	for _, test := range []struct {
-		kind     Kind
-		unit     Unit
-		base     Base
-		operator Operator
-		window   WindowType
-		ok       bool
-	}{
-		{KindLimit, UnitAmount, "", OpLTE, WindowDaily, true},
-		{KindLimit, UnitCount, "", OpLTE, WindowNone, true},
-		{KindLimit, "", "", OpLTE, WindowNone, false},
-		{KindLimit, UnitAmount, "", "", WindowNone, false},
-		{KindLimit, UnitAmount, BaseAmount, OpLTE, WindowNone, false},
-		{KindWaiver, UnitCount, "", "", WindowMonthly, true},
-		{KindWaiver, UnitAmount, "", "", WindowMonthly, false},
-		{KindWaiver, UnitCount, "", OpLT, WindowMonthly, false},
-		{KindFee, "", "", "", WindowNone, true},
-		{KindFee, "", BaseAmount, "", WindowNone, true},
-		{KindFee, "", BaseFee, "", WindowNone, false},
-		{KindFee, UnitAmount, "", "", WindowNone, false},
-		{KindFee, "", "", OpEQ, WindowNone, false},
-		{KindFee, "", "", "", WindowDaily, false},
-		{KindDiscount, "", BaseFee, "", WindowNone, true},
-		{KindDiscount, "", BaseNetFee, "", WindowNone, false},
-		{KindTax, "", BaseNetFee, "", WindowNone, true},
-		{"REVENUE_SHARE", "", "", "", WindowNone, false},
-	} {
-		if err := test.kind.Check(test.unit, test.base, test.operator, test.window); (err == nil) != test.ok {
-			t.Errorf("%s unit=%q base=%q operator=%q window=%s: err = %v, want ok %v", test.kind, test.unit, test.base, test.operator, test.window, err, test.ok)
-		}
-	}
-}

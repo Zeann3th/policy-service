@@ -13,16 +13,40 @@ var at = time.Date(2026, time.November, 30, 18, 30, 0, 0, time.UTC)
 
 func d(value string) decimal.Decimal { return decimal.RequireFromString(value) }
 
-func p(id int64, kind policy.Kind, unit policy.Unit, window policy.WindowType, operator policy.Operator, value string) policy.Policy {
-	return policy.Policy{ID: id, PolicyTypeID: id, PolicyType: "TYPE", Kind: kind, Unit: unit, TransactionType: policy.All, Channel: policy.All, Direction: policy.DirectionOut, WindowType: window, Operator: operator, Value: d(value)}
+// unit ids as seeded in the units table
+var unitIDs = map[string]int64{policy.UnitAmount: 1, policy.UnitCount: 2, "BALANCE": 3}
+
+// p is a LIMIT or WAIVER policy measured in unit.
+func p(id int64, kind policy.Kind, unit string, window policy.WindowType, operator policy.Operator, value string) policy.Policy {
+	value_ := policy.Policy{ID: id, PolicyTypeID: id, PolicyType: "TYPE", Kind: kind, TransactionType: policy.All, Channel: policy.All, Direction: policy.DirectionOut, WindowType: window, Operator: operator, Value: d(value), IsEnforced: true}
+	if unit != "" {
+		unitID := unitIDs[unit]
+		value_.UnitID, value_.Unit = &unitID, unit
+	}
+	return value_
 }
 
-// c is a charge (FEE, DISCOUNT, TAX): flat without a base, otherwise a
+// c is an AUXILIARY policy of type code: flat without a base, otherwise a
 // percentage of it.
-func c(id int64, kind policy.Kind, base policy.Base, value string) policy.Policy {
-	charge := p(id, kind, "", policy.WindowNone, "", value)
-	charge.Base = base
+func c(id int64, code string, base policy.Base, value string) policy.Policy {
+	charge := p(id, policy.KindAuxiliary, "", policy.WindowNone, "", value)
+	charge.PolicyType, charge.Base = code, base
 	return charge
+}
+
+// windowCapped gives a charge a window cap counted in unit.
+func windowCapped(value policy.Policy, window policy.WindowType, unit, cap string) policy.Policy {
+	unitID, amount := unitIDs[unit], d(cap)
+	value.WindowType, value.UnitID, value.Unit, value.Cap = window, &unitID, unit, &amount
+	return value
+}
+
+func charges(result PartyResult) map[string]string {
+	totals := map[string]string{}
+	for _, charge := range result.Charges {
+		totals[charge.PolicyType] = charge.Amount.String()
+	}
+	return totals
 }
 
 func TestWindowStartUsesUTCCalendar(t *testing.T) {
@@ -38,18 +62,13 @@ func TestWindowStartUsesUTCCalendar(t *testing.T) {
 	}
 }
 
-func TestEveryKindHasOneStrategy(t *testing.T) {
+func TestEveryKindHasOneStrategyInOrder(t *testing.T) {
 	var kinds []policy.Kind
 	for _, value := range strategies.order {
 		kinds = append(kinds, value.kind())
 	}
-	if want := policy.Kinds(); !slices.Equal(slices.Sorted(slices.Values(kinds)), want) {
-		t.Fatalf("strategies cover %v, declared kinds are %v", kinds, want)
-	}
-	// charges read the bases of earlier strategies; the waiver zeroes the fee
-	want := []policy.Kind{policy.KindLimit, policy.KindWaiver, policy.KindFee, policy.KindDiscount, policy.KindTax}
-	if !slices.Equal(kinds, want) {
-		t.Fatalf("order = %v, want %v", kinds, want)
+	if want := policy.Kinds(); !slices.Equal(kinds, want) {
+		t.Fatalf("strategies = %v, want %v (limits and the waiver before the charges)", kinds, want)
 	}
 }
 
@@ -59,27 +78,40 @@ func TestRegistryRejectsDuplicateKind(t *testing.T) {
 			t.Fatal("registering a kind twice must panic")
 		}
 	}()
-	newRegistry(feeStrategy{}, feeStrategy{})
+	newRegistry(limitStrategy{}, limitStrategy{})
 }
 
-func TestEvaluateRejectsKindWithoutStrategy(t *testing.T) {
-	if _, _, err := evaluate("w", d("1"), []policy.Policy{c(1, "REVENUE_SHARE", "", "1")}, nil, at); err == nil {
-		t.Fatal("want error")
+func TestEngineSkipsConfigOnlyAndUnknownPolicies(t *testing.T) {
+	// config only: the type is not enforced (balance limits for accounting)
+	balance := p(1, policy.KindLimit, "BALANCE", policy.WindowNone, policy.OpGTE, "1000000")
+	balance.IsEnforced = false
+	// enforced, but the code has no behaviour for them: they do nothing
+	unmeasured := p(2, policy.KindLimit, "BALANCE", policy.WindowNone, policy.OpGTE, "1000000")
+	smsFee := c(3, "SMS_FEE", "", "500")
+	unknownKind := c(4, "REVENUE_SHARE", "", "1")
+	unknownKind.Kind = "REVENUE_SHARE"
+	fee := c(5, TypeFee, "", "1100")
+
+	result, entries, err := evaluate("w", d("1"), []policy.Policy{balance, unmeasured, smsFee, unknownKind, fee}, nil, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.AppliedPolicies) != 1 || result.AppliedPolicies[0].PolicyID != 5 || len(entries) != 0 || result.IsViolated {
+		t.Fatalf("only the fee may reach the engine: %#v", result.AppliedPolicies)
+	}
+	if want := map[string]string{TypeFee: "1100"}; !equalMaps(charges(result), want) {
+		t.Fatalf("charges = %v, want %v", charges(result), want)
 	}
 }
 
 func TestEvaluateLimits(t *testing.T) {
 	daily := p(1, policy.KindLimit, policy.UnitAmount, policy.WindowDaily, policy.OpLTE, "1000")
 	single := p(2, policy.KindLimit, policy.UnitAmount, policy.WindowNone, policy.OpLTE, "500")
-	balance := p(3, policy.KindLimit, policy.UnitBalance, policy.WindowNone, policy.OpGTE, "0")
 	usage := map[UsageKey]decimal.Decimal{usageKey("w", daily, at): d("700")}
 
-	result, entries, err := evaluate("w", d("400"), []policy.Policy{daily, single, balance}, usage, at)
+	result, entries, err := evaluate("w", d("400"), []policy.Policy{daily, single}, usage, at)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if len(result.AppliedPolicies) != 2 {
-		t.Fatalf("the balance limit must be skipped: %#v", result.AppliedPolicies)
 	}
 	if got := result.AppliedPolicies[0].Usage; got == nil || !got.Equal(d("1100")) {
 		t.Fatalf("projected usage = %v", got)
@@ -87,7 +119,7 @@ func TestEvaluateLimits(t *testing.T) {
 	if !result.IsViolated || !result.AppliedPolicies[0].Violated || result.AppliedPolicies[1].Violated {
 		t.Fatal("700 + 400 must violate only the daily 1000 limit")
 	}
-	if len(entries) != 1 || !entries[0].Delta.Equal(d("400")) || entries[0].EntryType != EntryReserve || *entries[0].PolicyID != 1 || entries[0].Unit != policy.UnitAmount {
+	if len(entries) != 1 || !entries[0].Delta.Equal(d("400")) || entries[0].EntryType != EntryReserve || *entries[0].PolicyID != 1 || entries[0].UnitID != unitIDs[policy.UnitAmount] {
 		t.Fatalf("entries = %#v", entries)
 	}
 
@@ -114,13 +146,13 @@ func TestEvaluateCountLimitCountsTransactions(t *testing.T) {
 	}
 }
 
-func TestEvaluateFeesWaiverDiscountTax(t *testing.T) {
-	fee := c(1, policy.KindFee, "", "1000")
-	percentFee := c(2, policy.KindFee, policy.BaseAmount, "1")
-	discount := c(3, policy.KindDiscount, policy.BaseFee, "10")
-	tax := c(4, policy.KindTax, policy.BaseNetFee, "10")
+func TestEvaluateWaiverFeeDiscountTax(t *testing.T) {
+	fee := c(1, TypeFee, "", "1000")
+	percentFee := c(2, TypeFee, policy.BaseAmount, "1")
+	discount := c(3, TypeDiscount, policy.BaseFee, "10")
+	tax := c(4, TypeTax, policy.BaseNetFee, "10")
 	waiver := p(5, policy.KindWaiver, policy.UnitCount, policy.WindowMonthly, "", "3")
-	// any input order: the registry processes the waiver before the fee
+	// any input order: the waiver runs before the charges, the fee before the tax
 	all := []policy.Policy{tax, discount, fee, percentFee, waiver}
 
 	// 4th transaction this month: the waiver is used up
@@ -130,66 +162,106 @@ func TestEvaluateFeesWaiverDiscountTax(t *testing.T) {
 		t.Fatal(err)
 	}
 	// fee 1000 + 1% of 100000 = 2000; discount 10% = 200; tax 10% of 1800 = 180
-	if !result.Fee.Equal(d("2000")) || !result.Discount.Equal(d("200")) || !result.Tax.Equal(d("180")) {
-		t.Fatalf("fee/discount/tax = %s/%s/%s", result.Fee, result.Discount, result.Tax)
+	want := map[string]string{TypeFee: "2000", TypeDiscount: "-200", TypeTax: "180"}
+	if got := charges(result); !equalMaps(got, want) {
+		t.Fatalf("charges = %v, want %v", got, want)
+	}
+	if order := []string{result.Charges[0].PolicyType, result.Charges[1].PolicyType, result.Charges[2].PolicyType}; !slices.Equal(order, []string{TypeFee, TypeDiscount, TypeTax}) {
+		t.Fatalf("charges order = %v", order)
 	}
 	if len(entries) != 1 || !entries[0].Delta.Equal(d("1")) || entries[0].Operator != nil {
 		t.Fatalf("waiver must count one transaction: %#v", entries)
 	}
 
-	// 1st transaction this month: free
+	// 1st transaction this month: the fee is waived, so is the tax on it
 	result, _, err = evaluate("w", d("100000"), all, nil, at)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.Fee.IsZero() || !result.Discount.IsZero() || !result.Tax.IsZero() {
-		t.Fatalf("waived fee/discount/tax = %s/%s/%s", result.Fee, result.Discount, result.Tax)
+	if want := map[string]string{TypeFee: "0", TypeDiscount: "0", TypeTax: "0"}; !equalMaps(charges(result), want) {
+		t.Fatalf("waived charges = %v", charges(result))
 	}
 }
 
 func TestEvaluateChargesUseTheirBase(t *testing.T) {
-	fee := c(1, policy.KindFee, policy.BaseAmount, "1")
-	feeDiscount := c(2, policy.KindDiscount, policy.BaseFee, "50")
-	cashback := c(3, policy.KindDiscount, policy.BaseAmount, "2")
+	fee := c(1, TypeFee, policy.BaseAmount, "1")
+	feeDiscount := c(2, TypeDiscount, policy.BaseFee, "50")
+	cashback := c(3, TypeDiscount, policy.BaseAmount, "2")
 	for name, test := range map[string]struct {
-		tax               policy.Policy
-		discount, wantTax string
+		tax  policy.Policy
+		want string
 	}{
 		// fee 1% of 100000 = 1000; fee discount 50% = 500; cashback 2% of 100000 = 2000
-		"tax on net fee": {tax: c(4, policy.KindTax, policy.BaseNetFee, "10"), discount: "2500", wantTax: "50"},
-		"tax on fee":     {tax: c(4, policy.KindTax, policy.BaseFee, "10"), discount: "2500", wantTax: "100"},
-		"tax on amount":  {tax: c(4, policy.KindTax, policy.BaseAmount, "10"), discount: "2500", wantTax: "10000"},
-		"flat tax":       {tax: c(4, policy.KindTax, "", "10"), discount: "2500", wantTax: "10"},
+		"tax on net fee": {tax: c(4, TypeTax, policy.BaseNetFee, "10"), want: "50"},
+		"tax on fee":     {tax: c(4, TypeTax, policy.BaseFee, "10"), want: "100"},
+		"tax on amount":  {tax: c(4, TypeTax, policy.BaseAmount, "10"), want: "10000"},
+		"flat tax":       {tax: c(4, TypeTax, "", "10"), want: "10"},
 	} {
 		result, _, err := evaluate("w", d("100000"), []policy.Policy{fee, feeDiscount, cashback, test.tax}, nil, at)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !result.Fee.Equal(d("1000")) || !result.Discount.Equal(d(test.discount)) || !result.Tax.Equal(d(test.wantTax)) {
-			t.Errorf("%s: fee/discount/tax = %s/%s/%s", name, result.Fee, result.Discount, result.Tax)
+		if want := map[string]string{TypeFee: "1000", TypeDiscount: "-2500", TypeTax: test.want}; !equalMaps(charges(result), want) {
+			t.Errorf("%s: charges = %v, want %v", name, charges(result), want)
 		}
 	}
 }
 
 func TestEvaluateCapsDiscountsByTheirBase(t *testing.T) {
-	fee := c(1, policy.KindFee, "", "100")
-	feeDiscount := c(2, policy.KindDiscount, policy.BaseFee, "300")
-	flatDiscount := c(3, policy.KindDiscount, "", "50")
-	cashback := c(4, policy.KindDiscount, policy.BaseAmount, "150")
+	fee := c(1, TypeFee, "", "100")
+	feeDiscount := c(2, TypeDiscount, policy.BaseFee, "300")
+	flatDiscount := c(3, TypeDiscount, "", "50")
+	cashback := c(4, TypeDiscount, policy.BaseAmount, "150")
 	result, _, err := evaluate("w", d("1000"), []policy.Policy{fee, feeDiscount, flatDiscount, cashback}, nil, at)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// flat and fee discounts capped at the fee (100), cashback at the amount (1000)
-	if !result.Discount.Equal(d("1100")) {
-		t.Fatalf("discount = %s, want 1100", result.Discount)
+	// flat and fee discounts at most the fee (100), cashback at most the amount (1000)
+	if got := charges(result)[TypeDiscount]; got != "-1100" {
+		t.Fatalf("discount = %s, want -1100", got)
+	}
+	// each line reports its own signed charge
+	if got := result.AppliedPolicies[1].Charge; got == nil || got.String() != "-300" {
+		t.Fatalf("fee discount line = %v, want -300", got)
+	}
+}
+
+func TestEvaluateCapsChargesPerWindow(t *testing.T) {
+	// 0.5% fee, at most 1,000 charged per day; 800 charged already today
+	fee := windowCapped(c(1, TypeFee, policy.BaseAmount, "0.5"), policy.WindowDaily, policy.UnitAmount, "1000")
+	usage := map[UsageKey]decimal.Decimal{usageKey("w", fee, at): d("800")}
+	result, entries, err := evaluate("w", d("100000"), []policy.Policy{fee}, usage, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := charges(result)[TypeFee]; got != "200" {
+		t.Fatalf("fee = %s, want the 200 left of the daily cap", got)
+	}
+	if len(entries) != 1 || !entries[0].Delta.Equal(d("200")) || !entries[0].LimitValue.Equal(d("1000")) {
+		t.Fatalf("entries = %#v", entries)
+	}
+
+	// cashback on the first 2 payments a month only (cap counted in COUNT)
+	cashback := windowCapped(c(2, TypeDiscount, policy.BaseAmount, "1"), policy.WindowMonthly, policy.UnitCount, "2")
+	for used, want := range map[string]string{"1": "-1000", "2": "0"} {
+		usage := map[UsageKey]decimal.Decimal{usageKey("w", cashback, at): d(used)}
+		result, entries, err := evaluate("w", d("100000"), []policy.Policy{cashback}, usage, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := charges(result)[TypeDiscount]; got != want {
+			t.Errorf("after %s cashbacks: discount = %s, want %s", used, got, want)
+		}
+		if wantEntries := map[string]int{"1": 1, "2": 0}[used]; len(entries) != wantEntries {
+			t.Errorf("after %s cashbacks: %d entries, want %d", used, len(entries), wantEntries)
+		}
 	}
 }
 
 func TestEvaluateRejectsBaseNotYetComputed(t *testing.T) {
 	for name, value := range map[string]policy.Policy{
-		"fee on fee":       c(1, policy.KindFee, policy.BaseFee, "1"),
-		"discount net fee": c(1, policy.KindDiscount, policy.BaseNetFee, "1"),
+		"fee on fee":       c(1, TypeFee, policy.BaseFee, "1"),
+		"discount net fee": c(1, TypeDiscount, policy.BaseNetFee, "1"),
 	} {
 		if _, _, err := evaluate("w", d("100"), []policy.Policy{value}, nil, at); err == nil {
 			t.Errorf("%s: want error", name)
@@ -197,47 +269,53 @@ func TestEvaluateRejectsBaseNotYetComputed(t *testing.T) {
 	}
 }
 
-func TestEvaluateRejectsUnmeasurableLimit(t *testing.T) {
-	for _, value := range []policy.Policy{
-		p(1, policy.KindLimit, "", policy.WindowNone, policy.OpLTE, "1"),
-		p(2, policy.KindWaiver, "", policy.WindowDaily, "", "1"),
+func TestRulesCheckWhatEachKindTakes(t *testing.T) {
+	cap := d("50000")
+	negative := d("-10")
+	spec := func(kind policy.Kind, code, unit string, base policy.Base, operator policy.Operator, window policy.WindowType) policy.Spec {
+		return policy.Spec{Kind: kind, Type: code, Unit: unit, Base: base, Operator: operator, Window: window, Value: d("1")}
+	}
+	withCap := func(value policy.Spec, amount *decimal.Decimal) policy.Spec { value.Cap = amount; return value }
+	withValue := func(value policy.Spec, amount decimal.Decimal) policy.Spec { value.Value = amount; return value }
+	for name, test := range map[string]struct {
+		spec policy.Spec
+		ok   bool
+	}{
+		"daily amount limit":       {spec(policy.KindLimit, "TOTAL_MAX", policy.UnitAmount, "", policy.OpLTE, policy.WindowDaily), true},
+		"balance limit":            {spec(policy.KindLimit, "COIN_MIN", "BALANCE", "", policy.OpGTE, policy.WindowNone), true},
+		"limit without unit":       {spec(policy.KindLimit, "TXN_MAX", "", "", policy.OpLTE, policy.WindowNone), false},
+		"limit without operator":   {spec(policy.KindLimit, "TXN_MAX", policy.UnitAmount, "", "", policy.WindowNone), false},
+		"limit with base":          {spec(policy.KindLimit, "TXN_MAX", policy.UnitAmount, policy.BaseAmount, policy.OpLTE, policy.WindowNone), false},
+		"monthly count waiver":     {spec(policy.KindWaiver, "NO_FEE", policy.UnitCount, "", "", policy.WindowMonthly), true},
+		"waiver with operator":     {spec(policy.KindWaiver, "NO_FEE", policy.UnitCount, "", policy.OpLT, policy.WindowMonthly), false},
+		"flat fee":                 {spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowNone), true},
+		"fee on the amount":        {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseAmount, "", policy.WindowNone), true},
+		"fee on the fee":           {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseFee, "", policy.WindowNone), false},
+		"tax on net fee":           {spec(policy.KindAuxiliary, TypeTax, "", policy.BaseNetFee, "", policy.WindowNone), true},
+		"unknown charge, any base": {spec(policy.KindAuxiliary, "SMS_FEE", "", policy.BaseNetFee, "", policy.WindowNone), true},
+		"charge with operator":     {spec(policy.KindAuxiliary, TypeFee, "", "", policy.OpEQ, policy.WindowNone), false},
+		"daily capped fee":         {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, policy.BaseAmount, "", policy.WindowDaily), &cap), true},
+		"window without cap":       {spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), false},
+		"cap without window":       {withCap(spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowNone), &cap), false},
+		"negative discount":        {withValue(spec(policy.KindAuxiliary, TypeDiscount, "", policy.BaseAmount, "", policy.WindowNone), negative), false},
+		"negative cap":             {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), &negative), false},
+		"unknown kind":             {spec("REVENUE_SHARE", "X", "", "", "", policy.WindowNone), false},
+		"unknown window":           {spec(policy.KindLimit, "TXN_MAX", policy.UnitAmount, "", policy.OpLTE, "WEEKLY"), false},
 	} {
-		if _, _, err := evaluate("w", d("1"), []policy.Policy{value}, nil, at); err == nil {
-			t.Errorf("policy %d must fail", value.ID)
+		if err := NewRules().Check(test.spec); (err == nil) != test.ok {
+			t.Errorf("%s: err = %v, want ok %v", name, err, test.ok)
 		}
 	}
 }
 
-func TestEvaluateReportsEachLineCharge(t *testing.T) {
-	fee := c(1, policy.KindFee, policy.BaseAmount, "1")
-	tax := c(2, policy.KindTax, policy.BaseFee, "10")
-	waiver := p(3, policy.KindWaiver, policy.UnitCount, policy.WindowMonthly, "", "1")
-	charges := func(result PartyResult) map[int64]string {
-		lines := map[int64]string{}
-		for _, applied := range result.AppliedPolicies {
-			if applied.Charge != nil {
-				lines[applied.PolicyID] = applied.Charge.String()
-			}
+func equalMaps(got, want map[string]string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for key, value := range want {
+		if got[key] != value {
+			return false
 		}
-		return lines
 	}
-
-	// waiver used up: fee 1% of 100000 = 1000, tax 10% of it = 100
-	used := map[UsageKey]decimal.Decimal{usageKey("w", waiver, at): d("1")}
-	result, _, err := evaluate("w", d("100000"), []policy.Policy{fee, tax, waiver}, used, at)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := charges(result); got[1] != "1000" || got[2] != "100" || len(got) != 2 {
-		t.Fatalf("line charges = %v", got)
-	}
-
-	// waived: the fee line charges nothing, so neither does the tax on it
-	result, _, err = evaluate("w", d("100000"), []policy.Policy{fee, tax, waiver}, nil, at)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := charges(result); got[1] != "0" || got[2] != "0" {
-		t.Fatalf("waived line charges = %v", got)
-	}
+	return true
 }

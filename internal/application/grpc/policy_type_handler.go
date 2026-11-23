@@ -20,7 +20,7 @@ func (h *policyTypeHandler) CreatePolicyType(ctx context.Context, request *pb.Cr
 	if err := kind(request.Kind); err != nil {
 		return nil, err
 	}
-	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, Kind: policy.Kind(request.Kind), Active: request.Active, UpdatedBy: request.UpdatedBy})
+	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, Kind: policy.Kind(request.Kind), IsEnforced: request.IsEnforced, Active: request.Active, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}
@@ -63,7 +63,7 @@ func (h *policyTypeHandler) UpdatePolicyType(ctx context.Context, request *pb.Up
 		return nil, grpcError(core.ErrBadRequest.WithMessage("active is required"))
 	}
 	id, _ := intID(request.Id)
-	response, err := h.service.Update(ctx, id, policy.UpdatePolicyTypeRequest{Description: request.Description, Active: request.Active, UpdatedBy: request.UpdatedBy})
+	response, err := h.service.Update(ctx, id, policy.UpdatePolicyTypeRequest{Description: request.Description, IsEnforced: request.IsEnforced, Active: request.Active, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}

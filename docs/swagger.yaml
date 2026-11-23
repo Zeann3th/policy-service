@@ -9,6 +9,7 @@ definitions:
         items:
           enum:
           - all
+          - units
           - policy:types
           - policy:groups
           - policies
@@ -113,17 +114,15 @@ definitions:
         items:
           $ref: '#/definitions/reservation.AppliedPolicy'
         type: array
-      discount:
-        example: "0"
-        type: string
-      fee:
-        example: "1100"
-        type: string
+      charges:
+        description: |-
+          Charges is what each AUXILIARY policy type charges this side, in type
+          order; a discount is negative. The side pays their sum.
+        items:
+          $ref: '#/definitions/reservation.Charge'
+        type: array
       isViolated:
         type: boolean
-      tax:
-        example: "0"
-        type: string
       usage:
         items:
           $ref: '#/definitions/dryrun.Usage'
@@ -215,6 +214,22 @@ definitions:
         example: 1
         type: integer
     type: object
+  http.unitPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/unit.Response'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
   policy.Base:
     enum:
     - AMOUNT
@@ -234,12 +249,18 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes a FEE / DISCOUNT / TAX value a percentage of it;
-          absent: flat amount.'
+        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
+          amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        description: |-
+          Cap is the most an AUXILIARY policy charges per window, in its unit;
+          required with a window, absent otherwise.
+        example: "50000"
+        type: string
       channel:
         type: string
       direction:
@@ -250,6 +271,7 @@ definitions:
         - OUT
         - IN
       effectiveFrom:
+        description: EffectiveFrom defaults to now on create and is required on update.
         format: date-time
         type: string
       effectiveTo:
@@ -272,15 +294,11 @@ definitions:
         type: string
       transactionType:
         type: string
-      unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        description: Unit is what a LIMIT or WAIVER measures; required for them, absent
-          otherwise.
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+      unitId:
+        description: |-
+          UnitID (units table) is what a LIMIT or WAIVER measures, or what an
+          AUXILIARY cap counts; required for LIMIT and WAIVER.
+        type: integer
       updatedBy:
         type: string
       value:
@@ -320,12 +338,18 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes a FEE / DISCOUNT / TAX value a percentage of it;
-          absent: flat amount.'
+        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
+          amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        description: |-
+          Cap is the most an AUXILIARY policy charges per window, in its unit;
+          required with a window, absent otherwise.
+        example: "50000"
+        type: string
       channel:
         type: string
       direction:
@@ -336,6 +360,7 @@ definitions:
         - OUT
         - IN
       effectiveFrom:
+        description: EffectiveFrom defaults to now on create and is required on update.
         format: date-time
         type: string
       effectiveTo:
@@ -356,15 +381,11 @@ definitions:
         type: integer
       transactionType:
         type: string
-      unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        description: Unit is what a LIMIT or WAIVER measures; required for them, absent
-          otherwise.
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+      unitId:
+        description: |-
+          UnitID (units table) is what a LIMIT or WAIVER measures, or what an
+          AUXILIARY cap counts; required for LIMIT and WAIVER.
+        type: integer
       updatedBy:
         type: string
       value:
@@ -391,16 +412,19 @@ definitions:
         type: string
       description:
         type: string
+      isEnforced:
+        description: |-
+          IsEnforced defaults to true; false stores and serves the type's
+          policies without evaluating them on reserve.
+        type: boolean
       kind:
         allOf:
         - $ref: '#/definitions/policy.Kind'
-        description: Kind defaults to LIMIT; it must be declared in shapes.
+        description: Kind defaults to LIMIT.
         enum:
         - LIMIT
         - WAIVER
-        - FEE
-        - TAX
-        - DISCOUNT
+        - AUXILIARY
       updatedBy:
         type: string
     required:
@@ -416,6 +440,8 @@ definitions:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        type: string
       channel:
         type: string
       createdAt:
@@ -454,13 +480,8 @@ definitions:
         type: string
       transactionType:
         type: string
-      unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+      unitId:
+        type: integer
       updatedAt:
         format: date-time
         type: string
@@ -499,16 +520,16 @@ definitions:
     enum:
     - LIMIT
     - WAIVER
-    - FEE
-    - TAX
-    - DISCOUNT
+    - AUXILIARY
     type: string
+    x-enum-comments:
+      KindAuxiliary: 'charges: fee, discount, tax, ... by type code'
+      KindLimit: blocks a transaction that breaks a bound
+      KindWaiver: waives the fee while usage is under a bound
     x-enum-varnames:
     - KindLimit
     - KindWaiver
-    - KindFee
-    - KindTax
-    - KindDiscount
+    - KindAuxiliary
   policy.Operator:
     enum:
     - EQ
@@ -551,6 +572,8 @@ definitions:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        type: string
       channel:
         type: string
       createdAt:
@@ -587,13 +610,8 @@ definitions:
         type: integer
       transactionType:
         type: string
-      unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+      unitId:
+        type: integer
       updatedAt:
         format: date-time
         type: string
@@ -622,15 +640,15 @@ definitions:
         type: string
       id:
         type: integer
+      isEnforced:
+        type: boolean
       kind:
         allOf:
         - $ref: '#/definitions/policy.Kind'
         enum:
         - LIMIT
         - WAIVER
-        - FEE
-        - TAX
-        - DISCOUNT
+        - AUXILIARY
       updatedAt:
         format: date-time
         type: string
@@ -644,6 +662,8 @@ definitions:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        type: string
       channel:
         type: string
       direction:
@@ -659,9 +679,7 @@ definitions:
         enum:
         - LIMIT
         - WAIVER
-        - FEE
-        - TAX
-        - DISCOUNT
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -683,12 +701,8 @@ definitions:
       transactionType:
         type: string
       unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+        example: AMOUNT
+        type: string
       value:
         example: "10000"
         type: string
@@ -709,30 +723,25 @@ definitions:
     x-enum-varnames:
     - SourceSystem
     - SourceCustom
-  policy.Unit:
-    enum:
-    - AMOUNT
-    - COUNT
-    - BALANCE
-    type: string
-    x-enum-comments:
-      UnitAmount: the transaction amount
-      UnitBalance: the wallet balance (not evaluated on reserve)
-      UnitCount: the number of transactions
-    x-enum-varnames:
-    - UnitAmount
-    - UnitCount
-    - UnitBalance
   policy.UpdateCustomPolicyRequest:
     properties:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
+        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
+          amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        description: |-
+          Cap is the most an AUXILIARY policy charges per window, in its unit;
+          required with a window, absent otherwise.
+        example: "50000"
+        type: string
       effectiveFrom:
+        description: EffectiveFrom defaults to now on create and is required on update.
         format: date-time
         type: string
       effectiveTo:
@@ -741,6 +750,7 @@ definitions:
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
+        description: Operator compares a LIMIT; required for LIMIT, absent otherwise.
         enum:
         - EQ
         - NEQ
@@ -756,7 +766,6 @@ definitions:
         example: "10000"
         type: string
     required:
-    - effectiveFrom
     - updatedBy
     - value
     type: object
@@ -765,11 +774,20 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
+        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
+          amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        description: |-
+          Cap is the most an AUXILIARY policy charges per window, in its unit;
+          required with a window, absent otherwise.
+        example: "50000"
+        type: string
       effectiveFrom:
+        description: EffectiveFrom defaults to now on create and is required on update.
         format: date-time
         type: string
       effectiveTo:
@@ -778,6 +796,7 @@ definitions:
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
+        description: Operator compares a LIMIT; required for LIMIT, absent otherwise.
         enum:
         - EQ
         - NEQ
@@ -791,7 +810,6 @@ definitions:
         example: "10000"
         type: string
     required:
-    - effectiveFrom
     - updatedBy
     - value
     type: object
@@ -801,6 +819,9 @@ definitions:
         type: boolean
       description:
         type: string
+      isEnforced:
+        description: IsEnforced keeps the current value when absent.
+        type: boolean
       updatedBy:
         type: string
     required:
@@ -828,12 +849,15 @@ definitions:
         - AMOUNT
         - FEE
         - NET_FEE
+      cap:
+        type: string
       channel:
         type: string
       charge:
         description: |-
-          Charge is what this FEE, DISCOUNT or TAX line computed, before the
-          side's caps (discounts) and waiver (fees) are applied to the totals.
+          Charge is what this AUXILIARY line charges, signed like Charges, after
+          its window cap and before the type's own caps (a discount at most the
+          fee) are applied to the totals.
         type: string
       direction:
         allOf:
@@ -848,9 +872,7 @@ definitions:
         enum:
         - LIMIT
         - WAIVER
-        - FEE
-        - TAX
-        - DISCOUNT
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -874,12 +896,8 @@ definitions:
       transactionType:
         type: string
       unit:
-        allOf:
-        - $ref: '#/definitions/policy.Unit'
-        enum:
-        - AMOUNT
-        - COUNT
-        - BALANCE
+        example: AMOUNT
+        type: string
       usage:
         description: Usage is the window total including this request (not stored
           when rejected).
@@ -899,6 +917,15 @@ definitions:
         - DAILY
         - MONTHLY
         - LIFETIME
+    type: object
+  reservation.Charge:
+    properties:
+      amount:
+        example: "1100"
+        type: string
+      policyType:
+        example: TXN_FEE
+        type: string
     type: object
   reservation.PartyRequest:
     properties:
@@ -922,17 +949,15 @@ definitions:
         items:
           $ref: '#/definitions/reservation.AppliedPolicy'
         type: array
-      discount:
-        example: "0"
-        type: string
-      fee:
-        example: "1100"
-        type: string
+      charges:
+        description: |-
+          Charges is what each AUXILIARY policy type charges this side, in type
+          order; a discount is negative. The side pays their sum.
+        items:
+          $ref: '#/definitions/reservation.Charge'
+        type: array
       isViolated:
         type: boolean
-      tax:
-        example: "0"
-        type: string
       walletId:
         type: string
     type: object
@@ -1014,6 +1039,53 @@ definitions:
     - StatusReleased
     - StatusRejected
     - StatusFailed
+  unit.CreateRequest:
+    properties:
+      active:
+        type: boolean
+      code:
+        example: AMOUNT
+        type: string
+      description:
+        type: string
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - code
+    - updatedBy
+    type: object
+  unit.Response:
+    properties:
+      active:
+        type: boolean
+      code:
+        example: AMOUNT
+        type: string
+      createdAt:
+        format: date-time
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      updatedAt:
+        format: date-time
+        type: string
+    type: object
+  unit.UpdateRequest:
+    properties:
+      active:
+        type: boolean
+      description:
+        type: string
+      updatedBy:
+        example: admin
+        type: string
+    required:
+    - active
+    - updatedBy
+    type: object
 info:
   contact: {}
   description: Policy configuration, custom policy, unit, and cache administration
@@ -1974,6 +2046,184 @@ paths:
       summary: Dry-run a reservation
       tags:
       - Reservations
+  /v1/units:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.unitPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List units
+      tags:
+      - Units
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/unit.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Create a unit
+      tags:
+      - Units
+  /v1/units/{unitId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      - description: Audit actor
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/core.ActorRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Delete a unit
+      tags:
+      - Units
+    get:
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Get a unit
+      tags:
+      - Units
+    put:
+      consumes:
+      - application/json
+      description: The unit code is immutable.
+      parameters:
+      - description: Unit ID
+        in: path
+        minimum: 1
+        name: unitId
+        required: true
+        type: integer
+      - description: Mutable unit fields
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/unit.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/unit.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Update a unit
+      tags:
+      - Units
 schemes:
 - http
 - https

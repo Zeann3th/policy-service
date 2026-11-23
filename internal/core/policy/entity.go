@@ -2,8 +2,6 @@ package policy
 
 import (
 	"encoding/json"
-	"fmt"
-	"maps"
 	"slices"
 	"time"
 
@@ -12,42 +10,37 @@ import (
 
 const All = "ALL"
 
+// Kind says which strategy evaluates a policy. Policy types and units are
+// catalog rows; the kinds are the behaviours this service implements.
 type Kind string
 
 const (
-	KindLimit    Kind = "LIMIT"
-	KindWaiver   Kind = "WAIVER"
-	KindFee      Kind = "FEE"
-	KindTax      Kind = "TAX"
-	KindDiscount Kind = "DISCOUNT"
+	KindLimit     Kind = "LIMIT"     // blocks a transaction that breaks a bound
+	KindWaiver    Kind = "WAIVER"    // waives the fee while usage is under a bound
+	KindAuxiliary Kind = "AUXILIARY" // charges: fee, discount, tax, ... by type code
 )
+
+var kinds = []Kind{KindLimit, KindWaiver, KindAuxiliary}
 
 func (k Kind) Valid() bool {
-	_, ok := shapes[k]
-	return ok
+	return slices.Contains(kinds, k)
 }
 
-// Kinds returns every declared kind.
+// Kinds returns every kind, in evaluation order.
 func Kinds() []Kind {
-	return slices.Sorted(maps.Keys(shapes))
+	return slices.Clone(kinds)
 }
 
-// Unit is what a LIMIT or WAIVER measures.
-type Unit string
-
+// Unit codes the code has a measure for. Units are catalog rows (table
+// units); the engine does nothing with a policy in another unit.
 const (
-	UnitAmount  Unit = "AMOUNT"  // the transaction amount
-	UnitCount   Unit = "COUNT"   // the number of transactions
-	UnitBalance Unit = "BALANCE" // the wallet balance (not evaluated on reserve)
+	UnitAmount = "AMOUNT" // money: the transaction amount, or the amount charged
+	UnitCount  = "COUNT"  // number of transactions
 )
 
-func (u Unit) Valid() bool {
-	return slices.Contains([]Unit{UnitAmount, UnitCount, UnitBalance}, u)
-}
-
-// Base is what a FEE, DISCOUNT or TAX value is a percentage of; no base
-// means the value is a flat amount. Charges are computed in the order FEE,
-// DISCOUNT, TAX, so a kind may only use a base computed before it.
+// Base is what an AUXILIARY value is a percentage of; no base means the
+// value is a flat amount. Charges are computed in type order (fee,
+// discount, tax), so a type may only use a base computed before it.
 type Base string
 
 const (
@@ -56,48 +49,34 @@ const (
 	BaseNetFee Base = "NET_FEE" // the fee minus fee-based discounts
 )
 
+var bases = []Base{BaseAmount, BaseFee, BaseNetFee}
+
 func (b Base) Valid() bool {
-	return slices.Contains([]Base{BaseAmount, BaseFee, BaseNetFee}, b)
+	return slices.Contains(bases, b)
 }
 
-// shape is which value fields a policy of a kind uses. Declaring a kind here
-// makes it valid for policy types; its evaluation is a strategy registered
-// in package reservation.
-type shape struct {
-	units    []Unit // required when not empty, otherwise absent
-	bases    []Base // optional when not empty, otherwise absent
-	operator bool   // required when true, otherwise absent
-	windowed bool   // may accumulate over a window
+// Bases returns every base, in the order they become available.
+func Bases() []Base {
+	return slices.Clone(bases)
 }
 
-var shapes = map[Kind]shape{
-	KindLimit:    {units: []Unit{UnitAmount, UnitCount, UnitBalance}, operator: true, windowed: true},
-	KindWaiver:   {units: []Unit{UnitCount}, windowed: true},
-	KindFee:      {bases: []Base{BaseAmount}},
-	KindDiscount: {bases: []Base{BaseAmount, BaseFee}},
-	KindTax:      {bases: []Base{BaseAmount, BaseFee, BaseNetFee}},
+// Spec is how a policy reads its value. The kind's strategy decides which
+// fields it takes and checks them (Rules).
+type Spec struct {
+	Kind     Kind
+	Type     string // policy type code
+	Unit     string // unit code; "" when the policy has none
+	Base     Base
+	Operator Operator
+	Window   WindowType
+	Value    decimal.Decimal
+	Cap      *decimal.Decimal
 }
 
-// Check reports the first value field that does not fit kind, or nil.
-func (k Kind) Check(unit Unit, base Base, operator Operator, window WindowType) error {
-	s, ok := shapes[k]
-	switch {
-	case !ok:
-		return fmt.Errorf("unknown kind %q", k)
-	case len(s.units) == 0 && unit != "":
-		return fmt.Errorf("%s policies take no unit", k)
-	case len(s.units) > 0 && !slices.Contains(s.units, unit):
-		return fmt.Errorf("%s policies need unit %v", k, s.units)
-	case base != "" && !slices.Contains(s.bases, base):
-		return fmt.Errorf("%s policies take base %v or none", k, s.bases)
-	case !s.operator && operator != "":
-		return fmt.Errorf("%s policies take no operator", k)
-	case s.operator && !operator.Valid():
-		return fmt.Errorf("%s policies need an operator", k)
-	case !s.windowed && window != WindowNone:
-		return fmt.Errorf("%s policies take window %s only", k, WindowNone)
-	}
-	return nil
+// Rules checks the value fields a policy's kind takes. It is implemented
+// next to the evaluation strategies.
+type Rules interface {
+	Check(Spec) error
 }
 
 type WindowType string
@@ -175,6 +154,7 @@ type PolicyType struct {
 	Code        string
 	Description *string
 	Kind        Kind
+	IsEnforced  bool
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
@@ -197,7 +177,7 @@ type PolicyKey struct {
 	Channel         string
 	Direction       Direction
 	WindowType      WindowType
-	Unit            Unit
+	UnitID          int64 // 0 when the policy has no unit
 }
 
 type Policy struct {
@@ -210,19 +190,24 @@ type Policy struct {
 	Channel         string
 	Direction       Direction
 	WindowType      WindowType
-	Unit            Unit
+	UnitID          *int64
+	Unit            string // unit code, joined from units
 	Base            Base
 	Operator        Operator
 	Value           decimal.Decimal
-	EffectiveFrom   time.Time
-	EffectiveTo     *time.Time
-	Source          Source
-	CreatedAt       time.Time
-	UpdatedAt       *time.Time
+	Cap             *decimal.Decimal
+	// IsEnforced (from the type) is internal: false keeps the policy out of
+	// the engine; it is still returned as config.
+	IsEnforced    bool
+	EffectiveFrom time.Time
+	EffectiveTo   *time.Time
+	Source        Source
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
 }
 
 func (v Policy) Key() PolicyKey {
-	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType, Unit: v.Unit}
+	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType, UnitID: unitID(v.UnitID)}
 }
 
 // Matches reports whether the policy's selectors cover a transaction.
@@ -242,20 +227,25 @@ type CustomPolicy struct {
 	Channel         string
 	Direction       Direction
 	WindowType      WindowType
-	Unit            Unit
+	UnitID          *int64
+	Unit            string // unit code, joined from units
 	Base            Base
 	Operator        Operator
 	Value           decimal.Decimal
-	EffectiveFrom   time.Time
-	EffectiveTo     *time.Time
-	Reason          *string
-	CreatedBy       string
-	CreatedAt       time.Time
-	UpdatedAt       *time.Time
+	Cap             *decimal.Decimal
+	// IsEnforced (from the type) is internal: false keeps the policy out of
+	// the engine; it is still returned as config.
+	IsEnforced    bool
+	EffectiveFrom time.Time
+	EffectiveTo   *time.Time
+	Reason        *string
+	CreatedBy     string
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
 }
 
 func (v CustomPolicy) Key() PolicyKey {
-	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType, Unit: v.Unit}
+	return PolicyKey{PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: v.Direction, WindowType: v.WindowType, UnitID: unitID(v.UnitID)}
 }
 
 type AuditAction string
@@ -283,3 +273,15 @@ const (
 	SourceSystem Source = "SYSTEM"
 	SourceCustom Source = "USER"
 )
+
+func unitID(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
+}
+
+// Spec is how the policy reads its value.
+func (v Policy) Spec() Spec {
+	return Spec{Kind: v.Kind, Type: v.PolicyType, Unit: v.Unit, Base: v.Base, Operator: v.Operator, Window: v.WindowType, Value: v.Value, Cap: v.Cap}
+}

@@ -15,6 +15,13 @@ export const options = {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+// charge returns what one policy type charges a side ("0" when it has no
+// line); discounts are negative.
+function charge(response, side, type) {
+  const found = (response.json(`${side}.charges`) || []).find((each) => each.policyType === type);
+  return found ? found.amount : '0';
+}
+
 function post(body) {
   return http.post(RESERVATIONS, JSON.stringify(body), { headers: JSON_HEADERS, responseCallback: http.expectedStatuses(200, 400, 404, 409) });
 }
@@ -28,7 +35,7 @@ export default function () {
     const fees = [];
     for (let i = 0; i < 6; i++) {
       const r = reserve(reserveBody({ sender, receiver: merchant, amount: 100000, transactionType: 'TRANSFER', channel: 'WEB', id: `${prefix}-waiver-${i}` }));
-      fees.push(r.json('sender.fee'), r.json('sender.tax'));
+      fees.push(charge(r, 'sender', 'TXN_FEE'), charge(r, 'sender', 'TXN_TAX'));
     }
     check(fees, {
       'transfers 1-5 free': (f) => f.slice(0, 10).every((v) => v === '0'),
@@ -40,9 +47,9 @@ export default function () {
   group('payment: percent fee on sender, merchant receiving fee', () => {
     const r = reserve(reserveBody({ sender: wallet(508), receiver: merchant, amount: 200000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(r, {
-      'sender 0.5% fee': (x) => x.json('sender.fee') === '1000',
-      'sender tax 10% of fee': (x) => x.json('sender.tax') === '100',
-      'merchant 1% receiving fee': (x) => x.json('receiver.fee') === '2000',
+      'sender 0.5% fee': (x) => charge(x, 'sender', 'TXN_FEE') === '1000',
+      'sender tax 10% of fee': (x) => charge(x, 'sender', 'TXN_TAX') === '100',
+      'merchant 1% receiving fee': (x) => charge(x, 'receiver', 'TXN_FEE') === '2000',
     });
   });
 
@@ -50,9 +57,9 @@ export default function () {
     // wallet 9: PERSONAL T3, profile 4 (no fee overrides): 0.5% fee, 10% T3 discount
     const t3 = reserve(reserveBody({ sender: wallet(9), receiver: wallet(11), amount: 200000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(t3, {
-      'T3 fee 0.5%': (x) => x.json('sender.fee') === '1000',
-      'T3 system discount 10% of fee': (x) => x.json('sender.discount') === '100',
-      'T3 tax 10% of fee after discount': (x) => x.json('sender.tax') === '90',
+      'T3 fee 0.5%': (x) => charge(x, 'sender', 'TXN_FEE') === '1000',
+      'T3 system discount 10% of fee': (x) => charge(x, 'sender', 'TXN_DISCOUNT') === '-100',
+      'T3 tax 10% of fee after discount': (x) => charge(x, 'sender', 'TXN_TAX') === '90',
     });
     // wallet 3: PERSONAL T3, profile 3 (PROMO: flat 2000 fee, 50% discount)
     for (let i = 0; i < 5; i++) {
@@ -60,9 +67,9 @@ export default function () {
     }
     const promo = reserve(reserveBody({ sender: wallet(3), receiver: wallet(4), amount: 100000, transactionType: 'TRANSFER', channel: 'WEB' }));
     check(promo, {
-      'custom fee 2000 overrides 1100': (x) => x.json('sender.fee') === '2000',
-      'custom 50% discount': (x) => x.json('sender.discount') === '1000',
-      'tax on fee after discount': (x) => x.json('sender.tax') === '100',
+      'custom fee 2000 overrides 1100': (x) => charge(x, 'sender', 'TXN_FEE') === '2000',
+      'custom 50% discount': (x) => charge(x, 'sender', 'TXN_DISCOUNT') === '-1000',
+      'tax on fee after discount': (x) => charge(x, 'sender', 'TXN_TAX') === '100',
     });
   });
 
@@ -70,9 +77,9 @@ export default function () {
     // wallet 7: PERSONAL T1, profile 2: 1% cashback on PAYMENT
     const r = reserve(reserveBody({ sender: wallet(7), receiver: wallet(8), amount: 200000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(r, {
-      'fee 0.5% of amount': (x) => x.json('sender.fee') === '1000',
-      'cashback 1% of amount counts as discount': (x) => x.json('sender.discount') === '2000',
-      'tax on NET_FEE ignores cashback': (x) => x.json('sender.tax') === '100',
+      'fee 0.5% of amount': (x) => charge(x, 'sender', 'TXN_FEE') === '1000',
+      'cashback 1% of amount counts as discount': (x) => charge(x, 'sender', 'TXN_DISCOUNT') === '-2000',
+      'tax on NET_FEE ignores cashback': (x) => charge(x, 'sender', 'TXN_TAX') === '100',
     });
   });
 

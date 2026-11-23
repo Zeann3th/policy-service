@@ -6,29 +6,53 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
--- A policy type is a name and a kind, nothing more. How a value is read
--- (unit, base, operator, window) lives on the policy rows.
--- kind: LIMIT | WAIVER | FEE | TAX | DISCOUNT
-CREATE TABLE policy_types (
+-- Catalog tables (units, policy_types) are the vocabulary; the code holds
+-- the behaviour (unit measures, charge types). Every policy is returned as
+-- config (GET /v1/policies). The engine (reserve, dry run) only evaluates
+-- policies whose type is_enforced, and does nothing with a unit or type
+-- code it has no behaviour for. is_enforced is internal and never
+-- returned: COIN_MIN / COIN_MAX are config for the accounting service.
+CREATE TABLE units (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE,
   description text,
-  kind text NOT NULL,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO policy_types (code, description, kind) VALUES
-  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'LIMIT'),
-  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'LIMIT'),
-  ('TXN_MIN', 'Minimum of a single transaction', 'LIMIT'),
-  ('TXN_MAX', 'Maximum of a single transaction', 'LIMIT'),
-  ('TOTAL_MAX', 'Maximum total over a window', 'LIMIT'),
-  ('NO_FEE_TRANSACTION', 'First N transactions per window are free', 'WAIVER'),
-  ('TXN_FEE', 'Fee per transaction', 'FEE'),
-  ('TXN_DISCOUNT', 'Discount per transaction', 'DISCOUNT'),
-  ('TXN_TAX', 'Tax per transaction', 'TAX');
+INSERT INTO units (code, description) VALUES
+  ('AMOUNT', 'Money: the transaction amount, or the amount charged'),
+  ('COUNT', 'Number of transactions'),
+  ('BALANCE', 'Wallet balance; enforced by the accounting service, not on reserve');
+
+-- A policy type is a name, a kind and whether it is enforced. How a value
+-- is read (unit, base, operator, window, cap) lives on the policy rows.
+-- kind: LIMIT | WAIVER | AUXILIARY (charges: fee, discount, tax, ...)
+-- is_enforced: evaluated by the engine; false = config only. The engine
+-- charges the AUXILIARY codes TXN_FEE, TXN_DISCOUNT and TXN_TAX.
+CREATE TABLE policy_types (
+  id bigserial PRIMARY KEY,
+  code text NOT NULL UNIQUE,
+  description text,
+  kind text NOT NULL,
+  is_enforced boolean NOT NULL DEFAULT true,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz
+);
+
+INSERT INTO policy_types (code, description, kind, is_enforced) VALUES
+  -- balance limits are served to the accounting service, not enforced here
+  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'LIMIT', false),
+  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'LIMIT', false),
+  ('TXN_MIN', 'Minimum of a single transaction', 'LIMIT', true),
+  ('TXN_MAX', 'Maximum of a single transaction', 'LIMIT', true),
+  ('TOTAL_MAX', 'Maximum total over a window', 'LIMIT', true),
+  ('NO_FEE_TRANSACTION', 'First N transactions per window are free', 'WAIVER', true),
+  ('TXN_FEE', 'Fee per transaction', 'AUXILIARY', true),
+  ('TXN_DISCOUNT', 'Discount off the fee or the amount', 'AUXILIARY', true),
+  ('TXN_TAX', 'Tax per transaction', 'AUXILIARY', true);
 
 CREATE TABLE policy_groups (
   id bigserial PRIMARY KEY,
@@ -44,19 +68,19 @@ CREATE TABLE policy_groups (
 -- recorded in usage_ledger never collides across the two tables.
 CREATE SEQUENCE policy_id_seq;
 
--- A policy row says everything about how its value is read. The value
--- columns each kind uses (enforced in the application):
---   LIMIT     unit AMOUNT | COUNT | BALANCE, operator, any window
---   WAIVER    unit COUNT, any window (free while usage < value)
---   FEE       base NULL | AMOUNT, window NONE
---   DISCOUNT  base NULL | AMOUNT | FEE, window NONE
---   TAX       base NULL | AMOUNT | FEE | NET_FEE, window NONE
--- base NULL: value is a flat amount; otherwise value is a percentage of the
--- base (NET_FEE = fee minus fee-based discounts).
+-- A policy row says everything about how its value is read (checked by the
+-- kind's strategy in the application):
+--   LIMIT      unit, operator
+--   WAIVER     unit; free while window usage < value (always with NONE)
+--   AUXILIARY  base NULL (flat value) or AMOUNT | FEE | NET_FEE (value is a
+--              percentage of it); with a window, cap (in unit) limits what
+--              is charged per window
+-- window_type: NONE = per transaction, nothing accumulates; DAILY / MONTHLY
+-- (UTC calendar); LIFETIME = accumulates and never resets.
+-- value and cap are never negative: the type's behaviour decides the sign.
 -- policy_type_id / transaction_type / channel / direction / window_type /
--- unit are the identity and are immutable: changing one means a new row.
--- direction: ALL | OUT | IN; window_type: NONE | DAILY | MONTHLY | LIFETIME
--- operator: EQ | NEQ | GT | GTE | LT | LTE
+-- unit_id are the identity and are immutable: changing one means a new row.
+-- direction: ALL | OUT | IN; operator: EQ | NEQ | GT | GTE | LT | LTE
 CREATE TABLE policies (
   id bigint PRIMARY KEY DEFAULT nextval('policy_id_seq'),
   policy_group_id bigint NOT NULL REFERENCES policy_groups (id) ON DELETE CASCADE,
@@ -65,10 +89,11 @@ CREATE TABLE policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
-  unit text, -- LIMIT / WAIVER only
-  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
+  unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
+  base text, -- AUXILIARY only; NULL: flat
   operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
+  cap numeric(24, 4), -- AUXILIARY with a window: most charged per window, in unit
   effective_from timestamptz NOT NULL DEFAULT now(),
   effective_to timestamptz, -- NULL: effective with no end
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -82,7 +107,7 @@ CREATE UNIQUE INDEX policies_identity_idx ON policies (
   channel,
   direction,
   window_type,
-  unit
+  unit_id
 ) NULLS NOT DISTINCT;
 
 CREATE INDEX policies_group_page_idx ON policies (policy_group_id, id);
@@ -98,10 +123,11 @@ CREATE TABLE custom_policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
-  unit text, -- LIMIT / WAIVER only
-  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
+  unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
+  base text, -- AUXILIARY only; NULL: flat
   operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
+  cap numeric(24, 4), -- AUXILIARY with a window: most charged per window, in unit
   effective_from timestamptz NOT NULL DEFAULT now(),
   effective_to timestamptz,
   reason text,
@@ -117,7 +143,7 @@ CREATE UNIQUE INDEX custom_policies_identity_idx ON custom_policies (
   channel,
   direction,
   window_type,
-  unit
+  unit_id
 ) NULLS NOT DISTINCT;
 
 CREATE INDEX custom_policies_wallet_page_idx ON custom_policies (wallet_id, id);
@@ -135,7 +161,7 @@ WHERE
 -- ---------------------------------------------------------------------
 CREATE TABLE policy_audit_logs (
   id bigserial,
-  entity text NOT NULL, -- policy_type | policy_group | policy | custom_policy
+  entity text NOT NULL, -- unit | policy_type | policy_group | policy | custom_policy
   entity_key text NOT NULL,
   action text NOT NULL, -- INSERT | UPDATE | DELETE
   old_value jsonb,
@@ -160,11 +186,12 @@ SELECT
 
 -- ---------------------------------------------------------------------
 -- usages: running totals per wallet and scope. The scope comes from the
--- type, selectors and unit of the matched policy, never from a policy id, so usage
+-- type, selectors, window and unit of the matched policy, never from a policy id, so usage
 -- outlives policy edits. Stateless policies (window NONE) have no row.
 -- window_start: the day (DAILY), the first day of the month (MONTHLY) or
 -- 1970-01-01 (LIFETIME), in UTC.
--- unit COUNT adds 1 to value, unit AMOUNT adds the transaction amount.
+-- unit COUNT adds 1 to value, unit AMOUNT adds the money measured (the
+-- transaction amount for LIMIT / WAIVER, the amount charged for AUXILIARY).
 -- List partitions reject any window_type other than the three below.
 -- ---------------------------------------------------------------------
 CREATE TABLE usages (
@@ -174,7 +201,7 @@ CREATE TABLE usages (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL,
-  unit text NOT NULL,
+  unit_id bigint NOT NULL REFERENCES units (id) ON DELETE RESTRICT,
   window_start date NOT NULL,
   value numeric(24, 4) NOT NULL DEFAULT 0,
   PRIMARY KEY (
@@ -184,7 +211,7 @@ CREATE TABLE usages (
     channel,
     direction,
     window_type,
-    unit,
+    unit_id,
     window_start
   )
 )
@@ -282,7 +309,7 @@ CREATE TABLE usage_ledger (
   channel text NOT NULL,
   direction text NOT NULL,
   window_type text NOT NULL,
-  unit text NOT NULL,
+  unit_id bigint NOT NULL REFERENCES units (id) ON DELETE RESTRICT,
   window_start date NOT NULL,
   delta numeric(24, 4) NOT NULL, -- RESERVE: 1 for COUNT, the amount for AMOUNT; RELEASE: the negation
   -- audit snapshot
@@ -302,7 +329,7 @@ CREATE TABLE usage_ledger (
     channel,
     direction,
     window_type,
-    unit
+    unit_id
   ),
   FOREIGN KEY (reservation_id, reservation_created_at)
     REFERENCES reservations (id, created_at) ON DELETE RESTRICT
@@ -334,6 +361,10 @@ WHERE
 -- ---------------------------------------------------------------------
 -- updated_at triggers: fire only when the row actually changed
 -- ---------------------------------------------------------------------
+CREATE TRIGGER units_set_updated_at
+BEFORE UPDATE ON units FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
+EXECUTE FUNCTION set_updated_at ();
+
 CREATE TRIGGER policy_types_set_updated_at
 BEFORE UPDATE ON policy_types FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
 EXECUTE FUNCTION set_updated_at ();

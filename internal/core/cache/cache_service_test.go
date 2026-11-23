@@ -83,6 +83,7 @@ func TestReloadAllInvalidatesEveryNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{
+		NamespaceUnits,
 		NamespacePolicyTypes,
 		NamespacePolicyGroups,
 		NamespacePolicies,

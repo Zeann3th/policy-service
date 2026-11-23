@@ -77,3 +77,16 @@ func WriteTTL[T any](ctx context.Context, v *Versioned, key string, value T, ttl
 		v.logger.Warn("write cache", "key", key, "error", err)
 	}
 }
+
+// Fetch reads key through the cache: a hit is returned as is; on a miss,
+// load runs and its value is written back unless load fails.
+func Fetch[T any](ctx context.Context, v *Versioned, key string, load func() (T, error)) (T, error) {
+	if cached, ok := Read[T](ctx, v, key); ok {
+		return cached, nil
+	}
+	value, err := load()
+	if err == nil {
+		Write(ctx, v, key, value)
+	}
+	return value, err
+}

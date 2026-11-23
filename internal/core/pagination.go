@@ -28,3 +28,12 @@ type Page[T any] struct {
 type ActorRequest struct {
 	UpdatedBy string `binding:"required" example:"admin" json:"updatedBy"`
 }
+
+// MapPage builds a page of responses from stored items.
+func MapPage[S, T any](items []S, page, limit int32, total int64, convert func(S) T) Page[T] {
+	result := Page[T]{Items: make([]T, len(items)), Page: page, Limit: limit, Total: total}
+	for i, item := range items {
+		result.Items[i] = convert(item)
+	}
+	return result
+}

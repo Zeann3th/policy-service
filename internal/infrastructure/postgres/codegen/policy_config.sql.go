@@ -23,10 +23,13 @@ SELECT
   cp.channel,
   cp.direction,
   cp.window_type,
-  cp.unit,
+  cp.unit_id,
+  u.code AS unit,
   cp.base,
   cp.operator,
   cp.value,
+  cp.cap,
+  pt.is_enforced,
   cp.effective_from,
   cp.effective_to,
   cp.reason,
@@ -36,9 +39,11 @@ SELECT
 FROM
   custom_policies cp
   JOIN policy_types pt ON pt.id = cp.policy_type_id
+  LEFT JOIN units u ON u.id = cp.unit_id
 WHERE
   cp.wallet_id = $1
   AND pt.active = true
+  AND (u.id IS NULL OR u.active = true)
   AND cp.effective_from <= now()
   AND (
     cp.effective_to IS NULL
@@ -51,25 +56,28 @@ ORDER BY
 `
 
 type GetActiveCustomPoliciesRow struct {
-	ID              int64           `json:"id"`
-	WalletID        string          `json:"wallet_id"`
-	PolicyTypeID    int64           `json:"policy_type_id"`
-	PolicyType      string          `json:"policy_type"`
-	Kind            string          `json:"kind"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Direction       string          `json:"direction"`
-	WindowType      string          `json:"window_type"`
-	Unit            *string         `json:"unit"`
-	Base            *string         `json:"base"`
-	Operator        *string         `json:"operator"`
-	Value           decimal.Decimal `json:"value"`
-	EffectiveFrom   time.Time       `json:"effective_from"`
-	EffectiveTo     *time.Time      `json:"effective_to"`
-	Reason          *string         `json:"reason"`
-	CreatedBy       string          `json:"created_by"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64            `json:"id"`
+	WalletID        string           `json:"wallet_id"`
+	PolicyTypeID    int64            `json:"policy_type_id"`
+	PolicyType      string           `json:"policy_type"`
+	Kind            string           `json:"kind"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	WindowType      string           `json:"window_type"`
+	UnitID          *int64           `json:"unit_id"`
+	Unit            *string          `json:"unit"`
+	Base            *string          `json:"base"`
+	Operator        *string          `json:"operator"`
+	Value           decimal.Decimal  `json:"value"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+	Reason          *string          `json:"reason"`
+	CreatedBy       string           `json:"created_by"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       *time.Time       `json:"updated_at"`
 }
 
 func (q *Queries) GetActiveCustomPolicies(ctx context.Context, walletID string) ([]GetActiveCustomPoliciesRow, error) {
@@ -91,10 +99,13 @@ func (q *Queries) GetActiveCustomPolicies(ctx context.Context, walletID string) 
 			&i.Channel,
 			&i.Direction,
 			&i.WindowType,
+			&i.UnitID,
 			&i.Unit,
 			&i.Base,
 			&i.Operator,
 			&i.Value,
+			&i.Cap,
+			&i.IsEnforced,
 			&i.EffectiveFrom,
 			&i.EffectiveTo,
 			&i.Reason,
@@ -139,10 +150,13 @@ SELECT
   p.channel,
   p.direction,
   p.window_type,
-  p.unit,
+  p.unit_id,
+  u.code AS unit,
   p.base,
   p.operator,
   p.value,
+  p.cap,
+  pt.is_enforced,
   p.effective_from,
   p.effective_to,
   p.created_at,
@@ -150,11 +164,13 @@ SELECT
 FROM
   policies p
   JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
 WHERE
   p.policy_group_id = $1
   AND p.effective_from <= now()
   AND (p.effective_to IS NULL OR p.effective_to > now())
   AND pt.active = true
+  AND (u.id IS NULL OR u.active = true)
 ORDER BY
   pt.code,
   p.transaction_type,
@@ -162,23 +178,26 @@ ORDER BY
 `
 
 type GetPoliciesByGroupIDRow struct {
-	ID              int64           `json:"id"`
-	PolicyGroupID   int64           `json:"policy_group_id"`
-	PolicyTypeID    int64           `json:"policy_type_id"`
-	PolicyType      string          `json:"policy_type"`
-	Kind            string          `json:"kind"`
-	TransactionType string          `json:"transaction_type"`
-	Channel         string          `json:"channel"`
-	Direction       string          `json:"direction"`
-	WindowType      string          `json:"window_type"`
-	Unit            *string         `json:"unit"`
-	Base            *string         `json:"base"`
-	Operator        *string         `json:"operator"`
-	Value           decimal.Decimal `json:"value"`
-	EffectiveFrom   time.Time       `json:"effective_from"`
-	EffectiveTo     *time.Time      `json:"effective_to"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       *time.Time      `json:"updated_at"`
+	ID              int64            `json:"id"`
+	PolicyGroupID   int64            `json:"policy_group_id"`
+	PolicyTypeID    int64            `json:"policy_type_id"`
+	PolicyType      string           `json:"policy_type"`
+	Kind            string           `json:"kind"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	WindowType      string           `json:"window_type"`
+	UnitID          *int64           `json:"unit_id"`
+	Unit            *string          `json:"unit"`
+	Base            *string          `json:"base"`
+	Operator        *string          `json:"operator"`
+	Value           decimal.Decimal  `json:"value"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       *time.Time       `json:"updated_at"`
 }
 
 func (q *Queries) GetPoliciesByGroupID(ctx context.Context, policyGroupID int64) ([]GetPoliciesByGroupIDRow, error) {
@@ -200,10 +219,13 @@ func (q *Queries) GetPoliciesByGroupID(ctx context.Context, policyGroupID int64)
 			&i.Channel,
 			&i.Direction,
 			&i.WindowType,
+			&i.UnitID,
 			&i.Unit,
 			&i.Base,
 			&i.Operator,
 			&i.Value,
+			&i.Cap,
+			&i.IsEnforced,
 			&i.EffectiveFrom,
 			&i.EffectiveTo,
 			&i.CreatedAt,

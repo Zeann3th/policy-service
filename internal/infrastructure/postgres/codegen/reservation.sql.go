@@ -16,11 +16,11 @@ import (
 
 const addUsage = `-- name: AddUsage :one
 INSERT INTO usages
-  (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, window_start, value)
+  (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, window_start, value)
 VALUES
   ($1, $2, $3, $4,
    $5, $6, $7, $8, $9)
-ON CONFLICT (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, window_start)
+ON CONFLICT (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, window_start)
 DO UPDATE SET value = usages.value + EXCLUDED.value
 RETURNING value
 `
@@ -32,7 +32,7 @@ type AddUsageParams struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Unit            string          `json:"unit"`
+	UnitID          int64           `json:"unit_id"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Delta           decimal.Decimal `json:"delta"`
 }
@@ -45,7 +45,7 @@ func (q *Queries) AddUsage(ctx context.Context, arg AddUsageParams) (decimal.Dec
 		arg.Channel,
 		arg.Direction,
 		arg.WindowType,
-		arg.Unit,
+		arg.UnitID,
 		arg.WindowStart,
 		arg.Delta,
 	)
@@ -107,7 +107,7 @@ func (q *Queries) CreateReservation(ctx context.Context, arg CreateReservationPa
 const createUsageLedger = `-- name: CreateUsageLedger :exec
 INSERT INTO usage_ledger
   (reservation_id, reservation_created_at, entry_type, wallet_id, policy_type_id, transaction_type,
-   channel, direction, window_type, unit, window_start, delta,
+   channel, direction, window_type, unit_id, window_start, delta,
    policy_id, policy_type_code, operator, limit_value, value_after)
 VALUES
   ($1, $2, $3, $4,
@@ -127,7 +127,7 @@ type CreateUsageLedgerParams struct {
 	Channel              string           `json:"channel"`
 	Direction            string           `json:"direction"`
 	WindowType           string           `json:"window_type"`
-	Unit                 string           `json:"unit"`
+	UnitID               int64            `json:"unit_id"`
 	WindowStart          pgtype.Date      `json:"window_start"`
 	Delta                decimal.Decimal  `json:"delta"`
 	PolicyID             *int64           `json:"policy_id"`
@@ -148,7 +148,7 @@ func (q *Queries) CreateUsageLedger(ctx context.Context, arg CreateUsageLedgerPa
 		arg.Channel,
 		arg.Direction,
 		arg.WindowType,
-		arg.Unit,
+		arg.UnitID,
 		arg.WindowStart,
 		arg.Delta,
 		arg.PolicyID,
@@ -197,7 +197,7 @@ SELECT value FROM usages
 WHERE wallet_id = $1 AND policy_type_id = $2
   AND transaction_type = $3 AND channel = $4
   AND direction = $5 AND window_type = $6
-  AND unit = $7 AND window_start = $8
+  AND unit_id = $7 AND window_start = $8
 `
 
 type GetUsageValueParams struct {
@@ -207,7 +207,7 @@ type GetUsageValueParams struct {
 	Channel         string      `json:"channel"`
 	Direction       string      `json:"direction"`
 	WindowType      string      `json:"window_type"`
-	Unit            string      `json:"unit"`
+	UnitID          int64       `json:"unit_id"`
 	WindowStart     pgtype.Date `json:"window_start"`
 }
 
@@ -219,7 +219,7 @@ func (q *Queries) GetUsageValue(ctx context.Context, arg GetUsageValueParams) (d
 		arg.Channel,
 		arg.Direction,
 		arg.WindowType,
-		arg.Unit,
+		arg.UnitID,
 		arg.WindowStart,
 	)
 	var value decimal.Decimal
@@ -228,10 +228,10 @@ func (q *Queries) GetUsageValue(ctx context.Context, arg GetUsageValueParams) (d
 }
 
 const listUsageLedger = `-- name: ListUsageLedger :many
-SELECT reservation_id, reservation_created_at, entry_type, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, window_start, delta, policy_id, policy_type_code, operator, limit_value, value_after, created_at FROM usage_ledger
+SELECT reservation_id, reservation_created_at, entry_type, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, window_start, delta, policy_id, policy_type_code, operator, limit_value, value_after, created_at FROM usage_ledger
 WHERE reservation_id = $1 AND reservation_created_at = $2
   AND entry_type = $3
-ORDER BY wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit
+ORDER BY wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id
 `
 
 type ListUsageLedgerParams struct {
@@ -259,7 +259,7 @@ func (q *Queries) ListUsageLedger(ctx context.Context, arg ListUsageLedgerParams
 			&i.Channel,
 			&i.Direction,
 			&i.WindowType,
-			&i.Unit,
+			&i.UnitID,
 			&i.WindowStart,
 			&i.Delta,
 			&i.PolicyID,

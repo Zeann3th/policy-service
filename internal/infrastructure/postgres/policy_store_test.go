@@ -108,7 +108,7 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 			t.Errorf("schema.sql missing %q", want)
 		}
 	}
-	for _, unwanted := range []string{"CHECK (", "counters", "CREATE TABLE units", "unit_id"} {
+	for _, unwanted := range []string{"CHECK (", "counters"} {
 		if strings.Contains(sql, unwanted) {
 			t.Errorf("schema.sql must not contain %q", unwanted)
 		}
@@ -117,22 +117,22 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 		t.Error("policies and custom_policies must share policy_id_seq")
 	}
 	policyTypes := sql[strings.Index(sql, "CREATE TABLE policy_types ("):strings.Index(sql, "INSERT INTO policy_types")]
-	for _, field := range []string{"window", "unit", "base", "operator"} {
+	for _, field := range []string{"window", "unit", "base", "operator", "cap"} {
 		if strings.Contains(policyTypes, field) {
 			t.Errorf("policy_types must not define %s: it belongs to the policy", field)
 		}
 	}
 	for _, table := range []string{"policies", "custom_policies"} {
 		block := sql[strings.Index(sql, "CREATE TABLE "+table+" ("):strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx")]
-		for _, want := range []string{"window_type text NOT NULL DEFAULT 'NONE'", "unit text,", "base text,", "operator text,"} {
+		for _, want := range []string{"window_type text NOT NULL DEFAULT 'NONE'", "unit_id bigint REFERENCES units (id) ON DELETE RESTRICT", "base text,", "operator text,", "cap numeric(24, 4)"} {
 			if !strings.Contains(block, want) {
 				t.Errorf("%s must define %q", table, want)
 			}
 		}
 		identity := sql[strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx"):]
 		identity = identity[:strings.Index(identity, ";")]
-		if !strings.Contains(identity, "unit\n) NULLS NOT DISTINCT") {
-			t.Errorf("%s identity must include unit with NULLS NOT DISTINCT", table)
+		if !strings.Contains(identity, "unit_id\n) NULLS NOT DISTINCT") {
+			t.Errorf("%s identity must include unit_id with NULLS NOT DISTINCT", table)
 		}
 	}
 }
@@ -169,14 +169,14 @@ func (q *fakePolicyQueries) GetNextPolicyStart(context.Context, int64) (time.Tim
 }
 
 func TestGetNextPolicyStartWithoutScheduleIsNil(t *testing.T) {
-	next, err := (&Store{resolverQueries: &fakePolicyQueries{}}).GetNextPolicyStart(context.Background(), 1)
+	next, err := (&PolicyStore{resolverQueries: &fakePolicyQueries{}}).GetNextPolicyStart(context.Background(), 1)
 	if err != nil || next != nil {
 		t.Fatalf("GetNextPolicyStart() = %v, %v", next, err)
 	}
 }
 
 func TestGetPolicyGroupIDReturnsNotFound(t *testing.T) {
-	store := &Store{resolverQueries: &fakePolicyQueries{groupErr: pgx.ErrNoRows}}
+	store := &PolicyStore{resolverQueries: &fakePolicyQueries{groupErr: pgx.ErrNoRows}}
 
 	_, err := store.GetGroupID(context.Background(), "PERSONAL", "USD", "TIER_1")
 	if !errors.Is(err, core.ErrNotFound) || !errors.Is(err, pgx.ErrNoRows) {
@@ -186,6 +186,7 @@ func TestGetPolicyGroupIDReturnsNotFound(t *testing.T) {
 
 func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 	effectiveTo := time.Now().Add(time.Hour)
+	amountUnit := int64(1)
 	rows := []codegen.GetActiveCustomPoliciesRow{{
 		WalletID:        "wallet-123",
 		PolicyTypeID:    7,
@@ -194,13 +195,14 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 		Channel:         "USSD",
 		Direction:       "OUT",
 		WindowType:      "DAILY",
+		UnitID:          &amountUnit,
 		Unit:            text(policy.UnitAmount),
 		Operator:        text(policy.OpLTE),
 		Value:           decimal.RequireFromString("100000"),
 		EffectiveFrom:   time.Now(),
 		EffectiveTo:     &effectiveTo,
 	}}
-	store := &Store{resolverQueries: &fakePolicyQueries{userRows: rows}}
+	store := &PolicyStore{resolverQueries: &fakePolicyQueries{userRows: rows}}
 
 	values, err := store.GetActiveCustomPolicies(context.Background(), "wallet-123")
 	if err != nil {
@@ -213,6 +215,7 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 	if value.PolicyTypeID != rows[0].PolicyTypeID ||
 		value.PolicyType != rows[0].PolicyType ||
 		value.Unit != policy.UnitAmount ||
+		value.UnitID == nil || *value.UnitID != amountUnit ||
 		value.Base != "" ||
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
@@ -248,7 +251,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 	if value.PolicyGroupID != rows[0].PolicyGroupID ||
 		value.PolicyTypeID != rows[0].PolicyTypeID ||
 		value.PolicyType != rows[0].PolicyType ||
-		value.Unit != "" ||
+		value.UnitID != nil ||
 		value.Base != policy.BaseNetFee ||
 		value.Operator != "" ||
 		value.TransactionType != rows[0].TransactionType ||
@@ -288,10 +291,9 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	store := &Store{db: pool}
 	code := fmt.Sprintf("ROLLBACK_%d", time.Now().UnixNano())
 
-	err = store.transact(ctx, func(q *codegen.Queries) error {
+	err = transact(ctx, pool, func(q *codegen.Queries) error {
 		policyType, err := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: code, Kind: string(policy.KindLimit), Active: true})
 		if err != nil {
 			return err

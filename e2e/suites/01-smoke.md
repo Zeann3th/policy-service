@@ -7,6 +7,9 @@ the start of the month.
 
 ## Cases
 
+Amounts are each side's `charges` by policy type: TXN_FEE (fee), TXN_DISCOUNT
+(discount, negative in the response) and TXN_TAX (tax).
+
 | Group | Wallets | Expectation |
 |---|---|---|
 | Waiver | 502 (PERSONAL T1, no custom) -> 10 (merchant) | Transfers 1-5: fee 0. Transfer 6: fee 1,100, tax 110 |

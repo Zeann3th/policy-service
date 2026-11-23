@@ -30,12 +30,14 @@ func (u *usageStub) Usage(context.Context, reservation.UsageKey) (decimal.Decima
 	return u.live, nil
 }
 
+var amountUnit = int64(1)
+
 func dailyLimit(id int64, direction policy.Direction, limit string) policy.Policy {
-	return policy.Policy{ID: id, PolicyTypeID: 1, PolicyType: "TOTAL_MAX", Kind: policy.KindLimit, Unit: policy.UnitAmount, TransactionType: policy.All, Channel: policy.All, Direction: direction, WindowType: policy.WindowDaily, Operator: policy.OpLTE, Value: d(limit)}
+	return policy.Policy{ID: id, PolicyTypeID: 1, PolicyType: "TOTAL_MAX", Kind: policy.KindLimit, UnitID: &amountUnit, Unit: policy.UnitAmount, TransactionType: policy.All, Channel: policy.All, Direction: direction, WindowType: policy.WindowDaily, Operator: policy.OpLTE, Value: d(limit), IsEnforced: true}
 }
 
 func fee(id int64, value string) policy.Policy {
-	return policy.Policy{ID: id, PolicyTypeID: 2, PolicyType: "TXN_FEE", Kind: policy.KindFee, TransactionType: policy.All, Channel: policy.All, Direction: policy.DirectionOut, WindowType: policy.WindowNone, Base: policy.BaseAmount, Value: d(value)}
+	return policy.Policy{ID: id, PolicyTypeID: 2, PolicyType: reservation.TypeFee, Kind: policy.KindAuxiliary, TransactionType: policy.All, Channel: policy.All, Direction: policy.DirectionOut, WindowType: policy.WindowNone, Base: policy.BaseAmount, Value: d(value), IsEnforced: true}
 }
 
 func request(amount string) Request {
@@ -63,8 +65,8 @@ func TestRunEvaluatesAgainstLiveUsage(t *testing.T) {
 	if response.Status != reservation.StatusRejected || !response.Sender.IsViolated || response.Receiver.IsViolated {
 		t.Fatalf("700 + 400 must break only the sender's 1000 limit: %#v", response)
 	}
-	if !response.Sender.Fee.Equal(d("4")) {
-		t.Fatalf("fee = %s, want 1%% of 400", response.Sender.Fee)
+	if len(response.Sender.Charges) != 1 || !response.Sender.Charges[0].Amount.Equal(d("4")) {
+		t.Fatalf("charges = %#v, want a fee of 1%% of 400", response.Sender.Charges)
 	}
 	// only the tracked policies read usage: one per side
 	if usage.reads != 2 || len(response.Sender.Usage) != 1 || !response.Sender.Usage[0].Live.Equal(d("700")) || response.Sender.Usage[0].Overridden {

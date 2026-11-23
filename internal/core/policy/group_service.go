@@ -15,11 +15,11 @@ type GroupService interface {
 }
 
 type groupService struct {
-	store Store
+	store GroupStore
 	cache *cachecore.Versioned
 }
 
-func NewGroupService(store Store, cache *cachecore.Versioned) GroupService {
+func NewGroupService(store GroupStore, cache *cachecore.Versioned) GroupService {
 	return &groupService{store: store, cache: cache}
 }
 
@@ -44,32 +44,19 @@ func (s *groupService) Create(ctx context.Context, request CreatePolicyGroupRequ
 
 func (s *groupService) Get(ctx context.Context, id int64) (PolicyGroupResponse, error) {
 	key := s.cache.Key(ctx, cachecore.NamespacePolicyGroups, "item", id)
-	if cached, ok := cachecore.Read[PolicyGroupResponse](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	value, err := s.store.GetGroup(ctx, id)
-	response := policyGroupResponse(value)
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (PolicyGroupResponse, error) {
+		value, err := s.store.GetGroup(ctx, id)
+		return policyGroupResponse(value), err
+	})
 }
 
 func (s *groupService) List(ctx context.Context, request core.PageRequest) (core.Page[PolicyGroupResponse], error) {
 	page, limit, offset := request.Values()
 	key := s.cache.Key(ctx, cachecore.NamespacePolicyGroups, "list", page, limit)
-	if cached, ok := cachecore.Read[core.Page[PolicyGroupResponse]](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	values, total, err := s.store.ListGroups(ctx, limit, offset)
-	response := core.Page[PolicyGroupResponse]{Items: make([]PolicyGroupResponse, len(values)), Page: page, Limit: limit, Total: total}
-	for i, value := range values {
-		response.Items[i] = policyGroupResponse(value)
-	}
-	if err == nil {
-		cachecore.Write(ctx, s.cache, key, response)
-	}
-	return response, err
+	return cachecore.Fetch(ctx, s.cache, key, func() (core.Page[PolicyGroupResponse], error) {
+		values, total, err := s.store.ListGroups(ctx, limit, offset)
+		return core.MapPage(values, page, limit, total, policyGroupResponse), err
+	})
 }
 
 func (s *groupService) Delete(ctx context.Context, id int64, request core.ActorRequest) error {

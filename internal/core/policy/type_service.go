@@ -26,7 +26,6 @@ func policyTypeResponse(value PolicyType) PolicyTypeResponse {
 		Description: value.Description,
 		UnitID:      value.UnitID,
 		Kind:        value.Kind,
-		WindowType:  value.WindowType,
 		Active:      value.Active,
 		CreatedAt:   value.CreatedAt,
 		UpdatedAt:   value.UpdatedAt,
@@ -40,9 +39,6 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 	}
 	if request.Kind == "" {
 		request.Kind = KindLimit
-	}
-	if request.WindowType == "" {
-		request.WindowType = WindowNone
 	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {

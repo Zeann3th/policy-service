@@ -74,103 +74,65 @@ func TestSQLAndCodegenContracts(t *testing.T) {
 	}
 }
 
-func TestPolicySchemaUsesPolicyNamesAndCascadeForeignKeys(t *testing.T) {
-	schema, err := os.ReadFile("../../../schema.sql")
+func readSQL(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sql := string(schema)
+	return strings.ReplaceAll(string(data), "\r\n", "\n")
+}
+
+func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
+	sql := readSQL(t, "../../../schema.sql")
 	for _, want := range []string{
 		"CREATE TABLE policy_types",
 		"CREATE TABLE policy_groups",
 		"CREATE TABLE policies",
 		"CREATE TABLE custom_policies",
 		"CREATE TABLE policy_audit_logs",
-		"REFERENCES units (id) ON DELETE CASCADE",
+		"CREATE TABLE usages",
+		"CREATE TABLE reservations",
+		"CREATE TABLE usage_ledger",
+		"CREATE TABLE processed_events",
+		"CREATE TABLE outbox",
+		"REFERENCES units (id) ON DELETE RESTRICT",
 		"REFERENCES policy_groups (id) ON DELETE CASCADE",
 		"REFERENCES policy_types (id) ON DELETE CASCADE",
-		"REFERENCES policy_types (id, window_type) ON DELETE RESTRICT",
-		"REFERENCES counters (id, window_type) ON DELETE RESTRICT",
+		"REFERENCES policy_types (id) ON DELETE RESTRICT",
+		"REFERENCES reservations (id) ON DELETE RESTRICT",
+		"id uuid PRIMARY KEY",
 	} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("schema.sql missing %q", want)
 		}
 	}
-	policies := sql[strings.Index(sql, "CREATE TABLE policies ("):strings.Index(sql, "CREATE UNIQUE INDEX policies_identity_idx")]
-	if !strings.Contains(policies, "window_type text NOT NULL DEFAULT 'NONE'") {
-		t.Error("policies must define window_type")
+	for _, unwanted := range []string{"CHECK (", "counters"} {
+		if strings.Contains(sql, unwanted) {
+			t.Errorf("schema.sql must not contain %q", unwanted)
+		}
 	}
-	usage := sql[strings.Index(sql, "CREATE TABLE usage ("):strings.Index(sql, "CREATE TABLE usage_daily")]
-	if !strings.Contains(usage, "wallet_id text NOT NULL") || strings.Contains(usage, "subject_id") {
-		t.Error("usage must use wallet_id")
+	if strings.Count(sql, "id bigint PRIMARY KEY DEFAULT nextval('policy_id_seq')") != 2 {
+		t.Error("policies and custom_policies must share policy_id_seq")
 	}
-	customPolicies := sql[strings.Index(sql, "CREATE TABLE custom_policies ("):strings.Index(sql, "CREATE UNIQUE INDEX custom_policies_identity_idx")]
-	if !strings.Contains(customPolicies, "window_type text NOT NULL DEFAULT 'NONE'") {
-		t.Error("custom_policies must define window_type")
+	policyTypes := sql[strings.Index(sql, "CREATE TABLE policy_types ("):strings.Index(sql, "INSERT INTO policy_types")]
+	if strings.Contains(policyTypes, "window") {
+		t.Error("policy_types must not define a window")
 	}
-}
-
-func TestCustomPolicyWindowMigration(t *testing.T) {
-	migration, err := os.ReadFile("../../../migrations/00006_custom_policy_window.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sql := string(migration)
-	for _, want := range []string{
-		"ALTER TABLE custom_policies",
-		"ADD COLUMN window_type text NOT NULL DEFAULT 'NONE'",
-		"CHECK (window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME'))",
-		"policy_group_id,\n  policy_type_id,\n  transaction_type,\n  channel,\n  direction,\n  window_type",
-		"wallet_id,\n  policy_type_id,\n  transaction_type,\n  channel,\n  direction,\n  window_type",
-		"ALTER TABLE custom_policies DROP COLUMN window_type",
-	} {
-		if !strings.Contains(sql, want) {
-			t.Errorf("custom policy window migration missing %q", want)
+	for _, table := range []string{"policies", "custom_policies"} {
+		block := sql[strings.Index(sql, "CREATE TABLE "+table+" ("):strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx")]
+		if !strings.Contains(block, "window_type text NOT NULL DEFAULT 'NONE'") {
+			t.Errorf("%s must define window_type", table)
 		}
 	}
 }
 
-func TestPolicyRenameMigrationProtectsHistory(t *testing.T) {
-	migration, err := os.ReadFile("../../../migrations/00004_policy_names.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sql := string(migration)
-	for _, want := range []string{
-		"ALTER TABLE limit_types RENAME TO policy_types",
-		"ALTER TABLE limit_groups RENAME TO policy_groups",
-		"ALTER TABLE limit_values RENAME TO policies",
-		"ALTER TABLE user_limits RENAME TO custom_policies",
-		"REFERENCES policy_types (id, window_type) ON DELETE RESTRICT",
-		"REFERENCES counters (id, window_type) ON DELETE RESTRICT",
-		"DROP TABLE counters",
-	} {
-		if !strings.Contains(sql, want) {
-			t.Errorf("migration missing %q", want)
-		}
-	}
-}
-
-func TestPolicyWindowUsageWalletMigration(t *testing.T) {
-	migration, err := os.ReadFile("../../../migrations/00005_policy_window_usage_wallet.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sql := string(migration)
-	for _, want := range []string{
-		"ALTER TABLE policies",
-		"ADD COLUMN window_type text NOT NULL DEFAULT 'NONE'",
-		"CHECK (window_type IN ('NONE', 'DAILY', 'MONTHLY', 'LIFETIME'))",
-		"ALTER TABLE usage RENAME COLUMN subject_id TO wallet_id",
-		"ALTER TABLE usage_daily_template RENAME COLUMN subject_id TO wallet_id",
-		"ALTER TABLE usage_daily_template RENAME COLUMN wallet_id TO subject_id",
-		"ALTER TABLE usage RENAME COLUMN wallet_id TO subject_id",
-		"ALTER TABLE policies DROP COLUMN window_type",
-	} {
-		if !strings.Contains(sql, want) {
-			t.Errorf("migration missing %q", want)
-		}
+func TestBaselineMigrationMatchesSchema(t *testing.T) {
+	migration := readSQL(t, "../../../migrations/00001_baseline.sql")
+	up := migration[strings.Index(migration, "-- updated_at stays NULL"):strings.Index(migration, "-- +goose Down")]
+	up = strings.NewReplacer("-- +goose StatementBegin\n", "", "-- +goose StatementEnd\n", "").Replace(up)
+	if up != readSQL(t, "../../../schema.sql") {
+		t.Fatal("schema.sql must match the Up section of migrations/00001_baseline.sql")
 	}
 }
 
@@ -331,11 +293,11 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		_, err = q.CreatePolicyAuditLog(ctx, codegen.CreatePolicyAuditLogParams{Entity: entityUnit, EntityKey: fmt.Sprint(unit.ID), Action: "INVALID", NewValue: []byte(`{"code":"rollback"}`), UpdatedBy: "test"})
+		_, err = q.CreatePolicyAuditLog(ctx, codegen.CreatePolicyAuditLogParams{Entity: entityUnit, EntityKey: fmt.Sprint(unit.ID), Action: string(policy.AuditInsert), NewValue: []byte(`not json`), UpdatedBy: "test"})
 		return err
 	})
 	if err == nil {
-		t.Fatal("transaction succeeded, want audit constraint failure")
+		t.Fatal("transaction succeeded, want audit insert failure")
 	}
 
 	var count int

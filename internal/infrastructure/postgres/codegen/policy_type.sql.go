@@ -21,9 +21,9 @@ func (q *Queries) CountPolicyTypes(ctx context.Context) (int64, error) {
 }
 
 const createPolicyType = `-- name: CreatePolicyType :one
-INSERT INTO policy_types (code, description, unit_id, kind, window_type, active)
+INSERT INTO policy_types (code, description, unit_id, kind, active)
 VALUES (upper(CAST($1 AS text)), $2, $3,
-        $4, $5, $6) RETURNING id, code, description, unit_id, active, created_at, updated_at, kind, window_type
+        $4, $5) RETURNING id, code, description, unit_id, kind, active, created_at, updated_at
 `
 
 type CreatePolicyTypeParams struct {
@@ -31,7 +31,6 @@ type CreatePolicyTypeParams struct {
 	Description *string `json:"description"`
 	UnitID      int64   `json:"unit_id"`
 	Kind        string  `json:"kind"`
-	WindowType  string  `json:"window_type"`
 	Active      bool    `json:"active"`
 }
 
@@ -41,7 +40,6 @@ func (q *Queries) CreatePolicyType(ctx context.Context, arg CreatePolicyTypePara
 		arg.Description,
 		arg.UnitID,
 		arg.Kind,
-		arg.WindowType,
 		arg.Active,
 	)
 	var i PolicyType
@@ -50,17 +48,16 @@ func (q *Queries) CreatePolicyType(ctx context.Context, arg CreatePolicyTypePara
 		&i.Code,
 		&i.Description,
 		&i.UnitID,
+		&i.Kind,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Kind,
-		&i.WindowType,
 	)
 	return i, err
 }
 
 const deletePolicyType = `-- name: DeletePolicyType :one
-DELETE FROM policy_types WHERE id = $1 RETURNING id, code, description, unit_id, active, created_at, updated_at, kind, window_type
+DELETE FROM policy_types WHERE id = $1 RETURNING id, code, description, unit_id, kind, active, created_at, updated_at
 `
 
 func (q *Queries) DeletePolicyType(ctx context.Context, id int64) (PolicyType, error) {
@@ -71,17 +68,16 @@ func (q *Queries) DeletePolicyType(ctx context.Context, id int64) (PolicyType, e
 		&i.Code,
 		&i.Description,
 		&i.UnitID,
+		&i.Kind,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Kind,
-		&i.WindowType,
 	)
 	return i, err
 }
 
 const getPolicyTypeByID = `-- name: GetPolicyTypeByID :one
-SELECT id, code, description, unit_id, active, created_at, updated_at, kind, window_type FROM policy_types WHERE id = $1
+SELECT id, code, description, unit_id, kind, active, created_at, updated_at FROM policy_types WHERE id = $1
 `
 
 func (q *Queries) GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, error) {
@@ -92,17 +88,16 @@ func (q *Queries) GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, 
 		&i.Code,
 		&i.Description,
 		&i.UnitID,
+		&i.Kind,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Kind,
-		&i.WindowType,
 	)
 	return i, err
 }
 
 const getPolicyTypeByIDForUpdate = `-- name: GetPolicyTypeByIDForUpdate :one
-SELECT id, code, description, unit_id, active, created_at, updated_at, kind, window_type FROM policy_types WHERE id = $1 FOR UPDATE
+SELECT id, code, description, unit_id, kind, active, created_at, updated_at FROM policy_types WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (PolicyType, error) {
@@ -113,17 +108,16 @@ func (q *Queries) GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (Pol
 		&i.Code,
 		&i.Description,
 		&i.UnitID,
+		&i.Kind,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Kind,
-		&i.WindowType,
 	)
 	return i, err
 }
 
 const listPolicyTypes = `-- name: ListPolicyTypes :many
-SELECT id, code, description, unit_id, active, created_at, updated_at, kind, window_type FROM policy_types ORDER BY id LIMIT $2 OFFSET $1
+SELECT id, code, description, unit_id, kind, active, created_at, updated_at FROM policy_types ORDER BY id LIMIT $2 OFFSET $1
 `
 
 type ListPolicyTypesParams struct {
@@ -145,11 +139,10 @@ func (q *Queries) ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams
 			&i.Code,
 			&i.Description,
 			&i.UnitID,
+			&i.Kind,
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Kind,
-			&i.WindowType,
 		); err != nil {
 			return nil, err
 		}
@@ -164,7 +157,7 @@ func (q *Queries) ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams
 const updatePolicyType = `-- name: UpdatePolicyType :one
 UPDATE policy_types
 SET description = $1, active = $2, updated_at = now()
-WHERE id = $3 RETURNING id, code, description, unit_id, active, created_at, updated_at, kind, window_type
+WHERE id = $3 RETURNING id, code, description, unit_id, kind, active, created_at, updated_at
 `
 
 type UpdatePolicyTypeParams struct {
@@ -181,11 +174,10 @@ func (q *Queries) UpdatePolicyType(ctx context.Context, arg UpdatePolicyTypePara
 		&i.Code,
 		&i.Description,
 		&i.UnitID,
+		&i.Kind,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Kind,
-		&i.WindowType,
 	)
 	return i, err
 }

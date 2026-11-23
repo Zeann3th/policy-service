@@ -65,9 +65,9 @@ message UnitPage { repeated Unit items = 1; int32 page = 2; int32 limit = 3; int
 message CreateUnitRequest { string code = 1; optional bool active = 2; string updated_by = 3; }
 message UpdateUnitRequest { uint64 id = 1; optional bool active = 2; string updated_by = 3; }
 
-message PolicyType { uint64 id = 1; string code = 2; optional string description = 3; uint64 unit_id = 4; bool active = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; string kind = 8; string window_type = 9; }
+message PolicyType { uint64 id = 1; string code = 2; optional string description = 3; uint64 unit_id = 4; bool active = 5; google.protobuf.Timestamp created_at = 6; google.protobuf.Timestamp updated_at = 7; string kind = 8; reserved 9; reserved "window_type"; }
 message PolicyTypePage { repeated PolicyType items = 1; int32 page = 2; int32 limit = 3; int64 total = 4; }
-message CreatePolicyTypeRequest { string code = 1; optional string description = 2; uint64 unit_id = 3; optional bool active = 4; string updated_by = 5; string kind = 6; string window_type = 7; }
+message CreatePolicyTypeRequest { string code = 1; optional string description = 2; uint64 unit_id = 3; optional bool active = 4; string updated_by = 5; string kind = 6; reserved 7; reserved "window_type"; }
 message UpdatePolicyTypeRequest { uint64 id = 1; optional string description = 2; optional bool active = 3; string updated_by = 4; }
 
 message PolicyGroup { uint64 id = 1; string wallet_type = 2; string currency = 3; string tier = 4; google.protobuf.Timestamp created_at = 5; google.protobuf.Timestamp updated_at = 6; }

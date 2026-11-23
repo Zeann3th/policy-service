@@ -250,14 +250,6 @@ definitions:
         type: integer
       updatedBy:
         type: string
-      windowType:
-        allOf:
-        - $ref: '#/definitions/policy.WindowType'
-        enum:
-        - NONE
-        - DAILY
-        - MONTHLY
-        - LIFETIME
     required:
     - code
     - unitId
@@ -458,14 +450,6 @@ definitions:
       updatedAt:
         format: date-time
         type: string
-      windowType:
-        allOf:
-        - $ref: '#/definitions/policy.WindowType'
-        enum:
-        - NONE
-        - DAILY
-        - MONTHLY
-        - LIFETIME
     type: object
   policy.Rule:
     properties:

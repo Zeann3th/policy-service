@@ -41,7 +41,7 @@ func (h *policyHandler) CreatePolicy(ctx context.Context, request *pb.CreatePoli
 	if err := direction(request.Direction); err != nil {
 		return nil, err
 	}
-	if err := policyTypeSelectors("", request.WindowType); err != nil {
+	if err := windowType(request.WindowType); err != nil {
 		return nil, err
 	}
 	groupID, _ := intID(request.GroupId)
@@ -134,7 +134,7 @@ func (h *policyHandler) CreateCustomPolicy(ctx context.Context, request *pb.Crea
 	if err := direction(request.Direction); err != nil {
 		return nil, err
 	}
-	if err := policyTypeSelectors("", request.WindowType); err != nil {
+	if err := windowType(request.WindowType); err != nil {
 		return nil, err
 	}
 	typeID, _ := intID(request.PolicyTypeId)

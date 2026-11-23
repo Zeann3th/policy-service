@@ -1052,7 +1052,6 @@ type PolicyType struct {
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	Kind          string                 `protobuf:"bytes,8,opt,name=kind,proto3" json:"kind,omitempty"`
-	WindowType    string                 `protobuf:"bytes,9,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1143,13 +1142,6 @@ func (x *PolicyType) GetKind() string {
 	return ""
 }
 
-func (x *PolicyType) GetWindowType() string {
-	if x != nil {
-		return x.WindowType
-	}
-	return ""
-}
-
 type PolicyTypePage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*PolicyType          `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -1226,7 +1218,6 @@ type CreatePolicyTypeRequest struct {
 	Active        *bool                  `protobuf:"varint,4,opt,name=active,proto3,oneof" json:"active,omitempty"`
 	UpdatedBy     string                 `protobuf:"bytes,5,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
 	Kind          string                 `protobuf:"bytes,6,opt,name=kind,proto3" json:"kind,omitempty"`
-	WindowType    string                 `protobuf:"bytes,7,opt,name=window_type,json=windowType,proto3" json:"window_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1299,13 +1290,6 @@ func (x *CreatePolicyTypeRequest) GetUpdatedBy() string {
 func (x *CreatePolicyTypeRequest) GetKind() string {
 	if x != nil {
 		return x.Kind
-	}
-	return ""
-}
-
-func (x *CreatePolicyTypeRequest) GetWindowType() string {
-	if x != nil {
-		return x.WindowType
 	}
 	return ""
 }
@@ -2559,7 +2543,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x06active\x18\x02 \x01(\bH\x00R\x06active\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\x03 \x01(\tR\tupdatedByB\t\n" +
-	"\a_active\"\xc3\x02\n" +
+	"\a_active\"\xb5\x02\n" +
 	"\n" +
 	"PolicyType\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x12\n" +
@@ -2571,15 +2555,14 @@ const file_proto_policy_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
-	"\x04kind\x18\b \x01(\tR\x04kind\x12\x1f\n" +
-	"\vwindow_type\x18\t \x01(\tR\n" +
-	"windowTypeB\x0e\n" +
-	"\f_description\"\x82\x01\n" +
+	"\x04kind\x18\b \x01(\tR\x04kindB\x0e\n" +
+	"\f_descriptionJ\x04\b\t\x10\n" +
+	"R\vwindow_type\"\x82\x01\n" +
 	"\x0ePolicyTypePage\x120\n" +
 	"\x05items\x18\x01 \x03(\v2\x1a.policy.ui.grpc.PolicyTypeR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\xf9\x01\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\xeb\x01\n" +
 	"\x17CreatePolicyTypeRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x17\n" +
@@ -2587,11 +2570,9 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x06active\x18\x04 \x01(\bH\x01R\x06active\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"updated_by\x18\x05 \x01(\tR\tupdatedBy\x12\x12\n" +
-	"\x04kind\x18\x06 \x01(\tR\x04kind\x12\x1f\n" +
-	"\vwindow_type\x18\a \x01(\tR\n" +
-	"windowTypeB\x0e\n" +
+	"\x04kind\x18\x06 \x01(\tR\x04kindB\x0e\n" +
 	"\f_descriptionB\t\n" +
-	"\a_active\"\xa7\x01\n" +
+	"\a_activeJ\x04\b\a\x10\bR\vwindow_type\"\xa7\x01\n" +
 	"\x17UpdatePolicyTypeRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1b\n" +

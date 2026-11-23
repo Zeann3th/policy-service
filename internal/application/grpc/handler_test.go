@@ -9,11 +9,11 @@ import (
 )
 
 func TestPolicyMappingsExposeBusinessSelectors(t *testing.T) {
-	typeMessage := outPolicyType(policy.PolicyTypeResponse{Kind: policy.KindFee, WindowType: policy.WindowDaily})
+	typeMessage := outPolicyType(policy.PolicyTypeResponse{Kind: policy.KindFee})
 	policyMessage := outPolicy(policy.PolicyResponse{Direction: policy.DirectionOut, WindowType: policy.WindowMonthly})
 	customMessage := outCustomPolicy(policy.CustomPolicyResponse{Direction: policy.DirectionIn, WindowType: policy.WindowLifetime})
 
-	if typeMessage.Kind != "FEE" || typeMessage.WindowType != "DAILY" {
+	if typeMessage.Kind != "FEE" {
 		t.Fatalf("policy type = %#v", typeMessage)
 	}
 	if policyMessage.Direction != "OUT" || policyMessage.WindowType != "MONTHLY" || customMessage.Direction != "IN" || customMessage.WindowType != "LIFETIME" {
@@ -27,8 +27,8 @@ func TestPolicyInputValidation(t *testing.T) {
 		err  error
 	}{
 		{name: "currency", err: isoCurrency("ZZZ")},
-		{name: "kind", err: policyTypeSelectors("UNKNOWN", "NONE")},
-		{name: "window", err: policyTypeSelectors("LIMIT", "YEARLY")},
+		{name: "kind", err: kind("UNKNOWN")},
+		{name: "window", err: windowType("YEARLY")},
 		{name: "direction", err: direction("SIDEWAYS")},
 	} {
 		t.Run(test.name, func(t *testing.T) {

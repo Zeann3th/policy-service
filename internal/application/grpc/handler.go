@@ -91,11 +91,15 @@ func isoCurrency(value string) error {
 	return nil
 }
 
-func policyTypeSelectors(kind, windowType string) error {
-	if kind != "" && !policy.Kind(kind).Valid() {
+func kind(value string) error {
+	if value != "" && !policy.Kind(value).Valid() {
 		return status.Error(codes.InvalidArgument, "kind is invalid")
 	}
-	if windowType != "" && !policy.WindowType(windowType).Valid() {
+	return nil
+}
+
+func windowType(value string) error {
+	if value != "" && !policy.WindowType(value).Valid() {
 		return status.Error(codes.InvalidArgument, "windowType is invalid")
 	}
 	return nil
@@ -135,7 +139,7 @@ func outUnit(value unit.Response) *pb.Unit {
 }
 
 func outPolicyType(value policy.PolicyTypeResponse) *pb.PolicyType {
-	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, UnitId: uint64(value.UnitID), Kind: string(value.Kind), WindowType: string(value.WindowType), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, UnitId: uint64(value.UnitID), Kind: string(value.Kind), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {

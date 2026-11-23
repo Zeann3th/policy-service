@@ -103,7 +103,6 @@ type PolicyType struct {
 	Description *string
 	UnitID      int64
 	Kind        Kind
-	WindowType  WindowType
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time

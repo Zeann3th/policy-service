@@ -201,7 +201,7 @@ func toUnit(v codegen.Unit) unit.Unit {
 }
 
 func toPolicyType(v codegen.PolicyType) policy.PolicyType {
-	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, UnitID: v.UnitID, Kind: policy.Kind(v.Kind), WindowType: policy.WindowType(v.WindowType), Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, UnitID: v.UnitID, Kind: policy.Kind(v.Kind), Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func toPolicyGroup(v codegen.PolicyGroup) policy.PolicyGroup {
@@ -274,7 +274,7 @@ func (s *policyStoreImpl) Delete(ctx context.Context, id int64, actor string) er
 
 func (s *policyStoreImpl) CreateType(ctx context.Context, c policy.CreatePolicyTypeRequest) (out policy.PolicyType, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, UnitID: c.UnitID, Kind: string(c.Kind), WindowType: string(c.WindowType), Active: *c.Active})
+		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, UnitID: c.UnitID, Kind: string(c.Kind), Active: *c.Active})
 		if e != nil {
 			return e
 		}

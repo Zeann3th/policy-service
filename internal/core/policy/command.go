@@ -12,20 +12,18 @@ type PolicyTypeResponse struct {
 	Description *string    `json:"description,omitempty"`
 	UnitID      int64      `json:"unitId"`
 	Kind        Kind       `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
-	WindowType  WindowType `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `format:"date-time" json:"createdAt"`
 	UpdatedAt   *time.Time `format:"date-time" json:"updatedAt,omitempty"`
 }
 
 type CreatePolicyTypeRequest struct {
-	Code        string     `binding:"required" json:"code"`
-	Description *string    `json:"description"`
-	UnitID      int64      `binding:"required,gt=0" json:"unitId"`
-	Kind        Kind       `binding:"omitempty,oneof=LIMIT WAIVER FEE TAX DISCOUNT" enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
-	WindowType  WindowType `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Active      *bool      `json:"active"`
-	UpdatedBy   string     `binding:"required" json:"updatedBy"`
+	Code        string  `binding:"required" json:"code"`
+	Description *string `json:"description"`
+	UnitID      int64   `binding:"required,gt=0" json:"unitId"`
+	Kind        Kind    `binding:"omitempty,oneof=LIMIT WAIVER FEE TAX DISCOUNT" enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
+	Active      *bool   `json:"active"`
+	UpdatedBy   string  `binding:"required" json:"updatedBy"`
 }
 
 type UpdatePolicyTypeRequest struct {

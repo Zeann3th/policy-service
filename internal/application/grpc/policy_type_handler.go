@@ -17,14 +17,14 @@ func (h *policyTypeHandler) CreatePolicyType(ctx context.Context, request *pb.Cr
 	if err := require(map[string]string{"code": request.Code, "updatedBy": request.UpdatedBy}); err != nil {
 		return nil, err
 	}
-	if err := policyTypeSelectors(request.Kind, request.WindowType); err != nil {
+	if err := kind(request.Kind); err != nil {
 		return nil, err
 	}
 	unitID, err := intID(request.UnitId)
 	if err != nil {
 		return nil, err
 	}
-	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, UnitID: unitID, Kind: policy.Kind(request.Kind), WindowType: policy.WindowType(request.WindowType), Active: request.Active, UpdatedBy: request.UpdatedBy})
+	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, UnitID: unitID, Kind: policy.Kind(request.Kind), Active: request.Active, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}

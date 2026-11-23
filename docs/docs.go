@@ -1855,19 +1855,6 @@ const docTemplate = `{
                 },
                 "updatedBy": {
                     "type": "string"
-                },
-                "windowType": {
-                    "enum": [
-                        "NONE",
-                        "DAILY",
-                        "MONTHLY",
-                        "LIFETIME"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.WindowType"
-                        }
-                    ]
                 }
             }
         },
@@ -2153,19 +2140,6 @@ const docTemplate = `{
                 "updatedAt": {
                     "type": "string",
                     "format": "date-time"
-                },
-                "windowType": {
-                    "enum": [
-                        "NONE",
-                        "DAILY",
-                        "MONTHLY",
-                        "LIFETIME"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.WindowType"
-                        }
-                    ]
                 }
             }
         },

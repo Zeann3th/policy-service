@@ -156,6 +156,38 @@ func (q *Queries) CreateUsageLedger(ctx context.Context, arg CreateUsageLedgerPa
 	return err
 }
 
+const getReservationByRequestID = `-- name: GetReservationByRequestID :one
+SELECT id, request_id, status, transaction_type, channel, currency, amount, sender_wallet_id, sender_wallet_type, sender_tier, receiver_wallet_id, receiver_wallet_type, receiver_tier, result, created_at, updated_at FROM reservations
+WHERE request_id = $1
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+// request_id is unique per monthly partition; the latest one wins.
+func (q *Queries) GetReservationByRequestID(ctx context.Context, requestID string) (Reservation, error) {
+	row := q.db.QueryRow(ctx, getReservationByRequestID, requestID)
+	var i Reservation
+	err := row.Scan(
+		&i.ID,
+		&i.RequestID,
+		&i.Status,
+		&i.TransactionType,
+		&i.Channel,
+		&i.Currency,
+		&i.Amount,
+		&i.SenderWalletID,
+		&i.SenderWalletType,
+		&i.SenderTier,
+		&i.ReceiverWalletID,
+		&i.ReceiverWalletType,
+		&i.ReceiverTier,
+		&i.Result,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUsageValue = `-- name: GetUsageValue :one
 SELECT value FROM usages
 WHERE wallet_id = $1 AND policy_type_id = $2
@@ -189,13 +221,90 @@ func (q *Queries) GetUsageValue(ctx context.Context, arg GetUsageValueParams) (d
 	return value, err
 }
 
-const lockWallet = `-- name: LockWallet :exec
-SELECT pg_advisory_xact_lock(hashtextextended(CAST($1 AS text), 0))
+const listUsageLedger = `-- name: ListUsageLedger :many
+SELECT reservation_id, reservation_created_at, entry_type, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, window_start, delta, policy_id, policy_type_code, operator, limit_value, value_after, created_at FROM usage_ledger
+WHERE reservation_id = $1 AND reservation_created_at = $2
+  AND entry_type = $3
+ORDER BY wallet_id, policy_type_id, transaction_type, channel, direction, window_type
 `
 
-func (q *Queries) LockWallet(ctx context.Context, walletID string) error {
-	_, err := q.db.Exec(ctx, lockWallet, walletID)
+type ListUsageLedgerParams struct {
+	ReservationID        uuid.UUID `json:"reservation_id"`
+	ReservationCreatedAt time.Time `json:"reservation_created_at"`
+	EntryType            string    `json:"entry_type"`
+}
+
+func (q *Queries) ListUsageLedger(ctx context.Context, arg ListUsageLedgerParams) ([]UsageLedger, error) {
+	rows, err := q.db.Query(ctx, listUsageLedger, arg.ReservationID, arg.ReservationCreatedAt, arg.EntryType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UsageLedger
+	for rows.Next() {
+		var i UsageLedger
+		if err := rows.Scan(
+			&i.ReservationID,
+			&i.ReservationCreatedAt,
+			&i.EntryType,
+			&i.WalletID,
+			&i.PolicyTypeID,
+			&i.TransactionType,
+			&i.Channel,
+			&i.Direction,
+			&i.WindowType,
+			&i.WindowStart,
+			&i.Delta,
+			&i.PolicyID,
+			&i.PolicyTypeCode,
+			&i.Operator,
+			&i.LimitValue,
+			&i.ValueAfter,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lock = `-- name: Lock :exec
+SELECT pg_advisory_xact_lock(CAST($1 AS bigint))
+`
+
+func (q *Queries) Lock(ctx context.Context, key int64) error {
+	_, err := q.db.Exec(ctx, lock, key)
 	return err
+}
+
+const transitionReservation = `-- name: TransitionReservation :execrows
+UPDATE reservations
+SET status = $1
+WHERE id = $2 AND created_at = $3 AND status = $4
+`
+
+type TransitionReservationParams struct {
+	Status     string    `json:"status"`
+	ID         uuid.UUID `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	FromStatus string    `json:"from_status"`
+}
+
+func (q *Queries) TransitionReservation(ctx context.Context, arg TransitionReservationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, transitionReservation,
+		arg.Status,
+		arg.ID,
+		arg.CreatedAt,
+		arg.FromStatus,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateReservationStatus = `-- name: UpdateReservationStatus :execrows

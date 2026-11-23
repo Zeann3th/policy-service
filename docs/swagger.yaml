@@ -681,6 +681,21 @@ definitions:
       walletId:
         type: string
     type: object
+  reservation.ReleaseResponse:
+    properties:
+      requestId:
+        type: string
+      reservationId:
+        type: string
+      responseTime:
+        format: date-time
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/reservation.Status'
+        enum:
+        - RELEASED
+    type: object
   reservation.ReserveRequest:
     properties:
       amount:
@@ -1639,6 +1654,44 @@ paths:
           schema:
             $ref: '#/definitions/core.AppError'
       summary: Reserve a transaction
+      tags:
+      - Reservations
+  /v1/reservations/{requestId}:
+    delete:
+      description: 'Reverses a RESERVED reservation by its original requestId: each
+        RESERVE ledger entry is recorded again as a RELEASE entry with the opposite
+        delta and subtracted from the same usage window. Only RESERVED can be released;
+        anything else is 409.'
+      parameters:
+      - description: Original requestId
+        in: path
+        name: requestId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/reservation.ReleaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Release a reservation
       tags:
       - Reservations
   /v1/units:

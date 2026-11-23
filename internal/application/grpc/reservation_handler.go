@@ -54,6 +54,22 @@ func (h *reservationHandler) Reserve(ctx context.Context, request *pb.ReserveReq
 	}, nil
 }
 
+func (h *reservationHandler) Release(ctx context.Context, request *pb.ReleaseRequest) (*pb.ReleaseResponse, error) {
+	if err := require(map[string]string{"requestId": request.RequestId}); err != nil {
+		return nil, err
+	}
+	response, err := h.service.Release(ctx, request.RequestId)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	return &pb.ReleaseResponse{
+		ReservationId: response.ReservationID.String(),
+		RequestId:     response.RequestID,
+		Status:        string(response.Status),
+		ResponseTime:  outTS(response.ResponseTime),
+	}, nil
+}
+
 func inParty(value *pb.ReservationParty) reservation.PartyRequest {
 	return reservation.PartyRequest{WalletID: value.WalletId, WalletType: value.WalletType, Tier: value.Tier}
 }

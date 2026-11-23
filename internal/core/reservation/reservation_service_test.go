@@ -27,6 +27,28 @@ type storeStub struct {
 	status   Status
 	failed   bool
 	applyErr error
+	found    Reservation
+	entries  []LedgerEntry
+	moved    []Status
+}
+
+func (s *storeStub) Find(_ context.Context, requestID string) (Reservation, error) {
+	if s.found.RequestID != requestID {
+		return Reservation{}, core.ErrNotFound
+	}
+	return s.found, nil
+}
+
+func (s *storeStub) Transition(_ context.Context, _ uuid.UUID, _ time.Time, from, to Status) error {
+	s.moved = append(s.moved, from, to)
+	return nil
+}
+
+func (s *storeStub) Entries(_ context.Context, _ uuid.UUID, _ time.Time, entryType EntryType) ([]LedgerEntry, error) {
+	if entryType != EntryReserve {
+		return nil, nil
+	}
+	return s.entries, nil
 }
 
 func (s *storeStub) Create(_ context.Context, value Reservation) (Reservation, error) {
@@ -134,5 +156,40 @@ func TestReserveValidatesRequest(t *testing.T) {
 		if _, err := NewService(&storeStub{}, policies()).Reserve(context.Background(), request); !errors.Is(err, core.ErrBadRequest) {
 			t.Errorf("%s: err = %v", name, err)
 		}
+	}
+}
+
+func reserved(status Status) *storeStub {
+	key := UsageKey{WalletID: "s", PolicyTypeID: 1, TransactionType: policy.All, Channel: policy.All, Direction: policy.DirectionOut, WindowType: policy.WindowDaily, WindowStart: at}
+	return &storeStub{
+		found:   Reservation{RequestID: "req-1", Status: status, Sender: Party{WalletID: "s"}, Receiver: Party{WalletID: "r"}, CreatedAt: at},
+		entries: []LedgerEntry{{EntryType: EntryReserve, UsageKey: key, Delta: d("400"), ReservationCreatedAt: at}},
+	}
+}
+
+func TestReleaseReversesReserveEntries(t *testing.T) {
+	store := reserved(StatusReserved)
+	response, err := NewService(store, policies()).Release(context.Background(), "req-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Status != StatusReleased || len(store.moved) != 2 || store.moved[0] != StatusReserved || store.moved[1] != StatusReleased {
+		t.Fatalf("status = %s, moved = %v", response.Status, store.moved)
+	}
+	if len(store.applied) != 1 || store.applied[0].EntryType != EntryRelease || !store.applied[0].Delta.Equal(d("-400")) ||
+		store.applied[0].UsageKey != store.entries[0].UsageKey || len(store.locked) != 2 {
+		t.Fatalf("applied = %#v, locked = %v", store.applied, store.locked)
+	}
+}
+
+func TestReleaseOnlyReserved(t *testing.T) {
+	for _, status := range []Status{StatusProcessing, StatusReleased, StatusRejected, StatusFailed} {
+		store := reserved(status)
+		if _, err := NewService(store, policies()).Release(context.Background(), "req-1"); !errors.Is(err, core.ErrConflict) || store.locked != nil {
+			t.Errorf("%s: err = %v, locked = %v", status, err, store.locked)
+		}
+	}
+	if _, err := NewService(reserved(StatusReserved), policies()).Release(context.Background(), "other"); !errors.Is(err, core.ErrNotFound) {
+		t.Errorf("unknown request: err = %v", err)
 	}
 }

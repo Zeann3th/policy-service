@@ -40,6 +40,8 @@ type Querier interface {
 	GetPolicyGroupID(ctx context.Context, arg GetPolicyGroupIDParams) (int64, error)
 	GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, error)
 	GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (PolicyType, error)
+	// request_id is unique per monthly partition; the latest one wins.
+	GetReservationByRequestID(ctx context.Context, requestID string) (Reservation, error)
 	GetUnitByID(ctx context.Context, id int64) (Unit, error)
 	GetUnitByIDForUpdate(ctx context.Context, id int64) (Unit, error)
 	GetUnits(ctx context.Context) ([]Unit, error)
@@ -48,7 +50,9 @@ type Querier interface {
 	ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]Policy, error)
 	ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams) ([]PolicyType, error)
 	ListUnits(ctx context.Context, arg ListUnitsParams) ([]Unit, error)
-	LockWallet(ctx context.Context, walletID string) error
+	ListUsageLedger(ctx context.Context, arg ListUsageLedgerParams) ([]UsageLedger, error)
+	Lock(ctx context.Context, key int64) error
+	TransitionReservation(ctx context.Context, arg TransitionReservationParams) (int64, error)
 	UpdateCustomPolicy(ctx context.Context, arg UpdateCustomPolicyParams) (CustomPolicy, error)
 	UpdatePolicy(ctx context.Context, arg UpdatePolicyParams) (Policy, error)
 	UpdatePolicyType(ctx context.Context, arg UpdatePolicyTypeParams) (PolicyType, error)

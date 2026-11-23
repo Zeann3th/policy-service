@@ -2926,6 +2926,118 @@ func (x *ReserveResponse) GetResponseTime() *timestamppb.Timestamp {
 	return nil
 }
 
+type ReleaseRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseRequest) Reset() {
+	*x = ReleaseRequest{}
+	mi := &file_proto_policy_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseRequest) ProtoMessage() {}
+
+func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseRequest.ProtoReflect.Descriptor instead.
+func (*ReleaseRequest) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ReleaseRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+type ReleaseResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ReservationId string                 `protobuf:"bytes,1,opt,name=reservation_id,json=reservationId,proto3" json:"reservation_id,omitempty"`
+	RequestId     string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	ResponseTime  *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=response_time,json=responseTime,proto3" json:"response_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseResponse) Reset() {
+	*x = ReleaseResponse{}
+	mi := &file_proto_policy_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseResponse) ProtoMessage() {}
+
+func (x *ReleaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseResponse.ProtoReflect.Descriptor instead.
+func (*ReleaseResponse) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ReleaseResponse) GetReservationId() string {
+	if x != nil {
+		return x.ReservationId
+	}
+	return ""
+}
+
+func (x *ReleaseResponse) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *ReleaseResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ReleaseResponse) GetResponseTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResponseTime
+	}
+	return nil
+}
+
 var File_proto_policy_proto protoreflect.FileDescriptor
 
 const file_proto_policy_proto_rawDesc = "" +
@@ -3220,7 +3332,16 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x123\n" +
 	"\x06sender\x18\x04 \x01(\v2\x1b.policy.ui.grpc.PartyResultR\x06sender\x127\n" +
 	"\breceiver\x18\x05 \x01(\v2\x1b.policy.ui.grpc.PartyResultR\breceiver\x12?\n" +
-	"\rresponse_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\fresponseTime2\xec\x02\n" +
+	"\rresponse_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\fresponseTime\"/\n" +
+	"\x0eReleaseRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\"\xb0\x01\n" +
+	"\x0fReleaseResponse\x12%\n" +
+	"\x0ereservation_id\x18\x01 \x01(\tR\rreservationId\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12?\n" +
+	"\rresponse_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\fresponseTime2\xec\x02\n" +
 	"\vUnitService\x12E\n" +
 	"\n" +
 	"CreateUnit\x12!.policy.ui.grpc.CreateUnitRequest\x1a\x14.policy.ui.grpc.Unit\x12:\n" +
@@ -3253,9 +3374,10 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x12UpdateCustomPolicy\x12).policy.ui.grpc.UpdateCustomPolicyRequest\x1a\x1c.policy.ui.grpc.CustomPolicy\x12_\n" +
 	"\x12DeleteCustomPolicy\x12).policy.ui.grpc.DeleteCustomPolicyRequest\x1a\x1e.policy.ui.grpc.DeleteResponse2f\n" +
 	"\fCacheService\x12V\n" +
-	"\vReloadCache\x12\".policy.ui.grpc.ReloadCacheRequest\x1a#.policy.ui.grpc.ReloadCacheResponse2`\n" +
+	"\vReloadCache\x12\".policy.ui.grpc.ReloadCacheRequest\x1a#.policy.ui.grpc.ReloadCacheResponse2\xac\x01\n" +
 	"\x12ReservationService\x12J\n" +
-	"\aReserve\x12\x1e.policy.ui.grpc.ReserveRequest\x1a\x1f.policy.ui.grpc.ReserveResponseBKZIgithub.com/zeann3th/policy-service/internal/application/grpc/codegen;grpcb\x06proto3"
+	"\aReserve\x12\x1e.policy.ui.grpc.ReserveRequest\x1a\x1f.policy.ui.grpc.ReserveResponse\x12J\n" +
+	"\aRelease\x12\x1e.policy.ui.grpc.ReleaseRequest\x1a\x1f.policy.ui.grpc.ReleaseResponseBKZIgithub.com/zeann3th/policy-service/internal/application/grpc/codegen;grpcb\x06proto3"
 
 var (
 	file_proto_policy_proto_rawDescOnce sync.Once
@@ -3269,7 +3391,7 @@ func file_proto_policy_proto_rawDescGZIP() []byte {
 	return file_proto_policy_proto_rawDescData
 }
 
-var file_proto_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_proto_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_proto_policy_proto_goTypes = []any{
 	(*PageRequest)(nil),               // 0: policy.ui.grpc.PageRequest
 	(*IdRequest)(nil),                 // 1: policy.ui.grpc.IdRequest
@@ -3309,93 +3431,98 @@ var file_proto_policy_proto_goTypes = []any{
 	(*AppliedPolicy)(nil),             // 35: policy.ui.grpc.AppliedPolicy
 	(*PartyResult)(nil),               // 36: policy.ui.grpc.PartyResult
 	(*ReserveResponse)(nil),           // 37: policy.ui.grpc.ReserveResponse
-	(*timestamppb.Timestamp)(nil),     // 38: google.protobuf.Timestamp
+	(*ReleaseRequest)(nil),            // 38: policy.ui.grpc.ReleaseRequest
+	(*ReleaseResponse)(nil),           // 39: policy.ui.grpc.ReleaseResponse
+	(*timestamppb.Timestamp)(nil),     // 40: google.protobuf.Timestamp
 }
 var file_proto_policy_proto_depIdxs = []int32{
 	11, // 0: policy.ui.grpc.GetPolicyConfigResponse.rules:type_name -> policy.ui.grpc.PolicyRule
-	38, // 1: policy.ui.grpc.Unit.created_at:type_name -> google.protobuf.Timestamp
-	38, // 2: policy.ui.grpc.Unit.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 1: policy.ui.grpc.Unit.created_at:type_name -> google.protobuf.Timestamp
+	40, // 2: policy.ui.grpc.Unit.updated_at:type_name -> google.protobuf.Timestamp
 	13, // 3: policy.ui.grpc.UnitPage.items:type_name -> policy.ui.grpc.Unit
-	38, // 4: policy.ui.grpc.PolicyType.created_at:type_name -> google.protobuf.Timestamp
-	38, // 5: policy.ui.grpc.PolicyType.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 4: policy.ui.grpc.PolicyType.created_at:type_name -> google.protobuf.Timestamp
+	40, // 5: policy.ui.grpc.PolicyType.updated_at:type_name -> google.protobuf.Timestamp
 	17, // 6: policy.ui.grpc.PolicyTypePage.items:type_name -> policy.ui.grpc.PolicyType
-	38, // 7: policy.ui.grpc.PolicyGroup.created_at:type_name -> google.protobuf.Timestamp
-	38, // 8: policy.ui.grpc.PolicyGroup.updated_at:type_name -> google.protobuf.Timestamp
-	38, // 9: policy.ui.grpc.Policy.created_at:type_name -> google.protobuf.Timestamp
-	38, // 10: policy.ui.grpc.Policy.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 7: policy.ui.grpc.PolicyGroup.created_at:type_name -> google.protobuf.Timestamp
+	40, // 8: policy.ui.grpc.PolicyGroup.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 9: policy.ui.grpc.Policy.created_at:type_name -> google.protobuf.Timestamp
+	40, // 10: policy.ui.grpc.Policy.updated_at:type_name -> google.protobuf.Timestamp
 	23, // 11: policy.ui.grpc.PolicyPage.items:type_name -> policy.ui.grpc.Policy
-	38, // 12: policy.ui.grpc.CustomPolicy.effective_from:type_name -> google.protobuf.Timestamp
-	38, // 13: policy.ui.grpc.CustomPolicy.effective_to:type_name -> google.protobuf.Timestamp
-	38, // 14: policy.ui.grpc.CustomPolicy.created_at:type_name -> google.protobuf.Timestamp
-	38, // 15: policy.ui.grpc.CustomPolicy.updated_at:type_name -> google.protobuf.Timestamp
+	40, // 12: policy.ui.grpc.CustomPolicy.effective_from:type_name -> google.protobuf.Timestamp
+	40, // 13: policy.ui.grpc.CustomPolicy.effective_to:type_name -> google.protobuf.Timestamp
+	40, // 14: policy.ui.grpc.CustomPolicy.created_at:type_name -> google.protobuf.Timestamp
+	40, // 15: policy.ui.grpc.CustomPolicy.updated_at:type_name -> google.protobuf.Timestamp
 	27, // 16: policy.ui.grpc.CustomPolicyPage.items:type_name -> policy.ui.grpc.CustomPolicy
-	38, // 17: policy.ui.grpc.CreateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	38, // 18: policy.ui.grpc.CreateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
-	38, // 19: policy.ui.grpc.UpdateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	38, // 20: policy.ui.grpc.UpdateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	40, // 17: policy.ui.grpc.CreateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	40, // 18: policy.ui.grpc.CreateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	40, // 19: policy.ui.grpc.UpdateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	40, // 20: policy.ui.grpc.UpdateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
 	33, // 21: policy.ui.grpc.ReserveRequest.sender:type_name -> policy.ui.grpc.ReservationParty
 	33, // 22: policy.ui.grpc.ReserveRequest.receiver:type_name -> policy.ui.grpc.ReservationParty
 	35, // 23: policy.ui.grpc.PartyResult.applied_policies:type_name -> policy.ui.grpc.AppliedPolicy
 	36, // 24: policy.ui.grpc.ReserveResponse.sender:type_name -> policy.ui.grpc.PartyResult
 	36, // 25: policy.ui.grpc.ReserveResponse.receiver:type_name -> policy.ui.grpc.PartyResult
-	38, // 26: policy.ui.grpc.ReserveResponse.response_time:type_name -> google.protobuf.Timestamp
-	15, // 27: policy.ui.grpc.UnitService.CreateUnit:input_type -> policy.ui.grpc.CreateUnitRequest
-	1,  // 28: policy.ui.grpc.UnitService.GetUnit:input_type -> policy.ui.grpc.IdRequest
-	0,  // 29: policy.ui.grpc.UnitService.ListUnits:input_type -> policy.ui.grpc.PageRequest
-	16, // 30: policy.ui.grpc.UnitService.UpdateUnit:input_type -> policy.ui.grpc.UpdateUnitRequest
-	2,  // 31: policy.ui.grpc.UnitService.DeleteUnit:input_type -> policy.ui.grpc.DeleteByIdRequest
-	19, // 32: policy.ui.grpc.PolicyTypeService.CreatePolicyType:input_type -> policy.ui.grpc.CreatePolicyTypeRequest
-	1,  // 33: policy.ui.grpc.PolicyTypeService.GetPolicyType:input_type -> policy.ui.grpc.IdRequest
-	0,  // 34: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:input_type -> policy.ui.grpc.PageRequest
-	20, // 35: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:input_type -> policy.ui.grpc.UpdatePolicyTypeRequest
-	2,  // 36: policy.ui.grpc.PolicyTypeService.DeletePolicyType:input_type -> policy.ui.grpc.DeleteByIdRequest
-	22, // 37: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:input_type -> policy.ui.grpc.CreatePolicyGroupRequest
-	1,  // 38: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:input_type -> policy.ui.grpc.IdRequest
-	2,  // 39: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:input_type -> policy.ui.grpc.DeleteByIdRequest
-	10, // 40: policy.ui.grpc.PolicyService.GetPolicyConfig:input_type -> policy.ui.grpc.GetPolicyConfigRequest
-	25, // 41: policy.ui.grpc.PolicyService.CreatePolicy:input_type -> policy.ui.grpc.CreatePolicyRequest
-	3,  // 42: policy.ui.grpc.PolicyService.GetPolicy:input_type -> policy.ui.grpc.ScopedIdRequest
-	4,  // 43: policy.ui.grpc.PolicyService.ListPolicies:input_type -> policy.ui.grpc.ScopedPageRequest
-	26, // 44: policy.ui.grpc.PolicyService.UpdatePolicy:input_type -> policy.ui.grpc.UpdatePolicyRequest
-	5,  // 45: policy.ui.grpc.PolicyService.DeletePolicy:input_type -> policy.ui.grpc.DeleteScopedRequest
-	29, // 46: policy.ui.grpc.PolicyService.CreateCustomPolicy:input_type -> policy.ui.grpc.CreateCustomPolicyRequest
-	6,  // 47: policy.ui.grpc.PolicyService.GetCustomPolicy:input_type -> policy.ui.grpc.WalletIdRequest
-	7,  // 48: policy.ui.grpc.PolicyService.ListCustomPolicies:input_type -> policy.ui.grpc.WalletPageRequest
-	30, // 49: policy.ui.grpc.PolicyService.UpdateCustomPolicy:input_type -> policy.ui.grpc.UpdateCustomPolicyRequest
-	8,  // 50: policy.ui.grpc.PolicyService.DeleteCustomPolicy:input_type -> policy.ui.grpc.DeleteCustomPolicyRequest
-	31, // 51: policy.ui.grpc.CacheService.ReloadCache:input_type -> policy.ui.grpc.ReloadCacheRequest
-	34, // 52: policy.ui.grpc.ReservationService.Reserve:input_type -> policy.ui.grpc.ReserveRequest
-	13, // 53: policy.ui.grpc.UnitService.CreateUnit:output_type -> policy.ui.grpc.Unit
-	13, // 54: policy.ui.grpc.UnitService.GetUnit:output_type -> policy.ui.grpc.Unit
-	14, // 55: policy.ui.grpc.UnitService.ListUnits:output_type -> policy.ui.grpc.UnitPage
-	13, // 56: policy.ui.grpc.UnitService.UpdateUnit:output_type -> policy.ui.grpc.Unit
-	9,  // 57: policy.ui.grpc.UnitService.DeleteUnit:output_type -> policy.ui.grpc.DeleteResponse
-	17, // 58: policy.ui.grpc.PolicyTypeService.CreatePolicyType:output_type -> policy.ui.grpc.PolicyType
-	17, // 59: policy.ui.grpc.PolicyTypeService.GetPolicyType:output_type -> policy.ui.grpc.PolicyType
-	18, // 60: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:output_type -> policy.ui.grpc.PolicyTypePage
-	17, // 61: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:output_type -> policy.ui.grpc.PolicyType
-	9,  // 62: policy.ui.grpc.PolicyTypeService.DeletePolicyType:output_type -> policy.ui.grpc.DeleteResponse
-	21, // 63: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
-	21, // 64: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
-	9,  // 65: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:output_type -> policy.ui.grpc.DeleteResponse
-	12, // 66: policy.ui.grpc.PolicyService.GetPolicyConfig:output_type -> policy.ui.grpc.GetPolicyConfigResponse
-	23, // 67: policy.ui.grpc.PolicyService.CreatePolicy:output_type -> policy.ui.grpc.Policy
-	23, // 68: policy.ui.grpc.PolicyService.GetPolicy:output_type -> policy.ui.grpc.Policy
-	24, // 69: policy.ui.grpc.PolicyService.ListPolicies:output_type -> policy.ui.grpc.PolicyPage
-	23, // 70: policy.ui.grpc.PolicyService.UpdatePolicy:output_type -> policy.ui.grpc.Policy
-	9,  // 71: policy.ui.grpc.PolicyService.DeletePolicy:output_type -> policy.ui.grpc.DeleteResponse
-	27, // 72: policy.ui.grpc.PolicyService.CreateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	27, // 73: policy.ui.grpc.PolicyService.GetCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	28, // 74: policy.ui.grpc.PolicyService.ListCustomPolicies:output_type -> policy.ui.grpc.CustomPolicyPage
-	27, // 75: policy.ui.grpc.PolicyService.UpdateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	9,  // 76: policy.ui.grpc.PolicyService.DeleteCustomPolicy:output_type -> policy.ui.grpc.DeleteResponse
-	32, // 77: policy.ui.grpc.CacheService.ReloadCache:output_type -> policy.ui.grpc.ReloadCacheResponse
-	37, // 78: policy.ui.grpc.ReservationService.Reserve:output_type -> policy.ui.grpc.ReserveResponse
-	53, // [53:79] is the sub-list for method output_type
-	27, // [27:53] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	40, // 26: policy.ui.grpc.ReserveResponse.response_time:type_name -> google.protobuf.Timestamp
+	40, // 27: policy.ui.grpc.ReleaseResponse.response_time:type_name -> google.protobuf.Timestamp
+	15, // 28: policy.ui.grpc.UnitService.CreateUnit:input_type -> policy.ui.grpc.CreateUnitRequest
+	1,  // 29: policy.ui.grpc.UnitService.GetUnit:input_type -> policy.ui.grpc.IdRequest
+	0,  // 30: policy.ui.grpc.UnitService.ListUnits:input_type -> policy.ui.grpc.PageRequest
+	16, // 31: policy.ui.grpc.UnitService.UpdateUnit:input_type -> policy.ui.grpc.UpdateUnitRequest
+	2,  // 32: policy.ui.grpc.UnitService.DeleteUnit:input_type -> policy.ui.grpc.DeleteByIdRequest
+	19, // 33: policy.ui.grpc.PolicyTypeService.CreatePolicyType:input_type -> policy.ui.grpc.CreatePolicyTypeRequest
+	1,  // 34: policy.ui.grpc.PolicyTypeService.GetPolicyType:input_type -> policy.ui.grpc.IdRequest
+	0,  // 35: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:input_type -> policy.ui.grpc.PageRequest
+	20, // 36: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:input_type -> policy.ui.grpc.UpdatePolicyTypeRequest
+	2,  // 37: policy.ui.grpc.PolicyTypeService.DeletePolicyType:input_type -> policy.ui.grpc.DeleteByIdRequest
+	22, // 38: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:input_type -> policy.ui.grpc.CreatePolicyGroupRequest
+	1,  // 39: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:input_type -> policy.ui.grpc.IdRequest
+	2,  // 40: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:input_type -> policy.ui.grpc.DeleteByIdRequest
+	10, // 41: policy.ui.grpc.PolicyService.GetPolicyConfig:input_type -> policy.ui.grpc.GetPolicyConfigRequest
+	25, // 42: policy.ui.grpc.PolicyService.CreatePolicy:input_type -> policy.ui.grpc.CreatePolicyRequest
+	3,  // 43: policy.ui.grpc.PolicyService.GetPolicy:input_type -> policy.ui.grpc.ScopedIdRequest
+	4,  // 44: policy.ui.grpc.PolicyService.ListPolicies:input_type -> policy.ui.grpc.ScopedPageRequest
+	26, // 45: policy.ui.grpc.PolicyService.UpdatePolicy:input_type -> policy.ui.grpc.UpdatePolicyRequest
+	5,  // 46: policy.ui.grpc.PolicyService.DeletePolicy:input_type -> policy.ui.grpc.DeleteScopedRequest
+	29, // 47: policy.ui.grpc.PolicyService.CreateCustomPolicy:input_type -> policy.ui.grpc.CreateCustomPolicyRequest
+	6,  // 48: policy.ui.grpc.PolicyService.GetCustomPolicy:input_type -> policy.ui.grpc.WalletIdRequest
+	7,  // 49: policy.ui.grpc.PolicyService.ListCustomPolicies:input_type -> policy.ui.grpc.WalletPageRequest
+	30, // 50: policy.ui.grpc.PolicyService.UpdateCustomPolicy:input_type -> policy.ui.grpc.UpdateCustomPolicyRequest
+	8,  // 51: policy.ui.grpc.PolicyService.DeleteCustomPolicy:input_type -> policy.ui.grpc.DeleteCustomPolicyRequest
+	31, // 52: policy.ui.grpc.CacheService.ReloadCache:input_type -> policy.ui.grpc.ReloadCacheRequest
+	34, // 53: policy.ui.grpc.ReservationService.Reserve:input_type -> policy.ui.grpc.ReserveRequest
+	38, // 54: policy.ui.grpc.ReservationService.Release:input_type -> policy.ui.grpc.ReleaseRequest
+	13, // 55: policy.ui.grpc.UnitService.CreateUnit:output_type -> policy.ui.grpc.Unit
+	13, // 56: policy.ui.grpc.UnitService.GetUnit:output_type -> policy.ui.grpc.Unit
+	14, // 57: policy.ui.grpc.UnitService.ListUnits:output_type -> policy.ui.grpc.UnitPage
+	13, // 58: policy.ui.grpc.UnitService.UpdateUnit:output_type -> policy.ui.grpc.Unit
+	9,  // 59: policy.ui.grpc.UnitService.DeleteUnit:output_type -> policy.ui.grpc.DeleteResponse
+	17, // 60: policy.ui.grpc.PolicyTypeService.CreatePolicyType:output_type -> policy.ui.grpc.PolicyType
+	17, // 61: policy.ui.grpc.PolicyTypeService.GetPolicyType:output_type -> policy.ui.grpc.PolicyType
+	18, // 62: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:output_type -> policy.ui.grpc.PolicyTypePage
+	17, // 63: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:output_type -> policy.ui.grpc.PolicyType
+	9,  // 64: policy.ui.grpc.PolicyTypeService.DeletePolicyType:output_type -> policy.ui.grpc.DeleteResponse
+	21, // 65: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
+	21, // 66: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
+	9,  // 67: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:output_type -> policy.ui.grpc.DeleteResponse
+	12, // 68: policy.ui.grpc.PolicyService.GetPolicyConfig:output_type -> policy.ui.grpc.GetPolicyConfigResponse
+	23, // 69: policy.ui.grpc.PolicyService.CreatePolicy:output_type -> policy.ui.grpc.Policy
+	23, // 70: policy.ui.grpc.PolicyService.GetPolicy:output_type -> policy.ui.grpc.Policy
+	24, // 71: policy.ui.grpc.PolicyService.ListPolicies:output_type -> policy.ui.grpc.PolicyPage
+	23, // 72: policy.ui.grpc.PolicyService.UpdatePolicy:output_type -> policy.ui.grpc.Policy
+	9,  // 73: policy.ui.grpc.PolicyService.DeletePolicy:output_type -> policy.ui.grpc.DeleteResponse
+	27, // 74: policy.ui.grpc.PolicyService.CreateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	27, // 75: policy.ui.grpc.PolicyService.GetCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	28, // 76: policy.ui.grpc.PolicyService.ListCustomPolicies:output_type -> policy.ui.grpc.CustomPolicyPage
+	27, // 77: policy.ui.grpc.PolicyService.UpdateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	9,  // 78: policy.ui.grpc.PolicyService.DeleteCustomPolicy:output_type -> policy.ui.grpc.DeleteResponse
+	32, // 79: policy.ui.grpc.CacheService.ReloadCache:output_type -> policy.ui.grpc.ReloadCacheResponse
+	37, // 80: policy.ui.grpc.ReservationService.Reserve:output_type -> policy.ui.grpc.ReserveResponse
+	39, // 81: policy.ui.grpc.ReservationService.Release:output_type -> policy.ui.grpc.ReleaseResponse
+	55, // [55:82] is the sub-list for method output_type
+	28, // [28:55] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_proto_policy_proto_init() }
@@ -3418,7 +3545,7 @@ func file_proto_policy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_policy_proto_rawDesc), len(file_proto_policy_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   38,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   6,
 		},

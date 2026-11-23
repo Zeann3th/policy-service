@@ -14,6 +14,7 @@ type reservationHandler struct {
 func RegisterReservationRoutes(routes *gin.RouterGroup, service reservation.Service) {
 	handler := &reservationHandler{service: service}
 	routes.POST("/v1/reservations", handler.reserve)
+	routes.DELETE("/v1/reservations/:requestId", handler.release)
 }
 
 // reserve godoc
@@ -33,6 +34,25 @@ func (h *reservationHandler) reserve(c *gin.Context) {
 		return
 	}
 	response, err := h.service.Reserve(c.Request.Context(), request)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// release godoc
+//
+//	@Summary		Release a reservation
+//	@Description	Reverses a RESERVED reservation by its original requestId: each RESERVE ledger entry is recorded again as a RELEASE entry with the opposite delta and subtracted from the same usage window. Only RESERVED can be released; anything else is 409.
+//	@Tags			Reservations
+//	@Produce		json
+//	@Param			requestId		path		string	true	"Original requestId"
+//	@Success		200				{object}	reservation.ReleaseResponse
+//	@Failure		400,404,409,500	{object}	core.AppError
+//	@Router			/v1/reservations/{requestId} [delete]
+func (h *reservationHandler) release(c *gin.Context) {
+	response, err := h.service.Release(c.Request.Context(), c.Param("requestId"))
 	if err != nil {
 		handleError(c, err)
 		return

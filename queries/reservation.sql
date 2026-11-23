@@ -10,13 +10,20 @@ VALUES
    sqlc.arg(receiver_wallet_id), sqlc.arg(receiver_wallet_type), sqlc.arg(receiver_tier))
 RETURNING created_at;
 
+-- name: GetReservationByRequestID :one
+-- request_id is unique per monthly partition; the latest one wins.
+SELECT * FROM reservations
+WHERE request_id = sqlc.arg(request_id)
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: UpdateReservationStatus :execrows
 UPDATE reservations
 SET status = sqlc.arg(status), result = sqlc.narg(result)
 WHERE id = sqlc.arg(id) AND created_at = sqlc.arg(created_at) AND status = sqlc.arg(from_status);
 
--- name: LockWallet :exec
-SELECT pg_advisory_xact_lock(hashtextextended(CAST(sqlc.arg(wallet_id) AS text), 0));
+-- name: Lock :exec
+SELECT pg_advisory_xact_lock(CAST(sqlc.arg(key) AS bigint));
 
 -- name: GetUsageValue :one
 SELECT value FROM usages
@@ -46,3 +53,14 @@ VALUES
    sqlc.arg(window_type), sqlc.arg(window_start), sqlc.arg(delta),
    sqlc.narg(policy_id), sqlc.arg(policy_type_code), sqlc.narg(operator), sqlc.narg(limit_value),
    sqlc.arg(value_after));
+
+-- name: TransitionReservation :execrows
+UPDATE reservations
+SET status = sqlc.arg(status)
+WHERE id = sqlc.arg(id) AND created_at = sqlc.arg(created_at) AND status = sqlc.arg(from_status);
+
+-- name: ListUsageLedger :many
+SELECT * FROM usage_ledger
+WHERE reservation_id = sqlc.arg(reservation_id) AND reservation_created_at = sqlc.arg(reservation_created_at)
+  AND entry_type = sqlc.arg(entry_type)
+ORDER BY wallet_id, policy_type_id, transaction_type, channel, direction, window_type;

@@ -222,3 +222,121 @@ func TestLedgerLivesInTheReservationMonthPartition(t *testing.T) {
 		t.Fatalf("partitions = %s, %s", reservationPartition, ledgerPartition)
 	}
 }
+
+func TestLockKeysAreSortedAndDistinct(t *testing.T) {
+	keys := lockKeys([]string{"b", "a", "b"})
+	if len(keys) != 2 || keys[0] >= keys[1] {
+		t.Fatalf("keys = %v", keys)
+	}
+	if reversed := lockKeys([]string{"a", "b"}); reversed[0] != keys[0] || reversed[1] != keys[1] {
+		t.Fatalf("order depends on input: %v vs %v", reversed, keys)
+	}
+}
+
+func TestReleaseRestoresUsageAndRecordsReversal(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	service := reservation.NewService(NewReservationStore(pool), dailyLimit(t, pool, "1000"))
+	request := reserveRequest(wallet("sender"), wallet("receiver"), "600")
+
+	if _, err := service.Reserve(ctx, request); err != nil {
+		t.Fatal(err)
+	}
+	response, err := service.Release(ctx, request.RequestID)
+	if err != nil || response.Status != reservation.StatusReleased {
+		t.Fatalf("Release() = %+v, %v", response, err)
+	}
+	for _, walletID := range []string{request.Sender.WalletID, request.Receiver.WalletID} {
+		if usage, ledger := usageValue(t, pool, walletID), ledgerSum(t, pool, walletID); !usage.IsZero() || !ledger.IsZero() {
+			t.Errorf("%s usage = %s, ledger = %s, want 0", walletID, usage, ledger)
+		}
+	}
+	var releases int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM usage_ledger WHERE reservation_id = $1 AND entry_type = $2",
+		response.ReservationID, reservation.EntryRelease).Scan(&releases); err != nil || releases != 2 {
+		t.Fatalf("release entries = %d, %v", releases, err)
+	}
+	// the released 600 is available again
+	if again, err := service.Reserve(ctx, reserveRequest(request.Sender.WalletID, request.Receiver.WalletID, "1000")); err != nil || again.Status != reservation.StatusReserved {
+		t.Fatalf("Reserve() after release = %s, %v", again.Status, err)
+	}
+	if _, err := service.Release(ctx, "missing-"+request.RequestID); !errors.Is(err, core.ErrNotFound) {
+		t.Fatalf("unknown request err = %v", err)
+	}
+}
+
+func TestConcurrentReleaseReversesOnce(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	service := reservation.NewService(NewReservationStore(pool), dailyLimit(t, pool, "1000"))
+	request := reserveRequest(wallet("sender"), wallet("receiver"), "100")
+	if _, err := service.Reserve(ctx, request); err != nil {
+		t.Fatal(err)
+	}
+
+	const releases = 10
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	succeeded, conflicted := 0, 0
+	for range releases {
+		wg.Go(func() {
+			_, err := service.Release(ctx, request.RequestID)
+			mu.Lock()
+			defer mu.Unlock()
+			switch {
+			case err == nil:
+				succeeded++
+			case errors.Is(err, core.ErrConflict):
+				conflicted++
+			default:
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	if succeeded != 1 || conflicted != releases-1 {
+		t.Fatalf("succeeded = %d, conflicted = %d", succeeded, conflicted)
+	}
+	if usage := usageValue(t, pool, request.Sender.WalletID); !usage.IsZero() {
+		t.Fatalf("usage = %s, want 0", usage)
+	}
+}
+
+func TestReleaseRacingReservesKeepsUsageConsistent(t *testing.T) {
+	pool := testPool(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	service := reservation.NewService(NewReservationStore(pool), dailyLimit(t, pool, "1000000"))
+	sender, receiver := wallet("sender"), wallet("receiver")
+
+	var requests []reservation.ReserveRequest
+	for range 20 {
+		request := reserveRequest(sender, receiver, "10")
+		if _, err := service.Reserve(ctx, request); err != nil {
+			t.Fatal(err)
+		}
+		requests = append(requests, request)
+	}
+	var wg sync.WaitGroup
+	for i := range 40 {
+		wg.Go(func() {
+			var err error
+			if i%2 == 0 {
+				_, err = service.Release(ctx, requests[i/2].RequestID)
+			} else {
+				// opposite direction, so the wallet pair is locked in both orders
+				_, err = service.Reserve(ctx, reserveRequest(receiver, sender, "1"))
+			}
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+	// 20 x 10 reserved then released, 20 x 1 reserved the other way
+	for _, walletID := range []string{sender, receiver} {
+		if usage, ledger := usageValue(t, pool, walletID), ledgerSum(t, pool, walletID); !usage.Equal(decimal.NewFromInt(20)) || !ledger.Equal(usage) {
+			t.Errorf("%s usage = %s, ledger = %s, want 20", walletID, usage, ledger)
+		}
+	}
+}

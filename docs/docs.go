@@ -1271,6 +1271,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/reservations/{requestId}": {
+            "delete": {
+                "description": "Reverses a RESERVED reservation by its original requestId: each RESERVE ledger entry is recorded again as a RELEASE entry with the opposite delta and subtracted from the same usage window. Only RESERVED can be released; anything else is 409.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reservations"
+                ],
+                "summary": "Release a reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Original requestId",
+                        "name": "requestId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/reservation.ReleaseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/core.AppError"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/units": {
             "get": {
                 "produces": [
@@ -2540,6 +2593,31 @@ const docTemplate = `{
                 },
                 "walletId": {
                     "type": "string"
+                }
+            }
+        },
+        "reservation.ReleaseResponse": {
+            "type": "object",
+            "properties": {
+                "requestId": {
+                    "type": "string"
+                },
+                "reservationId": {
+                    "type": "string"
+                },
+                "responseTime": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "status": {
+                    "enum": [
+                        "RELEASED"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/reservation.Status"
+                        }
+                    ]
                 }
             }
         },

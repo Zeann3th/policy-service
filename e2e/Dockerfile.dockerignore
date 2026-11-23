@@ -1,0 +1,7 @@
+.git
+.codegraph
+.superpowers
+.env
+tmp
+bin
+e2e/results

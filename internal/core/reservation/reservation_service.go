@@ -16,6 +16,7 @@ import (
 
 type Service interface {
 	Reserve(context.Context, ReserveRequest) (ReserveResponse, error)
+	Release(ctx context.Context, requestID string) (ReleaseResponse, error)
 }
 
 type service struct {
@@ -77,6 +78,53 @@ func (s *service) Reserve(ctx context.Context, request ReserveRequest) (ReserveR
 		return ReserveResponse{}, errors.Join(err, failErr)
 	}
 	return response, nil
+}
+
+// Release reverses a RESERVED reservation, found by its original request id.
+//
+//  1. Find the reservation (outside any transaction); only RESERVED can be
+//     released.
+//  2. In one transaction holding the same wallet locks as Reserve: move it
+//     to RELEASED (guarding against a concurrent release), read its RESERVE
+//     ledger entries and apply each one negated as a RELEASE entry, to the
+//     same usage window it was reserved in.
+//  3. On failure the transaction rolls back and it stays RESERVED.
+func (s *service) Release(ctx context.Context, requestID string) (ReleaseResponse, error) {
+	if strings.TrimSpace(requestID) == "" {
+		return ReleaseResponse{}, core.ErrBadRequest.WithMessage("requestId is required")
+	}
+	value, err := s.store.Find(ctx, requestID)
+	if err != nil {
+		return ReleaseResponse{}, err
+	}
+	if value.Status != StatusReserved {
+		return ReleaseResponse{}, notReserved(value.Status)
+	}
+
+	err = s.store.Transact(ctx, []string{value.Sender.WalletID, value.Receiver.WalletID}, func(tx Tx) error {
+		if err := tx.Transition(ctx, value.ID, value.CreatedAt, StatusReserved, StatusReleased); err != nil {
+			return err
+		}
+		entries, err := tx.Entries(ctx, value.ID, value.CreatedAt, EntryReserve)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			entry.EntryType, entry.Delta = EntryRelease, entry.Delta.Neg()
+			if _, err := tx.Apply(ctx, entry); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return ReleaseResponse{}, err
+	}
+	return ReleaseResponse{ReservationID: value.ID, RequestID: value.RequestID, Status: StatusReleased, ResponseTime: time.Now()}, nil
+}
+
+func notReserved(status Status) error {
+	return core.ErrConflict.WithMessage(fmt.Sprintf("reservation is %s, only %s can be released", status, StatusReserved))
 }
 
 func validate(request *ReserveRequest) error {

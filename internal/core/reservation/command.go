@@ -33,6 +33,13 @@ type ReserveResponse struct {
 	ResponseTime  time.Time   `format:"date-time" json:"responseTime"`
 }
 
+type ReleaseResponse struct {
+	ReservationID uuid.UUID `json:"reservationId" swaggertype:"string"`
+	RequestID     string    `json:"requestId"`
+	Status        Status    `enums:"RELEASED" json:"status"`
+	ResponseTime  time.Time `format:"date-time" json:"responseTime"`
+}
+
 type PartyResult struct {
 	WalletID        string          `json:"walletId"`
 	IsViolated      bool            `json:"isViolated"`

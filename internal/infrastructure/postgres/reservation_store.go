@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
+	"github.com/zeann3th/policy-service/internal/core"
+	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	codegen "github.com/zeann3th/policy-service/internal/infrastructure/postgres/codegen"
 )
@@ -50,12 +53,36 @@ func (s *ReservationStore) Create(ctx context.Context, value reservation.Reserva
 	return value, nil
 }
 
+func (s *ReservationStore) Find(ctx context.Context, requestID string) (reservation.Reservation, error) {
+	row, err := s.queries.GetReservationByRequestID(ctx, requestID)
+	if err != nil {
+		return reservation.Reservation{}, mapDBError(err)
+	}
+	return reservation.Reservation{
+		ID:              row.ID,
+		RequestID:       row.RequestID,
+		Status:          reservation.Status(row.Status),
+		TransactionType: row.TransactionType,
+		Channel:         row.Channel,
+		Currency:        row.Currency,
+		Amount:          row.Amount,
+		Sender:          reservation.Party{WalletID: row.SenderWalletID, WalletType: row.SenderWalletType, Tier: row.SenderTier},
+		Receiver:        reservation.Party{WalletID: row.ReceiverWalletID, WalletType: row.ReceiverWalletType, Tier: row.ReceiverTier},
+		Result:          row.Result,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+	}, nil
+}
+
 func (s *ReservationStore) Fail(ctx context.Context, id uuid.UUID, createdAt time.Time) error {
 	return finish(ctx, s.queries, id, createdAt, reservation.StatusFailed, nil)
 }
 
-// Transact locks the wallets in a fixed order, so two transactions touching
-// the same pair cannot deadlock. The advisory locks end with the transaction.
+// Transact locks the wallets in ascending lock-key order, so transactions
+// over overlapping wallets always queue in the same order and cannot
+// deadlock. Sorting the keys rather than the wallet ids keeps the order total
+// even when two ids hash to the same key. The advisory locks end with the
+// transaction.
 func (s *ReservationStore) Transact(ctx context.Context, walletIDs []string, fn func(reservation.Tx) error) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -63,17 +90,27 @@ func (s *ReservationStore) Transact(ctx context.Context, walletIDs []string, fn 
 	}
 	defer tx.Rollback(ctx)
 	q := codegen.New(tx)
-	ids := slices.Clone(walletIDs)
-	slices.Sort(ids)
-	for _, id := range slices.Compact(ids) {
-		if err := q.LockWallet(ctx, id); err != nil {
-			return fmt.Errorf("lock wallet %s: %w", id, err)
+	for _, key := range lockKeys(walletIDs) {
+		if err := q.Lock(ctx, key); err != nil {
+			return fmt.Errorf("lock wallets %v: %w", walletIDs, err)
 		}
 	}
 	if err := fn(&reservationTx{queries: q}); err != nil {
 		return mapDBError(err)
 	}
 	return tx.Commit(ctx)
+}
+
+// lockKeys maps wallet ids to sorted, distinct advisory lock keys.
+func lockKeys(walletIDs []string) []int64 {
+	keys := make([]int64, len(walletIDs))
+	for i, id := range walletIDs {
+		hash := fnv.New64a()
+		hash.Write([]byte(id))
+		keys[i] = int64(hash.Sum64())
+	}
+	slices.Sort(keys)
+	return slices.Compact(keys)
 }
 
 type reservationTx struct {
@@ -141,6 +178,63 @@ func (t *reservationTx) Apply(ctx context.Context, entry reservation.LedgerEntry
 
 func (t *reservationTx) Finish(ctx context.Context, id uuid.UUID, createdAt time.Time, status reservation.Status, result json.RawMessage) error {
 	return finish(ctx, t.queries, id, createdAt, status, result)
+}
+
+func (t *reservationTx) Transition(ctx context.Context, id uuid.UUID, createdAt time.Time, from, to reservation.Status) error {
+	rows, err := t.queries.TransitionReservation(ctx, codegen.TransitionReservationParams{
+		Status:     string(to),
+		ID:         id,
+		CreatedAt:  createdAt,
+		FromStatus: string(from),
+	})
+	if err != nil {
+		return fmt.Errorf("set reservation %s %s: %w", id, to, err)
+	}
+	if rows != 1 {
+		return core.ErrConflict.WithMessage(fmt.Sprintf("reservation %s is no longer %s", id, from))
+	}
+	return nil
+}
+
+func (t *reservationTx) Entries(ctx context.Context, id uuid.UUID, createdAt time.Time, entryType reservation.EntryType) ([]reservation.LedgerEntry, error) {
+	rows, err := t.queries.ListUsageLedger(ctx, codegen.ListUsageLedgerParams{
+		ReservationID:        id,
+		ReservationCreatedAt: createdAt,
+		EntryType:            string(entryType),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list usage ledger: %w", err)
+	}
+	entries := make([]reservation.LedgerEntry, len(rows))
+	for i, row := range rows {
+		var operator *policy.Operator
+		if row.Operator != nil {
+			value := policy.Operator(*row.Operator)
+			operator = &value
+		}
+		entries[i] = reservation.LedgerEntry{
+			ReservationID:        row.ReservationID,
+			ReservationCreatedAt: row.ReservationCreatedAt,
+			EntryType:            reservation.EntryType(row.EntryType),
+			UsageKey: reservation.UsageKey{
+				WalletID:        row.WalletID,
+				PolicyTypeID:    row.PolicyTypeID,
+				TransactionType: row.TransactionType,
+				Channel:         row.Channel,
+				Direction:       policy.Direction(row.Direction),
+				WindowType:      policy.WindowType(row.WindowType),
+				WindowStart:     row.WindowStart.Time,
+			},
+			Delta:          row.Delta,
+			PolicyID:       row.PolicyID,
+			PolicyTypeCode: row.PolicyTypeCode,
+			Operator:       operator,
+			LimitValue:     row.LimitValue,
+			ValueAfter:     row.ValueAfter,
+			CreatedAt:      row.CreatedAt,
+		}
+	}
+	return entries, nil
 }
 
 func finish(ctx context.Context, q *codegen.Queries, id uuid.UUID, createdAt time.Time, status reservation.Status, result json.RawMessage) error {

@@ -2,6 +2,7 @@ package policy
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/zeann3th/policy-service/internal/core"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
@@ -29,7 +30,6 @@ func policyTypeResponse(value PolicyType) PolicyTypeResponse {
 		ID:          value.ID,
 		Code:        value.Code,
 		Description: value.Description,
-		UnitID:      value.UnitID,
 		Kind:        value.Kind,
 		Active:      value.Active,
 		CreatedAt:   value.CreatedAt,
@@ -44,6 +44,9 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 	}
 	if request.Kind == "" {
 		request.Kind = KindLimit
+	}
+	if !request.Kind.Valid() {
+		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage(fmt.Sprintf("kind must be one of %v", Kinds()))
 	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {

@@ -15,7 +15,6 @@ import (
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 )
 
 // These tests write to a real, migrated database. They run only when
@@ -55,11 +54,11 @@ func policyTypeID(t *testing.T, pool *pgxpool.Pool, code string) int64 {
 	return id
 }
 
-// dailyLimit returns a DAILY TOTAL_MAX_AMT limit for both directions.
+// dailyLimit returns a DAILY TOTAL_MAX limit for both directions.
 func dailyLimit(t *testing.T, pool *pgxpool.Pool, limit string) resolverStub {
 	return resolverStub{{
-		ID: 1, PolicyTypeID: policyTypeID(t, pool, "TOTAL_MAX_AMT"), PolicyType: "TOTAL_MAX_AMT",
-		Kind: policy.KindLimit, Unit: unit.CodeAmount, TransactionType: policy.All, Channel: policy.All,
+		ID: 1, PolicyTypeID: policyTypeID(t, pool, "TOTAL_MAX"), PolicyType: "TOTAL_MAX",
+		Kind: policy.KindLimit, Unit: policy.UnitAmount, TransactionType: policy.All, Channel: policy.All,
 		Direction: policy.DirectionAll, WindowType: policy.WindowDaily, Operator: policy.OpLTE, Value: decimal.RequireFromString(limit),
 	}}
 }
@@ -265,7 +264,7 @@ func TestReleaseRestoresUsageAndRecordsReversal(t *testing.T) {
 	}
 }
 
-func TestConcurrentReleaseReversesOnce(t *testing.T) {
+func TestConcurrentReleaseReversesOnceAndAnswersAlike(t *testing.T) {
 	pool := testPool(t)
 	ctx := context.Background()
 	service := reservation.NewService(NewReservationStore(pool), dailyLimit(t, pool, "1000"))
@@ -275,27 +274,38 @@ func TestConcurrentReleaseReversesOnce(t *testing.T) {
 	}
 
 	const releases = 10
+	responses := make(chan reservation.ReleaseResponse, releases)
 	var wg sync.WaitGroup
-	var mu sync.Mutex
-	succeeded, conflicted := 0, 0
 	for range releases {
 		wg.Go(func() {
-			_, err := service.Release(ctx, request.RequestID)
-			mu.Lock()
-			defer mu.Unlock()
-			switch {
-			case err == nil:
-				succeeded++
-			case errors.Is(err, core.ErrConflict):
-				conflicted++
-			default:
+			response, err := service.Release(ctx, request.RequestID)
+			if err != nil {
 				t.Error(err)
+				return
 			}
+			responses <- response
 		})
 	}
 	wg.Wait()
-	if succeeded != 1 || conflicted != releases-1 {
-		t.Fatalf("succeeded = %d, conflicted = %d", succeeded, conflicted)
+	close(responses)
+	// every racer gets the winner's response
+	var first *reservation.ReleaseResponse
+	for response := range responses {
+		if first == nil {
+			first = &response
+			continue
+		}
+		if response != *first {
+			t.Fatalf("responses differ: %+v vs %+v", response, *first)
+		}
+	}
+	if first == nil || first.Status != reservation.StatusReleased || first.ResponseTime.IsZero() {
+		t.Fatalf("first = %+v", first)
+	}
+	var releaseEntries int
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM usage_ledger WHERE reservation_id = $1 AND entry_type = $2",
+		first.ReservationID, reservation.EntryRelease).Scan(&releaseEntries); err != nil || releaseEntries != 2 {
+		t.Fatalf("release entries = %d, %v: reversed more than once", releaseEntries, err)
 	}
 	if usage := usageValue(t, pool, request.Sender.WalletID); !usage.IsZero() {
 		t.Fatalf("usage = %s, want 0", usage)

@@ -1323,273 +1323,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/v1/units": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Units"
-                ],
-                "summary": "List units",
-                "parameters": [
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Page size",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/http.unitPageResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Units"
-                ],
-                "summary": "Create a unit",
-                "parameters": [
-                    {
-                        "description": "Unit",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/unit.CreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/unit.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/units/{unitId}": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Units"
-                ],
-                "summary": "Get a unit",
-                "parameters": [
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Unit ID",
-                        "name": "unitId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/unit.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "description": "The unit code is immutable.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Units"
-                ],
-                "summary": "Update a unit",
-                "parameters": [
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Unit ID",
-                        "name": "unitId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Mutable unit fields",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/unit.UpdateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/unit.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "consumes": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Units"
-                ],
-                "summary": "Delete a unit",
-                "parameters": [
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Unit ID",
-                        "name": "unitId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Audit actor",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/core.ActorRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/core.AppError"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -1609,7 +1342,6 @@ const docTemplate = `{
                         "type": "string",
                         "enum": [
                             "all",
-                            "units",
                             "policy:types",
                             "policy:groups",
                             "policies",
@@ -1739,38 +1471,45 @@ const docTemplate = `{
                 }
             }
         },
-        "http.unitPageResponse": {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/unit.Response"
-                    }
-                },
-                "limit": {
-                    "type": "integer",
-                    "example": 20
-                },
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "total": {
-                    "type": "integer",
-                    "example": 1
-                }
-            }
+        "policy.Base": {
+            "type": "string",
+            "enum": [
+                "AMOUNT",
+                "FEE",
+                "NET_FEE"
+            ],
+            "x-enum-comments": {
+                "BaseAmount": "the transaction amount",
+                "BaseFee": "the total fee",
+                "BaseNetFee": "the fee minus fee-based discounts"
+            },
+            "x-enum-varnames": [
+                "BaseAmount",
+                "BaseFee",
+                "BaseNetFee"
+            ]
         },
         "policy.CreateCustomPolicyRequest": {
             "type": "object",
             "required": [
-                "operator",
                 "policyTypeId",
                 "updatedBy",
                 "value"
             ],
             "properties": {
+                "base": {
+                    "description": "Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.",
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -1795,6 +1534,7 @@ const docTemplate = `{
                     "format": "date-time"
                 },
                 "operator": {
+                    "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
                         "EQ",
                         "NEQ",
@@ -1817,6 +1557,19 @@ const docTemplate = `{
                 },
                 "transactionType": {
                     "type": "string"
+                },
+                "unit": {
+                    "description": "Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.",
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "updatedBy": {
                     "type": "string"
@@ -1866,12 +1619,24 @@ const docTemplate = `{
         "policy.CreatePolicyRequest": {
             "type": "object",
             "required": [
-                "operator",
                 "policyTypeId",
                 "updatedBy",
                 "value"
             ],
             "properties": {
+                "base": {
+                    "description": "Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.",
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -1887,7 +1652,16 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "effectiveFrom": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "effectiveTo": {
+                    "type": "string",
+                    "format": "date-time"
+                },
                 "operator": {
+                    "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
                         "EQ",
                         "NEQ",
@@ -1907,6 +1681,19 @@ const docTemplate = `{
                 },
                 "transactionType": {
                     "type": "string"
+                },
+                "unit": {
+                    "description": "Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.",
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "updatedBy": {
                     "type": "string"
@@ -1934,7 +1721,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "code",
-                "unitId",
                 "updatedBy"
             ],
             "properties": {
@@ -1948,6 +1734,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
+                    "description": "Kind defaults to LIMIT; it must be declared in shapes.",
                     "enum": [
                         "LIMIT",
                         "WAIVER",
@@ -1961,9 +1748,6 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "unitId": {
-                    "type": "integer"
-                },
                 "updatedBy": {
                     "type": "string"
                 }
@@ -1972,6 +1756,18 @@ const docTemplate = `{
         "policy.CustomPolicyResponse": {
             "type": "object",
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2028,6 +1824,18 @@ const docTemplate = `{
                 },
                 "transactionType": {
                     "type": "string"
+                },
+                "unit": {
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "updatedAt": {
                     "type": "string",
@@ -2143,6 +1951,18 @@ const docTemplate = `{
         "policy.PolicyResponse": {
             "type": "object",
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2161,6 +1981,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/policy.Direction"
                         }
                     ]
+                },
+                "effectiveFrom": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "effectiveTo": {
+                    "type": "string",
+                    "format": "date-time"
                 },
                 "id": {
                     "type": "integer"
@@ -2188,6 +2016,18 @@ const docTemplate = `{
                 },
                 "transactionType": {
                     "type": "string"
+                },
+                "unit": {
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "updatedAt": {
                     "type": "string",
@@ -2245,9 +2085,6 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "unitId": {
-                    "type": "integer"
-                },
                 "updatedAt": {
                     "type": "string",
                     "format": "date-time"
@@ -2257,6 +2094,18 @@ const docTemplate = `{
         "policy.Rule": {
             "type": "object",
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2269,6 +2118,20 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/policy.Direction"
+                        }
+                    ]
+                },
+                "kind": {
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "FEE",
+                        "TAX",
+                        "DISCOUNT"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
                         }
                     ]
                 },
@@ -2305,7 +2168,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "type": "string"
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "value": {
                     "type": "string",
@@ -2337,15 +2209,44 @@ const docTemplate = `{
                 "SourceCustom"
             ]
         },
+        "policy.Unit": {
+            "type": "string",
+            "enum": [
+                "AMOUNT",
+                "COUNT",
+                "BALANCE"
+            ],
+            "x-enum-comments": {
+                "UnitAmount": "the transaction amount",
+                "UnitBalance": "the wallet balance (not evaluated on reserve)",
+                "UnitCount": "the number of transactions"
+            },
+            "x-enum-varnames": [
+                "UnitAmount",
+                "UnitCount",
+                "UnitBalance"
+            ]
+        },
         "policy.UpdateCustomPolicyRequest": {
             "type": "object",
             "required": [
                 "effectiveFrom",
-                "operator",
                 "updatedBy",
                 "value"
             ],
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "effectiveFrom": {
                     "type": "string",
                     "format": "date-time"
@@ -2384,11 +2285,31 @@ const docTemplate = `{
         "policy.UpdatePolicyRequest": {
             "type": "object",
             "required": [
-                "operator",
+                "effectiveFrom",
                 "updatedBy",
                 "value"
             ],
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
+                "effectiveFrom": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "effectiveTo": {
+                    "type": "string",
+                    "format": "date-time"
+                },
                 "operator": {
                     "enum": [
                         "EQ",
@@ -2449,6 +2370,18 @@ const docTemplate = `{
         "reservation.AppliedPolicy": {
             "type": "object",
             "properties": {
+                "base": {
+                    "enum": [
+                        "AMOUNT",
+                        "FEE",
+                        "NET_FEE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Base"
+                        }
+                    ]
+                },
                 "channel": {
                     "type": "string"
                 },
@@ -2514,7 +2447,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "unit": {
-                    "type": "string"
+                    "enum": [
+                        "AMOUNT",
+                        "COUNT",
+                        "BALANCE"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Unit"
+                        }
+                    ]
                 },
                 "usage": {
                     "description": "Usage is the window total including this request (not stored when rejected).",
@@ -2708,65 +2650,6 @@ const docTemplate = `{
                 "StatusRejected",
                 "StatusFailed"
             ]
-        },
-        "unit.CreateRequest": {
-            "type": "object",
-            "required": [
-                "code",
-                "updatedBy"
-            ],
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "AMOUNT"
-                },
-                "updatedBy": {
-                    "type": "string",
-                    "example": "admin"
-                }
-            }
-        },
-        "unit.Response": {
-            "type": "object",
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "AMOUNT"
-                },
-                "createdAt": {
-                    "type": "string",
-                    "format": "date-time"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string",
-                    "format": "date-time"
-                }
-            }
-        },
-        "unit.UpdateRequest": {
-            "type": "object",
-            "required": [
-                "active",
-                "updatedBy"
-            ],
-            "properties": {
-                "active": {
-                    "type": "boolean"
-                },
-                "updatedBy": {
-                    "type": "string",
-                    "example": "admin"
-                }
-            }
         }
     }
 }`

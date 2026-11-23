@@ -20,7 +20,9 @@ type CustomPolicy struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Operator        string          `json:"operator"`
+	Unit            *string         `json:"unit"`
+	Base            *string         `json:"base"`
+	Operator        *string         `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
 	EffectiveFrom   time.Time       `json:"effective_from"`
 	EffectiveTo     *time.Time      `json:"effective_to"`
@@ -47,8 +49,12 @@ type Policy struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Operator        string          `json:"operator"`
+	Unit            *string         `json:"unit"`
+	Base            *string         `json:"base"`
+	Operator        *string         `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
+	EffectiveFrom   time.Time       `json:"effective_from"`
+	EffectiveTo     *time.Time      `json:"effective_to"`
 	CreatedAt       time.Time       `json:"created_at"`
 	UpdatedAt       *time.Time      `json:"updated_at"`
 }
@@ -77,16 +83,10 @@ type PolicyType struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
-	UnitID      int64      `json:"unit_id"`
 	Kind        string     `json:"kind"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
-}
-
-type ProcessedEvent struct {
-	EventID     string    `json:"event_id"`
-	ProcessedAt time.Time `json:"processed_at"`
 }
 
 type Reservation struct {
@@ -127,14 +127,6 @@ type ReservationsTemplate struct {
 	UpdatedAt          *time.Time      `json:"updated_at"`
 }
 
-type Unit struct {
-	ID        int64      `json:"id"`
-	Code      string     `json:"code"`
-	Active    bool       `json:"active"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at"`
-}
-
 type Usage struct {
 	WalletID        string          `json:"wallet_id"`
 	PolicyTypeID    int64           `json:"policy_type_id"`
@@ -142,6 +134,7 @@ type Usage struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
+	Unit            string          `json:"unit"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -153,6 +146,7 @@ type UsageDaily struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
+	Unit            string          `json:"unit"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -164,6 +158,7 @@ type UsageDailyTemplate struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
+	Unit            string          `json:"unit"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -178,6 +173,7 @@ type UsageLedger struct {
 	Channel              string           `json:"channel"`
 	Direction            string           `json:"direction"`
 	WindowType           string           `json:"window_type"`
+	Unit                 string           `json:"unit"`
 	WindowStart          pgtype.Date      `json:"window_start"`
 	Delta                decimal.Decimal  `json:"delta"`
 	PolicyID             *int64           `json:"policy_id"`
@@ -195,6 +191,7 @@ type UsageLifetime struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
+	Unit            string          `json:"unit"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }
@@ -206,6 +203,7 @@ type UsageMonthly struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
+	Unit            string          `json:"unit"`
 	WindowStart     pgtype.Date     `json:"window_start"`
 	Value           decimal.Decimal `json:"value"`
 }

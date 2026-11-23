@@ -82,7 +82,7 @@ func outPartyResult(value reservation.PartyResult) *pb.PartyResult {
 			value := applied.Usage.String()
 			usage = &value
 		}
-		result.AppliedPolicies[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: applied.Unit, Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: usage, Violated: applied.Violated}
+		result.AppliedPolicies[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: string(applied.Unit), Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: usage, Violated: applied.Violated}
 	}
 	return result
 }

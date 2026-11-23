@@ -3,6 +3,9 @@
 # network (cicd_default, from cicd/docker-compose.yml) as a bridge so the
 # containers share it with the dev stack.
 #
+# Services connect by container name (policy_e2e_*), never by service name:
+# on the cicd network "postgres" / "redis" resolve to the dev containers.
+#
 #   docker compose -f e2e/docker-compose.yml up -d --build --wait
 #   k6 run e2e/k6/load.js          (k6 runs on the host against :18080)
 #
@@ -70,7 +73,7 @@ services:
     entrypoint: ["goose", "-dir", "/migrations", "up"]
     environment:
       GOOSE_DRIVER: postgres
-      GOOSE_DBSTRING: postgres://policy_service:e2e_password@postgres:5432/policy_service_e2e?sslmode=disable
+      GOOSE_DBSTRING: postgres://policy_service:e2e_password@policy_e2e_postgres:5432/policy_service_e2e?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,7 +83,7 @@ services:
     image: cicd-postgres:latest
     entrypoint: ["psql", "-v", "ON_ERROR_STOP=1", "-q", "-f", "/seed/seed.sql"]
     environment:
-      PGHOST: postgres
+      PGHOST: policy_e2e_postgres
       PGUSER: policy_service
       PGPASSWORD: *password
       PGDATABASE: *database
@@ -100,8 +103,8 @@ services:
       GIN_MODE: release
       HTTP_PORT: "8080"
       GRPC_PORT: "8081"
-      DATABASE_URL: postgres://policy_service:e2e_password@postgres:5432/policy_service_e2e?sslmode=disable&pool_max_conns=${E2E_POOL_MAX_CONNS:-64}&pool_min_conns=16
-      REDIS_ADDRS: redis:6379
+      DATABASE_URL: postgres://policy_service:e2e_password@policy_e2e_postgres:5432/policy_service_e2e?sslmode=disable&pool_max_conns=${E2E_POOL_MAX_CONNS:-64}&pool_min_conns=16
+      REDIS_ADDRS: policy_e2e_redis:6379
       REDIS_PASSWORD: *password
       GOMAXPROCS: ${E2E_APP_CPUS:-4}
     ports:

@@ -11,7 +11,6 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 )
 
 type resolverStub map[policy.Direction][]policy.Policy
@@ -30,7 +29,11 @@ type storeStub struct {
 	found    Reservation
 	entries  []LedgerEntry
 	moved    []Status
+
+	transitionErr error
 }
+
+var releasedAt = at.Add(time.Minute)
 
 func (s *storeStub) Find(_ context.Context, requestID string) (Reservation, error) {
 	if s.found.RequestID != requestID {
@@ -39,9 +42,12 @@ func (s *storeStub) Find(_ context.Context, requestID string) (Reservation, erro
 	return s.found, nil
 }
 
-func (s *storeStub) Transition(_ context.Context, _ uuid.UUID, _ time.Time, from, to Status) error {
+func (s *storeStub) Transition(_ context.Context, _ uuid.UUID, _ time.Time, from, to Status) (time.Time, error) {
+	if s.transitionErr != nil {
+		return time.Time{}, s.transitionErr
+	}
 	s.moved = append(s.moved, from, to)
-	return nil
+	return releasedAt, nil
 }
 
 func (s *storeStub) Entries(_ context.Context, _ uuid.UUID, _ time.Time, entryType EntryType) ([]LedgerEntry, error) {
@@ -94,7 +100,7 @@ func reserveRequest(amount string) ReserveRequest {
 }
 
 func dailyLimit(direction policy.Direction) policy.Policy {
-	value := p(1, policy.KindLimit, unit.CodeAmount, policy.WindowDaily, policy.OpLTE, "1000")
+	value := p(1, policy.KindLimit, policy.UnitAmount, policy.WindowDaily, policy.OpLTE, "1000")
 	value.Direction = direction
 	return value
 }
@@ -176,6 +182,9 @@ func TestReleaseReversesReserveEntries(t *testing.T) {
 	if response.Status != StatusReleased || len(store.moved) != 2 || store.moved[0] != StatusReserved || store.moved[1] != StatusReleased {
 		t.Fatalf("status = %s, moved = %v", response.Status, store.moved)
 	}
+	if !response.ResponseTime.Equal(releasedAt) {
+		t.Fatalf("responseTime = %s, want the stored release time %s", response.ResponseTime, releasedAt)
+	}
 	if len(store.applied) != 1 || store.applied[0].EntryType != EntryRelease || !store.applied[0].Delta.Equal(d("-400")) ||
 		store.applied[0].UsageKey != store.entries[0].UsageKey || len(store.locked) != 2 {
 		t.Fatalf("applied = %#v, locked = %v", store.applied, store.locked)
@@ -183,7 +192,7 @@ func TestReleaseReversesReserveEntries(t *testing.T) {
 }
 
 func TestReleaseOnlyReserved(t *testing.T) {
-	for _, status := range []Status{StatusProcessing, StatusReleased, StatusRejected, StatusFailed} {
+	for _, status := range []Status{StatusProcessing, StatusRejected, StatusFailed} {
 		store := reserved(status)
 		if _, err := NewService(store, policies()).Release(context.Background(), "req-1"); !errors.Is(err, core.ErrConflict) || store.locked != nil {
 			t.Errorf("%s: err = %v, locked = %v", status, err, store.locked)
@@ -192,4 +201,45 @@ func TestReleaseOnlyReserved(t *testing.T) {
 	if _, err := NewService(reserved(StatusReserved), policies()).Release(context.Background(), "other"); !errors.Is(err, core.ErrNotFound) {
 		t.Errorf("unknown request: err = %v", err)
 	}
+}
+
+func TestReleaseIsIdempotent(t *testing.T) {
+	store := reserved(StatusReleased)
+	store.found.UpdatedAt = &releasedAt
+	response, err := NewService(store, policies()).Release(context.Background(), "req-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Status != StatusReleased || !response.ResponseTime.Equal(releasedAt) || store.locked != nil || len(store.applied) != 0 {
+		t.Fatalf("response = %+v, locked = %v, applied = %d", response, store.locked, len(store.applied))
+	}
+}
+
+func TestReleaseLosingARaceReturnsTheWinnersResponse(t *testing.T) {
+	store := reserved(StatusReserved)
+	store.transitionErr = core.ErrConflict
+	winner := store.found
+	winner.Status, winner.UpdatedAt = StatusReleased, &releasedAt
+	service := NewService(&racedStore{storeStub: store, after: winner}, policies())
+
+	response, err := service.Release(context.Background(), "req-1")
+	if err != nil || response.Status != StatusReleased || !response.ResponseTime.Equal(releasedAt) {
+		t.Fatalf("response = %+v, err = %v", response, err)
+	}
+}
+
+// racedStore reports the reservation RESERVED on the first Find and as the
+// concurrent winner left it afterwards.
+type racedStore struct {
+	*storeStub
+	after Reservation
+	finds int
+}
+
+func (s *racedStore) Find(ctx context.Context, requestID string) (Reservation, error) {
+	s.finds++
+	if s.finds > 1 {
+		return s.after, nil
+	}
+	return s.storeStub.Find(ctx, requestID)
 }

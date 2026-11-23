@@ -10,7 +10,6 @@ import (
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 	"golang.org/x/text/currency"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -80,7 +79,7 @@ func intID(id uint64) (int64, error) {
 }
 
 func operator(value string) error {
-	if !policy.Operator(value).Valid() {
+	if value != "" && !policy.Operator(value).Valid() {
 		return status.Error(codes.InvalidArgument, "operator is invalid")
 	}
 	return nil
@@ -89,6 +88,20 @@ func operator(value string) error {
 func isoCurrency(value string) error {
 	if _, err := currency.ParseISO(value); err != nil {
 		return status.Error(codes.InvalidArgument, "currency must be a valid ISO 4217 currency")
+	}
+	return nil
+}
+
+func unitCode(value string) error {
+	if value != "" && !policy.Unit(value).Valid() {
+		return status.Error(codes.InvalidArgument, "unit is invalid")
+	}
+	return nil
+}
+
+func base(value string) error {
+	if value != "" && !policy.Base(value).Valid() {
+		return status.Error(codes.InvalidArgument, "base is invalid")
 	}
 	return nil
 }
@@ -136,12 +149,8 @@ func outOptionalTS(value *time.Time) *timestamppb.Timestamp {
 	return outTS(*value)
 }
 
-func outUnit(value unit.Response) *pb.Unit {
-	return &pb.Unit{Id: uint64(value.ID), Code: value.Code, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
-}
-
 func outPolicyType(value policy.PolicyTypeResponse) *pb.PolicyType {
-	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, UnitId: uint64(value.UnitID), Kind: string(value.Kind), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Kind: string(value.Kind), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
@@ -149,9 +158,9 @@ func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
 }
 
 func outPolicy(value policy.PolicyResponse) *pb.Policy {
-	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Unit: string(value.Unit), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outCustomPolicy(value policy.CustomPolicyResponse) *pb.CustomPolicy {
-	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Unit: string(value.Unit), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }

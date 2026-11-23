@@ -8,7 +8,6 @@ import (
 
 	"github.com/zeann3th/policy-service/internal/core"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 )
 
 type Service interface {
@@ -28,12 +27,11 @@ type Service interface {
 
 type service struct {
 	store Store
-	units unit.Store
 	cache *cachecore.Versioned
 }
 
-func NewService(store Store, units unit.Store, cache *cachecore.Versioned) Service {
-	return &service{store: store, units: units, cache: cache}
+func NewService(store Store, cache *cachecore.Versioned) Service {
+	return &service{store: store, cache: cache}
 }
 
 func policyResponse(value Policy) PolicyResponse {
@@ -48,8 +46,12 @@ func policyResponse(value Policy) PolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
+		Unit:            value.Unit,
+		Base:            value.Base,
 		Operator:        value.Operator,
 		Value:           value.Value,
+		EffectiveFrom:   value.EffectiveFrom,
+		EffectiveTo:     value.EffectiveTo,
 		CreatedAt:       value.CreatedAt,
 		UpdatedAt:       value.UpdatedAt,
 	}
@@ -67,6 +69,8 @@ func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
+		Unit:            value.Unit,
+		Base:            value.Base,
 		Operator:        value.Operator,
 		Value:           value.Value,
 		EffectiveFrom:   value.EffectiveFrom,
@@ -91,25 +95,16 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 	policies = filterPoliciesByTransactionType(policies, request.TransactionType)
 
 	response := GetConfigResponse{Rules: make([]Rule, len(policies))}
-	if len(policies) == 0 {
-		return response, nil
-	}
-	units, err := s.getActiveUnits(ctx)
-	if err != nil {
-		return GetConfigResponse{}, err
-	}
 	for i, value := range policies {
-		unitCode, ok := units[value.UnitID]
-		if !ok {
-			return GetConfigResponse{}, fmt.Errorf("unit %d not found", value.UnitID)
-		}
 		response.Rules[i] = Rule{
 			PolicyType:      value.PolicyType,
-			Unit:            unitCode,
+			Kind:            value.Kind,
 			TransactionType: value.TransactionType,
 			Channel:         value.Channel,
 			Direction:       value.Direction,
 			WindowType:      value.WindowType,
+			Unit:            value.Unit,
+			Base:            value.Base,
 			Operator:        value.Operator,
 			Value:           value.Value,
 			Source:          value.Source,
@@ -119,7 +114,7 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 }
 
 // Resolve returns the effective policies (system merged with the wallet's
-// custom overrides) that cover one side of a transaction, with unit codes.
+// custom overrides) that cover one side of a transaction.
 // A wallet without a policy group gets only its custom policies.
 func (s *service) Resolve(ctx context.Context, request ResolveRequest) ([]Policy, error) {
 	systemPolicies, err := s.getSystemPolicies(ctx, GetConfigRequest{WalletType: request.WalletType, Currency: request.Currency, Tier: request.Tier})
@@ -130,42 +125,18 @@ func (s *service) Resolve(ctx context.Context, request ResolveRequest) ([]Policy
 	if err != nil {
 		return nil, fmt.Errorf("get active custom policies: %w", err)
 	}
-	units, err := s.getActiveUnits(ctx)
-	if err != nil {
-		return nil, err
-	}
 	matched := make([]Policy, 0)
 	for _, value := range mergePolicies(systemPolicies, customPolicies) {
-		if !value.Matches(request.TransactionType, request.Channel, request.Direction) {
-			continue
+		if value.Matches(request.TransactionType, request.Channel, request.Direction) {
+			matched = append(matched, value)
 		}
-		unitCode, ok := units[value.UnitID]
-		if !ok {
-			return nil, fmt.Errorf("unit %d not found", value.UnitID)
-		}
-		value.Unit = unitCode
-		matched = append(matched, value)
 	}
 	return matched, nil
 }
 
-func (s *service) getActiveUnits(ctx context.Context) (map[int64]string, error) {
-	key := s.cache.Key(ctx, cachecore.NamespaceUnits, "active")
-	if cached, ok := cachecore.Read[map[int64]string](ctx, s.cache, key); ok {
-		return cached, nil
-	}
-	items, err := s.units.GetActive(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("get active units: %w", err)
-	}
-	units := make(map[int64]string, len(items))
-	for _, item := range items {
-		units[item.ID] = item.Code
-	}
-	cachecore.Write(ctx, s.cache, key, units)
-	return units, nil
-}
-
+// getSystemPolicies returns the group's policies effective now. The cached
+// list expires at its next effective boundary, so a policy starting or ending
+// while it is cached still takes effect on time.
 func (s *service) getSystemPolicies(ctx context.Context, request GetConfigRequest) ([]Policy, error) {
 	key := s.cache.Key(ctx, cachecore.NamespacePolicyConfig, request.WalletType, request.Currency, request.Tier)
 	if cached, ok := cachecore.Read[[]Policy](ctx, s.cache, key); ok {
@@ -179,8 +150,29 @@ func (s *service) getSystemPolicies(ctx context.Context, request GetConfigReques
 	if err != nil {
 		return nil, fmt.Errorf("get policies: %w", err)
 	}
-	cachecore.Write(ctx, s.cache, key, policies)
+	nextStart, err := s.store.GetNextPolicyStart(ctx, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("get next policy start: %w", err)
+	}
+	if ttl := cacheTTL(policies, nextStart, time.Now()); ttl > 0 {
+		cachecore.WriteTTL(ctx, s.cache, key, policies, ttl)
+	}
 	return policies, nil
+}
+
+// cacheTTL bounds the cache TTL by the next effective boundary: the next
+// policy start or the earliest end among the effective policies.
+func cacheTTL(policies []Policy, nextStart *time.Time, now time.Time) time.Duration {
+	boundary := now.Add(cachecore.TTL)
+	if nextStart != nil && nextStart.Before(boundary) {
+		boundary = *nextStart
+	}
+	for _, value := range policies {
+		if value.EffectiveTo != nil && value.EffectiveTo.Before(boundary) {
+			boundary = *value.EffectiveTo
+		}
+	}
+	return boundary.Sub(now)
 }
 
 func filterPoliciesByTransactionType(values []Policy, transactionType string) []Policy {
@@ -209,11 +201,12 @@ func mergePolicies(systemPolicies []Policy, customPolicies []CustomPolicy) []Pol
 			PolicyTypeID:    customPolicy.PolicyTypeID,
 			PolicyType:      customPolicy.PolicyType,
 			Kind:            customPolicy.Kind,
-			UnitID:          customPolicy.UnitID,
 			TransactionType: customPolicy.TransactionType,
 			Channel:         customPolicy.Channel,
 			Direction:       customPolicy.Direction,
 			WindowType:      customPolicy.WindowType,
+			Unit:            customPolicy.Unit,
+			Base:            customPolicy.Base,
 			Operator:        customPolicy.Operator,
 			Value:           customPolicy.Value,
 			Source:          SourceCustom,
@@ -249,10 +242,16 @@ func (s *service) CreatePolicy(ctx context.Context, groupID int64, request Creat
 	if request.Value == nil {
 		return PolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
 	}
+	if err := validateEffective(request.EffectiveFrom, request.EffectiveTo); err != nil {
+		return PolicyResponse{}, err
+	}
 	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
 	request.Direction = defaultDirection(request.Direction)
 	if request.WindowType == "" {
 		request.WindowType = WindowNone
+	}
+	if err := s.checkShape(ctx, request.PolicyTypeID, request.Unit, request.Base, request.Operator, request.WindowType); err != nil {
+		return PolicyResponse{}, err
 	}
 	value, err := s.store.CreatePolicy(ctx, groupID, request)
 	if err == nil {
@@ -295,6 +294,19 @@ func (s *service) UpdatePolicy(ctx context.Context, groupID, id int64, request U
 	if request.Value == nil {
 		return PolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
 	}
+	if request.EffectiveFrom == nil {
+		return PolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom is required")
+	}
+	if !validWindow(*request.EffectiveFrom, request.EffectiveTo) {
+		return PolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
+	}
+	current, err := s.store.GetPolicy(ctx, groupID, id)
+	if err != nil {
+		return PolicyResponse{}, err
+	}
+	if err := s.checkShape(ctx, current.PolicyTypeID, current.Unit, request.Base, request.Operator, current.WindowType); err != nil {
+		return PolicyResponse{}, err
+	}
 	value, err := s.store.UpdatePolicy(ctx, groupID, id, request)
 	if err == nil {
 		s.cache.Invalidate(ctx, cachecore.NamespacePolicies, cachecore.NamespacePolicyConfig)
@@ -310,24 +322,53 @@ func (s *service) DeletePolicy(ctx context.Context, groupID, id int64, request c
 	return err
 }
 
+// checkShape rejects value fields that do not fit the kind of the policy
+// type. The kind and the policy's unit and window are immutable, so reading
+// them before the write cannot race with it.
+func (s *service) checkShape(ctx context.Context, typeID int64, unit Unit, base Base, operator Operator, window WindowType) error {
+	policyType, err := s.store.GetType(ctx, typeID)
+	if errors.Is(err, core.ErrNotFound) {
+		return core.ErrBadRequest.WithMessage(fmt.Sprintf("policy type %d not found", typeID))
+	}
+	if err != nil {
+		return err
+	}
+	if err := policyType.Kind.Check(unit, base, operator, window); err != nil {
+		return core.ErrBadRequest.WithMessage(err.Error())
+	}
+	return nil
+}
+
 func validWindow(from time.Time, to *time.Time) bool {
 	return to == nil || from.Before(*to)
+}
+
+// validateEffective checks an optional effective range on create; an omitted
+// effectiveFrom defaults to now.
+func validateEffective(from, to *time.Time) error {
+	if from != nil && !validWindow(*from, to) {
+		return core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
+	}
+	if from == nil && to != nil && !time.Now().Before(*to) {
+		return core.ErrBadRequest.WithMessage("effectiveTo must be in the future when effectiveFrom is omitted")
+	}
+	return nil
 }
 
 func (s *service) CreateCustomPolicy(ctx context.Context, walletID string, request CreateCustomPolicyRequest) (CustomPolicyResponse, error) {
 	if request.Value == nil {
 		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("value is required")
 	}
-	if request.EffectiveFrom != nil && !validWindow(*request.EffectiveFrom, request.EffectiveTo) {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
-	}
-	if request.EffectiveFrom == nil && request.EffectiveTo != nil && !time.Now().Before(*request.EffectiveTo) {
-		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveTo must be in the future when effectiveFrom is omitted")
+	if err := validateEffective(request.EffectiveFrom, request.EffectiveTo); err != nil {
+		return CustomPolicyResponse{}, err
 	}
 	request.TransactionType, request.Channel = defaults(request.TransactionType, request.Channel)
 	request.Direction = defaultDirection(request.Direction)
 	if request.WindowType == "" {
 		request.WindowType = WindowNone
+	}
+	if err := s.checkShape(ctx, request.PolicyTypeID, request.Unit, request.Base, request.Operator, request.WindowType); err != nil {
+		return CustomPolicyResponse{}, err
 	}
 	value, err := s.store.CreateCustomPolicy(ctx, walletID, request)
 	if err == nil {
@@ -375,6 +416,13 @@ func (s *service) UpdateCustomPolicy(ctx context.Context, walletID string, id in
 	}
 	if !validWindow(*request.EffectiveFrom, request.EffectiveTo) {
 		return CustomPolicyResponse{}, core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
+	}
+	current, err := s.store.GetCustomPolicy(ctx, walletID, id)
+	if err != nil {
+		return CustomPolicyResponse{}, err
+	}
+	if err := s.checkShape(ctx, current.PolicyTypeID, current.Unit, request.Base, request.Operator, current.WindowType); err != nil {
+		return CustomPolicyResponse{}, err
 	}
 	value, err := s.store.UpdateCustomPolicy(ctx, walletID, id, request)
 	if err == nil {

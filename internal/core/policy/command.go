@@ -10,7 +10,6 @@ type PolicyTypeResponse struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description,omitempty"`
-	UnitID      int64      `json:"unitId"`
 	Kind        Kind       `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `format:"date-time" json:"createdAt"`
@@ -20,10 +19,10 @@ type PolicyTypeResponse struct {
 type CreatePolicyTypeRequest struct {
 	Code        string  `binding:"required" json:"code"`
 	Description *string `json:"description"`
-	UnitID      int64   `binding:"required,gt=0" json:"unitId"`
-	Kind        Kind    `binding:"omitempty,oneof=LIMIT WAIVER FEE TAX DISCOUNT" enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
-	Active      *bool   `json:"active"`
-	UpdatedBy   string  `binding:"required" json:"updatedBy"`
+	// Kind defaults to LIMIT; it must be declared in shapes.
+	Kind      Kind   `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
+	Active    *bool  `json:"active"`
+	UpdatedBy string `binding:"required" json:"updatedBy"`
 }
 
 type UpdatePolicyTypeRequest struct {
@@ -56,27 +55,41 @@ type PolicyResponse struct {
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Unit            Unit            `enums:"AMOUNT,COUNT,BALANCE" json:"unit,omitempty"`
+	Base            Base            `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
+	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
+	EffectiveFrom   time.Time       `format:"date-time" json:"effectiveFrom"`
+	EffectiveTo     *time.Time      `format:"date-time" json:"effectiveTo,omitempty"`
 	CreatedAt       time.Time       `format:"date-time" json:"createdAt"`
 	UpdatedAt       *time.Time      `format:"date-time" json:"updatedAt,omitempty"`
 }
 
 type CreatePolicyRequest struct {
-	PolicyTypeID    int64            `binding:"required,gt=0" json:"policyTypeId"`
-	TransactionType string           `json:"transactionType"`
-	Channel         string           `json:"channel"`
-	Direction       Direction        `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType       `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Operator        Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
-	Value           *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
-	UpdatedBy       string           `binding:"required" json:"updatedBy"`
+	PolicyTypeID    int64      `binding:"required,gt=0" json:"policyTypeId"`
+	TransactionType string     `json:"transactionType"`
+	Channel         string     `json:"channel"`
+	Direction       Direction  `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	// Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.
+	Unit Unit `binding:"omitempty,oneof=AMOUNT COUNT BALANCE" enums:"AMOUNT,COUNT,BALANCE" json:"unit"`
+	// Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.
+	Base Base `binding:"omitempty,oneof=AMOUNT FEE NET_FEE" enums:"AMOUNT,FEE,NET_FEE" json:"base"`
+	// Operator compares a LIMIT; required for LIMIT, absent otherwise.
+	Operator      Operator         `binding:"omitempty,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Value         *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
+	EffectiveFrom *time.Time       `format:"date-time" json:"effectiveFrom"`
+	EffectiveTo   *time.Time       `format:"date-time" json:"effectiveTo"`
+	UpdatedBy     string           `binding:"required" json:"updatedBy"`
 }
 
 type UpdatePolicyRequest struct {
-	Operator  Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
-	Value     *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
-	UpdatedBy string           `binding:"required" json:"updatedBy"`
+	Base          Base             `binding:"omitempty,oneof=AMOUNT FEE NET_FEE" enums:"AMOUNT,FEE,NET_FEE" json:"base"`
+	Operator      Operator         `binding:"omitempty,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Value         *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
+	EffectiveFrom *time.Time       `binding:"required" format:"date-time" json:"effectiveFrom"`
+	EffectiveTo   *time.Time       `format:"date-time" json:"effectiveTo"`
+	UpdatedBy     string           `binding:"required" json:"updatedBy"`
 }
 
 type CustomPolicyResponse struct {
@@ -87,7 +100,9 @@ type CustomPolicyResponse struct {
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Unit            Unit            `enums:"AMOUNT,COUNT,BALANCE" json:"unit,omitempty"`
+	Base            Base            `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
+	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
 	EffectiveFrom   time.Time       `format:"date-time" json:"effectiveFrom"`
 	EffectiveTo     *time.Time      `format:"date-time" json:"effectiveTo,omitempty"`
@@ -98,21 +113,27 @@ type CustomPolicyResponse struct {
 }
 
 type CreateCustomPolicyRequest struct {
-	PolicyTypeID    int64            `binding:"required,gt=0" json:"policyTypeId"`
-	TransactionType string           `json:"transactionType"`
-	Channel         string           `json:"channel"`
-	Direction       Direction        `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType       `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Operator        Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
-	Value           *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
-	EffectiveFrom   *time.Time       `format:"date-time" json:"effectiveFrom"`
-	EffectiveTo     *time.Time       `format:"date-time" json:"effectiveTo"`
-	Reason          *string          `json:"reason"`
-	UpdatedBy       string           `binding:"required" json:"updatedBy"`
+	PolicyTypeID    int64      `binding:"required,gt=0" json:"policyTypeId"`
+	TransactionType string     `json:"transactionType"`
+	Channel         string     `json:"channel"`
+	Direction       Direction  `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
+	WindowType      WindowType `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	// Unit is what a LIMIT or WAIVER measures; required for them, absent otherwise.
+	Unit Unit `binding:"omitempty,oneof=AMOUNT COUNT BALANCE" enums:"AMOUNT,COUNT,BALANCE" json:"unit"`
+	// Base makes a FEE / DISCOUNT / TAX value a percentage of it; absent: flat amount.
+	Base Base `binding:"omitempty,oneof=AMOUNT FEE NET_FEE" enums:"AMOUNT,FEE,NET_FEE" json:"base"`
+	// Operator compares a LIMIT; required for LIMIT, absent otherwise.
+	Operator      Operator         `binding:"omitempty,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Value         *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
+	EffectiveFrom *time.Time       `format:"date-time" json:"effectiveFrom"`
+	EffectiveTo   *time.Time       `format:"date-time" json:"effectiveTo"`
+	Reason        *string          `json:"reason"`
+	UpdatedBy     string           `binding:"required" json:"updatedBy"`
 }
 
 type UpdateCustomPolicyRequest struct {
-	Operator      Operator         `binding:"required,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Base          Base             `binding:"omitempty,oneof=AMOUNT FEE NET_FEE" enums:"AMOUNT,FEE,NET_FEE" json:"base"`
+	Operator      Operator         `binding:"omitempty,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value         *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
 	EffectiveFrom *time.Time       `binding:"required" format:"date-time" json:"effectiveFrom"`
 	EffectiveTo   *time.Time       `format:"date-time" json:"effectiveTo"`
@@ -144,12 +165,14 @@ type GetConfigResponse struct {
 
 type Rule struct {
 	PolicyType      string          `json:"policyType"`
-	Unit            string          `json:"unit"`
+	Kind            Kind            `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
 	TransactionType string          `json:"transactionType"`
 	Channel         string          `json:"channel"`
 	Direction       Direction       `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType      `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Unit            Unit            `enums:"AMOUNT,COUNT,BALANCE" json:"unit,omitempty"`
+	Base            Base            `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
+	Operator        Operator        `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal `example:"10000" json:"value" swaggertype:"string"`
 	Source          Source          `enums:"SYSTEM,USER" json:"source"`
 }

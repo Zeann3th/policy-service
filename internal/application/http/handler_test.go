@@ -37,7 +37,7 @@ func (s *policyServiceStub) CreateCustomPolicy(_ context.Context, walletID strin
 }
 
 func TestGetPolicyConfigReturnsResponseDirectly(t *testing.T) {
-	service := &policyServiceStub{response: policy.GetConfigResponse{Rules: []policy.Rule{{PolicyType: "FEE_AMT", Unit: "AMOUNT", Direction: policy.DirectionOut, WindowType: policy.WindowDaily, Source: policy.SourceSystem}}}}
+	service := &policyServiceStub{response: policy.GetConfigResponse{Rules: []policy.Rule{{PolicyType: "TXN_MAX", Kind: policy.KindLimit, Unit: policy.UnitAmount, Direction: policy.DirectionOut, WindowType: policy.WindowDaily, Source: policy.SourceSystem}}}}
 	response := performPolicyRequest(service, "/v1/policies?walletType=PERSONAL&currency=USD&tier=TIER_1&walletId=wallet-123&transactionType=TRANSFER_OUT")
 
 	if response.Code != http.StatusOK {
@@ -47,7 +47,7 @@ func TestGetPolicyConfigReturnsResponseDirectly(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
-	if len(body.Rules) != 1 || body.Rules[0].PolicyType != "FEE_AMT" || body.Rules[0].Direction != policy.DirectionOut || body.Rules[0].WindowType != policy.WindowDaily {
+	if len(body.Rules) != 1 || body.Rules[0].PolicyType != "TXN_MAX" || body.Rules[0].Direction != policy.DirectionOut || body.Rules[0].WindowType != policy.WindowDaily {
 		t.Fatalf("response = %s", response.Body.String())
 	}
 	if service.request.TransactionType != "TRANSFER_OUT" {
@@ -67,7 +67,7 @@ func TestGetPolicyConfigReturnsActionableBadRequest(t *testing.T) {
 	}
 }
 
-func TestGetPolicyConfigMapsErrors(t *testing.T) {
+func TestHandleErrorMapsStatusAndMessage(t *testing.T) {
 	for _, test := range []struct {
 		name   string
 		err    error
@@ -75,6 +75,7 @@ func TestGetPolicyConfigMapsErrors(t *testing.T) {
 		want   *core.AppError
 	}{
 		{name: "not found", err: core.ErrNotFound, status: http.StatusNotFound, want: core.ErrNotFound},
+		{name: "conflict keeps message", err: core.ErrConflict.WithMessage("reservation is RELEASED").WithCause(errors.New("database details")), status: http.StatusConflict, want: core.ErrConflict.WithMessage("reservation is RELEASED")},
 		{name: "internal", err: errors.New("database details"), status: http.StatusInternalServerError, want: core.ErrInternal},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -83,7 +84,7 @@ func TestGetPolicyConfigMapsErrors(t *testing.T) {
 				t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 			}
 			var got core.AppError
-			if err := json.Unmarshal(response.Body.Bytes(), &got); err != nil || got.Code != test.want.Code {
+			if err := json.Unmarshal(response.Body.Bytes(), &got); err != nil || got.Code != test.want.Code || got.Message != test.want.Message {
 				t.Fatalf("error = %#v, decode = %v", got, err)
 			}
 		})
@@ -154,8 +155,6 @@ func TestSwaggerDocumentsEveryRoute(t *testing.T) {
 		"/v1/policies/groups/{groupId}/policies/{policyId}": {http.MethodGet, http.MethodPut, http.MethodDelete},
 		"/v1/policies/types":                                {http.MethodGet, http.MethodPost},
 		"/v1/policies/types/{typeId}":                       {http.MethodGet, http.MethodPut, http.MethodDelete},
-		"/v1/units":                                         {http.MethodGet, http.MethodPost},
-		"/v1/units/{unitId}":                                {http.MethodGet, http.MethodPut, http.MethodDelete},
 	}
 	for path, methods := range expected {
 		for _, method := range methods {

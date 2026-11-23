@@ -1,7 +1,7 @@
 -- name: CreatePolicyType :one
-INSERT INTO policy_types (code, description, unit_id, kind, active)
-VALUES (upper(CAST(sqlc.arg(code) AS text)), sqlc.narg(description), sqlc.arg(unit_id),
-        sqlc.arg(kind), sqlc.arg(active)) RETURNING *;
+INSERT INTO policy_types (code, description, kind, active)
+VALUES (upper(CAST(sqlc.arg(code) AS text)), sqlc.narg(description), sqlc.arg(kind), sqlc.arg(active))
+RETURNING *;
 
 -- name: GetPolicyTypeByID :one
 SELECT * FROM policy_types WHERE id = $1;

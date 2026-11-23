@@ -10,19 +10,23 @@ import (
 
 func handleError(c *gin.Context, err error) {
 	_ = c.Error(err) // logged once by requestLogger
-	switch {
-	case errors.Is(err, core.ErrBadRequest):
-		var appErr *core.AppError
-		if errors.As(err, &appErr) {
-			c.AbortWithStatusJSON(http.StatusBadRequest, appErr)
+	for _, mapping := range []struct {
+		target *core.AppError
+		status int
+	}{
+		{core.ErrBadRequest, http.StatusBadRequest},
+		{core.ErrNotFound, http.StatusNotFound},
+		{core.ErrConflict, http.StatusConflict},
+	} {
+		if errors.Is(err, mapping.target) {
+			// the AppError carries the specific message; its cause is not serialized
+			var appErr *core.AppError
+			if !errors.As(err, &appErr) {
+				appErr = mapping.target
+			}
+			c.AbortWithStatusJSON(mapping.status, appErr)
 			return
 		}
-		c.AbortWithStatusJSON(http.StatusBadRequest, core.ErrBadRequest)
-	case errors.Is(err, core.ErrNotFound):
-		c.AbortWithStatusJSON(http.StatusNotFound, core.ErrNotFound)
-	case errors.Is(err, core.ErrConflict):
-		c.AbortWithStatusJSON(http.StatusConflict, core.ErrConflict)
-	default:
-		c.AbortWithStatusJSON(http.StatusInternalServerError, core.ErrInternal)
 	}
+	c.AbortWithStatusJSON(http.StatusInternalServerError, core.ErrInternal)
 }

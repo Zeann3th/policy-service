@@ -28,8 +28,8 @@ func TestSQLAndCodegenContracts(t *testing.T) {
 	}
 	policySQL := strings.ReplaceAll(string(policyQuery), "\r\n", "\n")
 	for _, want := range []string{
-		"-- name: GetUnits :many",
-		"pt.unit_id",
+		"cp.unit",
+		"cp.base",
 		"-- name: GetActiveCustomPolicies :many",
 		"JOIN policy_types pt ON pt.id = cp.policy_type_id",
 		"cp.wallet_id = $1",
@@ -41,12 +41,11 @@ func TestSQLAndCodegenContracts(t *testing.T) {
 			t.Fatalf("policy_config.sql missing %q", want)
 		}
 	}
-	if strings.Count(policySQL, "pt.active = true") != 2 || strings.Count(policySQL, "u.active = true") != 2 {
-		t.Fatal("resolver queries must exclude inactive policy types and units")
+	if strings.Count(policySQL, "pt.active = true") != 2 {
+		t.Fatal("resolver queries must exclude inactive policy types")
 	}
 
 	queries := map[string][]string{
-		"unit.sql":          {"CreateUnit", "GetUnitByID", "ListUnits", "CountUnits", "UpdateUnit", "DeleteUnit", "ORDER BY id"},
 		"policy_type.sql":   {"CreatePolicyType", "GetPolicyTypeByID", "ListPolicyTypes", "CountPolicyTypes", "UpdatePolicyType", "DeletePolicyType", "ORDER BY id"},
 		"policy_group.sql":  {"CreatePolicyGroup", "GetPolicyGroupByID", "DeletePolicyGroup"},
 		"policy.sql":        {"CreatePolicy", "GetPolicyByID", "ListPolicies", "CountPolicies", "UpdatePolicy", "DeletePolicy", "policy_group_id", "ORDER BY id"},
@@ -94,9 +93,7 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 		"CREATE TABLE usages",
 		"CREATE TABLE reservations",
 		"CREATE TABLE usage_ledger",
-		"CREATE TABLE processed_events",
 		"CREATE TABLE outbox",
-		"REFERENCES units (id) ON DELETE RESTRICT",
 		"REFERENCES policy_groups (id) ON DELETE CASCADE",
 		"REFERENCES policy_types (id) ON DELETE CASCADE",
 		"REFERENCES policy_types (id) ON DELETE RESTRICT",
@@ -111,7 +108,7 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 			t.Errorf("schema.sql missing %q", want)
 		}
 	}
-	for _, unwanted := range []string{"CHECK (", "counters"} {
+	for _, unwanted := range []string{"CHECK (", "counters", "CREATE TABLE units", "unit_id"} {
 		if strings.Contains(sql, unwanted) {
 			t.Errorf("schema.sql must not contain %q", unwanted)
 		}
@@ -120,13 +117,22 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 		t.Error("policies and custom_policies must share policy_id_seq")
 	}
 	policyTypes := sql[strings.Index(sql, "CREATE TABLE policy_types ("):strings.Index(sql, "INSERT INTO policy_types")]
-	if strings.Contains(policyTypes, "window") {
-		t.Error("policy_types must not define a window")
+	for _, field := range []string{"window", "unit", "base", "operator"} {
+		if strings.Contains(policyTypes, field) {
+			t.Errorf("policy_types must not define %s: it belongs to the policy", field)
+		}
 	}
 	for _, table := range []string{"policies", "custom_policies"} {
 		block := sql[strings.Index(sql, "CREATE TABLE "+table+" ("):strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx")]
-		if !strings.Contains(block, "window_type text NOT NULL DEFAULT 'NONE'") {
-			t.Errorf("%s must define window_type", table)
+		for _, want := range []string{"window_type text NOT NULL DEFAULT 'NONE'", "unit text,", "base text,", "operator text,"} {
+			if !strings.Contains(block, want) {
+				t.Errorf("%s must define %q", table, want)
+			}
+		}
+		identity := sql[strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx"):]
+		identity = identity[:strings.Index(identity, ";")]
+		if !strings.Contains(identity, "unit\n) NULLS NOT DISTINCT") {
+			t.Errorf("%s identity must include unit with NULLS NOT DISTINCT", table)
 		}
 	}
 }
@@ -142,14 +148,8 @@ func TestBaselineMigrationMatchesSchema(t *testing.T) {
 
 type fakePolicyQueries struct {
 	groupErr  error
-	unitRows  []codegen.Unit
-	unitError error
 	userRows  []codegen.GetActiveCustomPoliciesRow
 	userError error
-}
-
-func (q *fakePolicyQueries) GetUnits(context.Context) ([]codegen.Unit, error) {
-	return q.unitRows, q.unitError
 }
 
 func (q *fakePolicyQueries) GetActiveCustomPolicies(context.Context, string) ([]codegen.GetActiveCustomPoliciesRow, error) {
@@ -162,6 +162,17 @@ func (q *fakePolicyQueries) GetPolicyGroupID(context.Context, codegen.GetPolicyG
 
 func (q *fakePolicyQueries) GetPoliciesByGroupID(context.Context, int64) ([]codegen.GetPoliciesByGroupIDRow, error) {
 	return nil, nil
+}
+
+func (q *fakePolicyQueries) GetNextPolicyStart(context.Context, int64) (time.Time, error) {
+	return time.Time{}, pgx.ErrNoRows
+}
+
+func TestGetNextPolicyStartWithoutScheduleIsNil(t *testing.T) {
+	next, err := (&Store{resolverQueries: &fakePolicyQueries{}}).GetNextPolicyStart(context.Background(), 1)
+	if err != nil || next != nil {
+		t.Fatalf("GetNextPolicyStart() = %v, %v", next, err)
+	}
 }
 
 func TestGetPolicyGroupIDReturnsNotFound(t *testing.T) {
@@ -178,13 +189,13 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 	rows := []codegen.GetActiveCustomPoliciesRow{{
 		WalletID:        "wallet-123",
 		PolicyTypeID:    7,
-		PolicyType:      "TXN_MAX_AMT",
-		UnitID:          3,
+		PolicyType:      "TXN_MAX",
 		TransactionType: "TRANSFER_OUT",
 		Channel:         "USSD",
 		Direction:       "OUT",
 		WindowType:      "DAILY",
-		Operator:        "LTE",
+		Unit:            text(policy.UnitAmount),
+		Operator:        text(policy.OpLTE),
 		Value:           decimal.RequireFromString("100000"),
 		EffectiveFrom:   time.Now(),
 		EffectiveTo:     &effectiveTo,
@@ -201,7 +212,8 @@ func TestGetActiveCustomPoliciesMapsGeneratedRows(t *testing.T) {
 	value := values[0]
 	if value.PolicyTypeID != rows[0].PolicyTypeID ||
 		value.PolicyType != rows[0].PolicyType ||
-		value.UnitID != rows[0].UnitID ||
+		value.Unit != policy.UnitAmount ||
+		value.Base != "" ||
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Direction != policy.DirectionOut ||
@@ -217,13 +229,12 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 		{
 			PolicyGroupID:   42,
 			PolicyTypeID:    7,
-			PolicyType:      "TXN_MAX_AMT",
-			UnitID:          3,
+			PolicyType:      "TXN_FEE",
 			TransactionType: "TRANSFER",
 			Channel:         "MOBILE",
 			Direction:       "IN",
-			WindowType:      "DAILY",
-			Operator:        "LTE",
+			WindowType:      "NONE",
+			Base:            text(policy.BaseNetFee),
 			Value:           decimal.RequireFromString("1000.2500"),
 		},
 	}
@@ -237,27 +248,15 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 	if value.PolicyGroupID != rows[0].PolicyGroupID ||
 		value.PolicyTypeID != rows[0].PolicyTypeID ||
 		value.PolicyType != rows[0].PolicyType ||
-		value.UnitID != rows[0].UnitID ||
+		value.Unit != "" ||
+		value.Base != policy.BaseNetFee ||
+		value.Operator != "" ||
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Direction != policy.DirectionIn ||
-		value.WindowType != policy.WindowDaily ||
-		value.Operator != policy.OpLTE ||
+		value.WindowType != policy.WindowNone ||
 		!value.Value.Equal(rows[0].Value) {
 		t.Fatalf("toPolicies() value = %#v", value)
-	}
-}
-
-func TestGetActiveUnitsMapsGeneratedRows(t *testing.T) {
-	rows := []codegen.Unit{{ID: 3, Code: "AMOUNT", Active: true}}
-	store := &Store{resolverQueries: &fakePolicyQueries{unitRows: rows}}
-
-	units, err := store.GetActive(context.Background())
-	if err != nil {
-		t.Fatalf("GetUnits() error = %v", err)
-	}
-	if len(units) != 1 || units[0].ID != 3 || units[0].Code != "AMOUNT" || !units[0].Active {
-		t.Fatalf("GetUnits() = %#v", units)
 	}
 }
 
@@ -293,11 +292,11 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 	code := fmt.Sprintf("ROLLBACK_%d", time.Now().UnixNano())
 
 	err = store.transact(ctx, func(q *codegen.Queries) error {
-		unit, err := q.CreateUnit(ctx, codegen.CreateUnitParams{Code: code, Active: true})
+		policyType, err := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: code, Kind: string(policy.KindLimit), Active: true})
 		if err != nil {
 			return err
 		}
-		_, err = q.CreatePolicyAuditLog(ctx, codegen.CreatePolicyAuditLogParams{Entity: entityUnit, EntityKey: fmt.Sprint(unit.ID), Action: string(policy.AuditInsert), NewValue: []byte(`not json`), UpdatedBy: "test"})
+		_, err = q.CreatePolicyAuditLog(ctx, codegen.CreatePolicyAuditLogParams{Entity: entityPolicyType, EntityKey: fmt.Sprint(policyType.ID), Action: string(policy.AuditInsert), NewValue: []byte(`not json`), UpdatedBy: "test"})
 		return err
 	})
 	if err == nil {
@@ -305,10 +304,10 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 	}
 
 	var count int
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM units WHERE code = $1", code).Scan(&count); err != nil {
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM policy_types WHERE code = $1", code).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count != 0 {
-		t.Fatalf("unit count = %d, mutation was not rolled back", count)
+		t.Fatalf("policy type count = %d, mutation was not rolled back", count)
 	}
 }

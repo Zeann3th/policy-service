@@ -6,14 +6,6 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/zeann3th/policy-service/internal/application/grpc/codegen;grpc";
 
-service UnitService {
-  rpc CreateUnit(CreateUnitRequest) returns (Unit);
-  rpc GetUnit(IdRequest) returns (Unit);
-  rpc ListUnits(PageRequest) returns (UnitPage);
-  rpc UpdateUnit(UpdateUnitRequest) returns (Unit);
-  rpc DeleteUnit(DeleteByIdRequest) returns (DeleteResponse);
-}
-
 service PolicyTypeService {
   rpc CreatePolicyType(CreatePolicyTypeRequest) returns (PolicyType);
   rpc GetPolicyType(IdRequest) returns (PolicyType);
@@ -109,40 +101,19 @@ message PolicyRule {
   string source = 7;
   string direction = 8;
   string window_type = 9;
+  string base = 10;
+  string kind = 11;
 }
 message GetPolicyConfigResponse {
   repeated PolicyRule rules = 1;
-}
-
-message Unit {
-  uint64 id = 1;
-  string code = 2;
-  bool active = 3;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp updated_at = 5;
-}
-message UnitPage {
-  repeated Unit items = 1;
-  int32 page = 2;
-  int32 limit = 3;
-  int64 total = 4;
-}
-message CreateUnitRequest {
-  string code = 1;
-  optional bool active = 2;
-  string updated_by = 3;
-}
-message UpdateUnitRequest {
-  uint64 id = 1;
-  optional bool active = 2;
-  string updated_by = 3;
 }
 
 message PolicyType {
   uint64 id = 1;
   string code = 2;
   optional string description = 3;
-  uint64 unit_id = 4;
+  reserved 4, 10;
+  reserved "unit_id", "base";
   bool active = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
@@ -159,7 +130,8 @@ message PolicyTypePage {
 message CreatePolicyTypeRequest {
   string code = 1;
   optional string description = 2;
-  uint64 unit_id = 3;
+  reserved 3, 8;
+  reserved "unit_id", "base";
   optional bool active = 4;
   string updated_by = 5;
   string kind = 6;
@@ -200,6 +172,10 @@ message Policy {
   google.protobuf.Timestamp updated_at = 9;
   string direction = 10;
   string window_type = 11;
+  google.protobuf.Timestamp effective_from = 12;
+  google.protobuf.Timestamp effective_to = 13;
+  string unit = 14;
+  string base = 15;
 }
 message PolicyPage {
   repeated Policy items = 1;
@@ -217,6 +193,10 @@ message CreatePolicyRequest {
   string updated_by = 7;
   string direction = 8;
   string window_type = 9;
+  google.protobuf.Timestamp effective_from = 10;
+  google.protobuf.Timestamp effective_to = 11;
+  string unit = 12;
+  string base = 13;
 }
 message UpdatePolicyRequest {
   uint64 group_id = 1;
@@ -224,6 +204,9 @@ message UpdatePolicyRequest {
   string operator = 3;
   string value = 4;
   string updated_by = 5;
+  google.protobuf.Timestamp effective_from = 6;
+  google.protobuf.Timestamp effective_to = 7;
+  string base = 8;
 }
 
 message CustomPolicy {
@@ -242,6 +225,8 @@ message CustomPolicy {
   google.protobuf.Timestamp updated_at = 13;
   string direction = 14;
   string window_type = 15;
+  string unit = 16;
+  string base = 17;
 }
 message CustomPolicyPage {
   repeated CustomPolicy items = 1;
@@ -262,6 +247,8 @@ message CreateCustomPolicyRequest {
   string updated_by = 10;
   string direction = 11;
   string window_type = 12;
+  string unit = 13;
+  string base = 14;
 }
 message UpdateCustomPolicyRequest {
   string wallet_id = 1;
@@ -272,6 +259,7 @@ message UpdateCustomPolicyRequest {
   google.protobuf.Timestamp effective_to = 6;
   optional string reason = 7;
   string updated_by = 8;
+  string base = 9;
 }
 
 message ReloadCacheRequest {
@@ -313,6 +301,7 @@ message AppliedPolicy {
   string value = 12;
   optional string usage = 13;
   bool violated = 14;
+  string base = 15;
 }
 message PartyResult {
   string wallet_id = 1;

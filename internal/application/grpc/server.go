@@ -10,7 +10,6 @@ import (
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -25,7 +24,6 @@ type Server struct {
 func New(
 	cfg *config.Config,
 	logger *slog.Logger,
-	unitService unit.Service,
 	groupService policy.GroupService,
 	typeService policy.TypeService,
 	policyService policy.Service,
@@ -40,7 +38,6 @@ func New(
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(requestLogger(logger)))
-	pb.RegisterUnitServiceServer(grpcServer, &unitHandler{service: unitService})
 	pb.RegisterPolicyGroupServiceServer(grpcServer, &policyGroupHandler{service: groupService})
 	pb.RegisterPolicyTypeServiceServer(grpcServer, &policyTypeHandler{service: typeService})
 	pb.RegisterPolicyServiceServer(grpcServer, &policyHandler{service: policyService})

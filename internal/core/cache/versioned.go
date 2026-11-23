@@ -64,9 +64,14 @@ func Read[T any](ctx context.Context, v *Versioned, key string) (T, bool) {
 }
 
 func Write[T any](ctx context.Context, v *Versioned, key string, value T) {
+	WriteTTL(ctx, v, key, value, TTL)
+}
+
+// WriteTTL caches value for ttl instead of the default TTL.
+func WriteTTL[T any](ctx context.Context, v *Versioned, key string, value T, ttl time.Duration) {
 	encoded, err := core.Encode(&value)
 	if err == nil {
-		err = v.cache.SetWithTTL(ctx, key, encoded, TTL)
+		err = v.cache.SetWithTTL(ctx, key, encoded, ttl)
 	}
 	if err != nil {
 		v.logger.Warn("write cache", "key", key, "error", err)

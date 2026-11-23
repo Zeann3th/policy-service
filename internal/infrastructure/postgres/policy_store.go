@@ -5,17 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 	codegen "github.com/zeann3th/policy-service/internal/infrastructure/postgres/codegen"
 )
 
-// Store implements policy.Store and unit.Store on Postgres.
+// Store implements policy.Store on Postgres.
 type Store struct {
 	db              *pgxpool.Pool
 	resolverQueries policyQueries
@@ -23,9 +23,9 @@ type Store struct {
 }
 
 type policyQueries interface {
-	GetUnits(context.Context) ([]codegen.Unit, error)
 	GetPolicyGroupID(context.Context, codegen.GetPolicyGroupIDParams) (int64, error)
 	GetPoliciesByGroupID(context.Context, int64) ([]codegen.GetPoliciesByGroupIDRow, error)
+	GetNextPolicyStart(context.Context, int64) (time.Time, error)
 	GetActiveCustomPolicies(context.Context, string) ([]codegen.GetActiveCustomPoliciesRow, error)
 }
 
@@ -35,24 +35,6 @@ func NewStore(db *pgxpool.Pool) *Store {
 		resolverQueries: codegen.New(db),
 		queries:         codegen.New(db),
 	}
-}
-
-func (s *Store) GetActive(ctx context.Context) ([]unit.Unit, error) {
-	rows, err := s.resolverQueries.GetUnits(ctx)
-	if err != nil {
-		return nil, err
-	}
-	units := make([]unit.Unit, len(rows))
-	for i, row := range rows {
-		units[i] = unit.Unit{
-			ID:        row.ID,
-			Code:      row.Code,
-			Active:    row.Active,
-			CreatedAt: row.CreatedAt,
-			UpdatedAt: row.UpdatedAt,
-		}
-	}
-	return units, nil
 }
 
 func (s *Store) GetGroupID(
@@ -85,12 +67,13 @@ func (s *Store) GetActiveCustomPolicies(ctx context.Context, walletID string) ([
 			PolicyTypeID:    row.PolicyTypeID,
 			PolicyType:      row.PolicyType,
 			Kind:            policy.Kind(row.Kind),
-			UnitID:          row.UnitID,
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Direction:       policy.Direction(row.Direction),
 			WindowType:      policy.WindowType(row.WindowType),
-			Operator:        policy.Operator(row.Operator),
+			Unit:            fromText[policy.Unit](row.Unit),
+			Base:            fromText[policy.Base](row.Base),
+			Operator:        fromText[policy.Operator](row.Operator),
 			Value:           row.Value,
 			EffectiveFrom:   row.EffectiveFrom,
 			EffectiveTo:     row.EffectiveTo,
@@ -111,6 +94,17 @@ func (s *Store) GetPoliciesByGroupID(ctx context.Context, groupID int64) ([]poli
 	return toPolicies(rows), nil
 }
 
+func (s *Store) GetNextPolicyStart(ctx context.Context, groupID int64) (*time.Time, error) {
+	value, err := s.resolverQueries.GetNextPolicyStart(ctx, groupID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+
 func toPolicies(rows []codegen.GetPoliciesByGroupIDRow) []policy.Policy {
 	values := make([]policy.Policy, len(rows))
 	for i, row := range rows {
@@ -120,13 +114,16 @@ func toPolicies(rows []codegen.GetPoliciesByGroupIDRow) []policy.Policy {
 			PolicyTypeID:    row.PolicyTypeID,
 			PolicyType:      row.PolicyType,
 			Kind:            policy.Kind(row.Kind),
-			UnitID:          row.UnitID,
 			TransactionType: row.TransactionType,
 			Channel:         row.Channel,
 			Direction:       policy.Direction(row.Direction),
 			WindowType:      policy.WindowType(row.WindowType),
-			Operator:        policy.Operator(row.Operator),
+			Unit:            fromText[policy.Unit](row.Unit),
+			Base:            fromText[policy.Base](row.Base),
+			Operator:        fromText[policy.Operator](row.Operator),
 			Value:           row.Value,
+			EffectiveFrom:   row.EffectiveFrom,
+			EffectiveTo:     row.EffectiveTo,
 			CreatedAt:       row.CreatedAt,
 			UpdatedAt:       row.UpdatedAt,
 		}
@@ -135,7 +132,6 @@ func toPolicies(rows []codegen.GetPoliciesByGroupIDRow) []policy.Policy {
 }
 
 const (
-	entityUnit         = "unit"
 	entityPolicyType   = "policy_type"
 	entityPolicyGroup  = "policy_group"
 	entityPolicy       = "policy"
@@ -191,12 +187,25 @@ func audit(ctx context.Context, q *codegen.Queries, entity, key string, action p
 	return err
 }
 
-func toUnit(v codegen.Unit) unit.Unit {
-	return unit.Unit{ID: v.ID, Code: v.Code, Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+func toPolicyType(v codegen.PolicyType) policy.PolicyType {
+	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, Kind: policy.Kind(v.Kind), Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
-func toPolicyType(v codegen.PolicyType) policy.PolicyType {
-	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, UnitID: v.UnitID, Kind: policy.Kind(v.Kind), Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+// fromText reads a nullable text column; NULL is the zero value.
+func fromText[T ~string](value *string) T {
+	if value == nil {
+		return ""
+	}
+	return T(*value)
+}
+
+// text writes a nullable text column; the zero value is NULL.
+func text[T ~string](value T) *string {
+	if value == "" {
+		return nil
+	}
+	result := string(value)
+	return &result
 }
 
 func toPolicyGroup(v codegen.PolicyGroup) policy.PolicyGroup {
@@ -204,72 +213,16 @@ func toPolicyGroup(v codegen.PolicyGroup) policy.PolicyGroup {
 }
 
 func toPolicy(v codegen.Policy) policy.Policy {
-	return policy.Policy{ID: v.ID, PolicyGroupID: v.PolicyGroupID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Operator: policy.Operator(v.Operator), Value: v.Value, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+	return policy.Policy{ID: v.ID, PolicyGroupID: v.PolicyGroupID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Unit: fromText[policy.Unit](v.Unit), Base: fromText[policy.Base](v.Base), Operator: fromText[policy.Operator](v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func toCustomPolicy(v codegen.CustomPolicy) policy.CustomPolicy {
-	return policy.CustomPolicy{ID: v.ID, WalletID: v.WalletID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Operator: policy.Operator(v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
-}
-
-func (s *Store) Create(ctx context.Context, c unit.CreateRequest) (out unit.Unit, err error) {
-	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreateUnit(ctx, codegen.CreateUnitParams{Code: c.Code, Active: *c.Active})
-		if e != nil {
-			return e
-		}
-		out = toUnit(v)
-		return audit(ctx, q, entityUnit, strconv.FormatInt(v.ID, 10), policy.AuditInsert, nil, v, c.UpdatedBy)
-	})
-	return
-}
-
-func (s *Store) Get(ctx context.Context, id int64) (unit.Unit, error) {
-	v, e := s.queries.GetUnitByID(ctx, id)
-	return toUnit(v), mapDBError(e)
-}
-
-func (s *Store) List(ctx context.Context, l, o int32) ([]unit.Unit, int64, error) {
-	vs, e := s.queries.ListUnits(ctx, codegen.ListUnitsParams{PageLimit: l, PageOffset: o})
-	if e != nil {
-		return nil, 0, e
-	}
-	total, e := s.queries.CountUnits(ctx)
-	out := make([]unit.Unit, len(vs))
-	for i, v := range vs {
-		out[i] = toUnit(v)
-	}
-	return out, total, e
-}
-
-func (s *Store) Update(ctx context.Context, id int64, active bool, actor string) (out unit.Unit, err error) {
-	err = s.transact(ctx, func(q *codegen.Queries) error {
-		old, e := q.GetUnitByIDForUpdate(ctx, id)
-		if e != nil {
-			return e
-		}
-		v, e := q.UpdateUnit(ctx, codegen.UpdateUnitParams{ID: id, Active: active})
-		if e != nil {
-			return e
-		}
-		out = toUnit(v)
-		return audit(ctx, q, entityUnit, strconv.FormatInt(id, 10), policy.AuditUpdate, old, v, actor)
-	})
-	return
-}
-
-func (s *Store) Delete(ctx context.Context, id int64, actor string) error {
-	return s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.DeleteUnit(ctx, id)
-		if e != nil {
-			return e
-		}
-		return audit(ctx, q, entityUnit, strconv.FormatInt(id, 10), policy.AuditDelete, v, nil, actor)
-	})
+	return policy.CustomPolicy{ID: v.ID, WalletID: v.WalletID, PolicyTypeID: v.PolicyTypeID, TransactionType: v.TransactionType, Channel: v.Channel, Direction: policy.Direction(v.Direction), WindowType: policy.WindowType(v.WindowType), Unit: fromText[policy.Unit](v.Unit), Base: fromText[policy.Base](v.Base), Operator: fromText[policy.Operator](v.Operator), Value: v.Value, EffectiveFrom: v.EffectiveFrom, EffectiveTo: v.EffectiveTo, Reason: v.Reason, CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func (s *Store) CreateType(ctx context.Context, c policy.CreatePolicyTypeRequest) (out policy.PolicyType, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, UnitID: c.UnitID, Kind: string(c.Kind), Active: *c.Active})
+		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, Kind: string(c.Kind), Active: *c.Active})
 		if e != nil {
 			return e
 		}
@@ -352,7 +305,7 @@ func (s *Store) DeleteGroup(ctx context.Context, id int64, actor string) error {
 
 func (s *Store) CreatePolicy(ctx context.Context, g int64, c policy.CreatePolicyRequest) (out policy.Policy, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreatePolicy(ctx, codegen.CreatePolicyParams{PolicyGroupID: g, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Operator: string(c.Operator), Value: *c.Value})
+		v, e := q.CreatePolicy(ctx, codegen.CreatePolicyParams{PolicyGroupID: g, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Unit: text(c.Unit), Base: text(c.Base), Operator: text(c.Operator), Value: *c.Value, EffectiveFrom: c.EffectiveFrom, EffectiveTo: c.EffectiveTo})
 		if e != nil {
 			return e
 		}
@@ -386,7 +339,7 @@ func (s *Store) UpdatePolicy(ctx context.Context, g, id int64, c policy.UpdatePo
 		if e != nil {
 			return e
 		}
-		v, e := q.UpdatePolicy(ctx, codegen.UpdatePolicyParams{PolicyGroupID: g, ID: id, Operator: string(c.Operator), Value: *c.Value})
+		v, e := q.UpdatePolicy(ctx, codegen.UpdatePolicyParams{PolicyGroupID: g, ID: id, Base: text(c.Base), Operator: text(c.Operator), Value: *c.Value, EffectiveFrom: *c.EffectiveFrom, EffectiveTo: c.EffectiveTo})
 		if e != nil {
 			return e
 		}
@@ -408,7 +361,7 @@ func (s *Store) DeletePolicy(ctx context.Context, g, id int64, actor string) err
 
 func (s *Store) CreateCustomPolicy(ctx context.Context, w string, c policy.CreateCustomPolicyRequest) (out policy.CustomPolicy, err error) {
 	err = s.transact(ctx, func(q *codegen.Queries) error {
-		v, e := q.CreateCustomPolicy(ctx, codegen.CreateCustomPolicyParams{WalletID: w, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Operator: string(c.Operator), Value: *c.Value, EffectiveFrom: c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason, CreatedBy: c.UpdatedBy})
+		v, e := q.CreateCustomPolicy(ctx, codegen.CreateCustomPolicyParams{WalletID: w, PolicyTypeID: c.PolicyTypeID, TransactionType: c.TransactionType, Channel: c.Channel, Direction: string(c.Direction), WindowType: string(c.WindowType), Unit: text(c.Unit), Base: text(c.Base), Operator: text(c.Operator), Value: *c.Value, EffectiveFrom: c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason, CreatedBy: c.UpdatedBy})
 		if e != nil {
 			return e
 		}
@@ -442,7 +395,7 @@ func (s *Store) UpdateCustomPolicy(ctx context.Context, w string, id int64, c po
 		if e != nil {
 			return e
 		}
-		v, e := q.UpdateCustomPolicy(ctx, codegen.UpdateCustomPolicyParams{WalletID: w, ID: id, Operator: string(c.Operator), Value: *c.Value, EffectiveFrom: *c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason})
+		v, e := q.UpdateCustomPolicy(ctx, codegen.UpdateCustomPolicyParams{WalletID: w, ID: id, Base: text(c.Base), Operator: text(c.Operator), Value: *c.Value, EffectiveFrom: *c.EffectiveFrom, EffectiveTo: c.EffectiveTo, Reason: c.Reason})
 		if e != nil {
 			return e
 		}
@@ -462,7 +415,4 @@ func (s *Store) DeleteCustomPolicy(ctx context.Context, w string, id int64, acto
 	})
 }
 
-var (
-	_ policy.Store = (*Store)(nil)
-	_ unit.Store   = (*Store)(nil)
-)
+var _ policy.Store = (*Store)(nil)

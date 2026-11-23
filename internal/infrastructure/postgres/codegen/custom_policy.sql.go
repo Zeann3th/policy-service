@@ -25,13 +25,13 @@ func (q *Queries) CountCustomPolicies(ctx context.Context, walletID string) (int
 
 const createCustomPolicy = `-- name: CreateCustomPolicy :one
 INSERT INTO custom_policies
-  (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value,
-   effective_from, effective_to, reason, created_by)
+  (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator,
+   value, effective_from, effective_to, reason, created_by)
 VALUES
   ($1, $2, $3, $4, $5, $6,
-   $7, $8, COALESCE(CAST($9 AS timestamptz), now()), $10,
-   $11, $12)
-RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
+   $7, $8, $9, $10, COALESCE(CAST($11 AS timestamptz), now()), $12,
+   $13, $14)
+RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
 `
 
 type CreateCustomPolicyParams struct {
@@ -41,7 +41,9 @@ type CreateCustomPolicyParams struct {
 	Channel         string          `json:"channel"`
 	Direction       string          `json:"direction"`
 	WindowType      string          `json:"window_type"`
-	Operator        string          `json:"operator"`
+	Unit            *string         `json:"unit"`
+	Base            *string         `json:"base"`
+	Operator        *string         `json:"operator"`
 	Value           decimal.Decimal `json:"value"`
 	EffectiveFrom   *time.Time      `json:"effective_from"`
 	EffectiveTo     *time.Time      `json:"effective_to"`
@@ -57,6 +59,8 @@ func (q *Queries) CreateCustomPolicy(ctx context.Context, arg CreateCustomPolicy
 		arg.Channel,
 		arg.Direction,
 		arg.WindowType,
+		arg.Unit,
+		arg.Base,
 		arg.Operator,
 		arg.Value,
 		arg.EffectiveFrom,
@@ -73,6 +77,8 @@ func (q *Queries) CreateCustomPolicy(ctx context.Context, arg CreateCustomPolicy
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
+		&i.Unit,
+		&i.Base,
 		&i.Operator,
 		&i.Value,
 		&i.EffectiveFrom,
@@ -86,7 +92,7 @@ func (q *Queries) CreateCustomPolicy(ctx context.Context, arg CreateCustomPolicy
 }
 
 const deleteCustomPolicy = `-- name: DeleteCustomPolicy :one
-DELETE FROM custom_policies WHERE wallet_id = $1 AND id = $2 RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
+DELETE FROM custom_policies WHERE wallet_id = $1 AND id = $2 RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
 `
 
 type DeleteCustomPolicyParams struct {
@@ -105,6 +111,8 @@ func (q *Queries) DeleteCustomPolicy(ctx context.Context, arg DeleteCustomPolicy
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
+		&i.Unit,
+		&i.Base,
 		&i.Operator,
 		&i.Value,
 		&i.EffectiveFrom,
@@ -118,7 +126,7 @@ func (q *Queries) DeleteCustomPolicy(ctx context.Context, arg DeleteCustomPolicy
 }
 
 const getCustomPolicyByID = `-- name: GetCustomPolicyByID :one
-SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies WHERE wallet_id = $1 AND id = $2
+SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies WHERE wallet_id = $1 AND id = $2
 `
 
 type GetCustomPolicyByIDParams struct {
@@ -137,6 +145,8 @@ func (q *Queries) GetCustomPolicyByID(ctx context.Context, arg GetCustomPolicyBy
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
+		&i.Unit,
+		&i.Base,
 		&i.Operator,
 		&i.Value,
 		&i.EffectiveFrom,
@@ -150,7 +160,7 @@ func (q *Queries) GetCustomPolicyByID(ctx context.Context, arg GetCustomPolicyBy
 }
 
 const getCustomPolicyByIDForUpdate = `-- name: GetCustomPolicyByIDForUpdate :one
-SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies WHERE wallet_id = $1 AND id = $2 FOR UPDATE
+SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies WHERE wallet_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetCustomPolicyByIDForUpdateParams struct {
@@ -169,6 +179,8 @@ func (q *Queries) GetCustomPolicyByIDForUpdate(ctx context.Context, arg GetCusto
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
+		&i.Unit,
+		&i.Base,
 		&i.Operator,
 		&i.Value,
 		&i.EffectiveFrom,
@@ -182,7 +194,7 @@ func (q *Queries) GetCustomPolicyByIDForUpdate(ctx context.Context, arg GetCusto
 }
 
 const listCustomPolicies = `-- name: ListCustomPolicies :many
-SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies
+SELECT id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at FROM custom_policies
 WHERE wallet_id = $1
 ORDER BY id LIMIT $3 OFFSET $2
 `
@@ -210,6 +222,8 @@ func (q *Queries) ListCustomPolicies(ctx context.Context, arg ListCustomPolicies
 			&i.Channel,
 			&i.Direction,
 			&i.WindowType,
+			&i.Unit,
+			&i.Base,
 			&i.Operator,
 			&i.Value,
 			&i.EffectiveFrom,
@@ -231,15 +245,16 @@ func (q *Queries) ListCustomPolicies(ctx context.Context, arg ListCustomPolicies
 
 const updateCustomPolicy = `-- name: UpdateCustomPolicy :one
 UPDATE custom_policies
-SET operator = $1, value = $2,
-    effective_from = $3, effective_to = $4,
-    reason = $5, updated_at = now()
-WHERE wallet_id = $6 AND id = $7
-RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
+SET base = $1, operator = $2, value = $3,
+    effective_from = $4, effective_to = $5,
+    reason = $6, updated_at = now()
+WHERE wallet_id = $7 AND id = $8
+RETURNING id, wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit, base, operator, value, effective_from, effective_to, reason, created_by, created_at, updated_at
 `
 
 type UpdateCustomPolicyParams struct {
-	Operator      string          `json:"operator"`
+	Base          *string         `json:"base"`
+	Operator      *string         `json:"operator"`
 	Value         decimal.Decimal `json:"value"`
 	EffectiveFrom time.Time       `json:"effective_from"`
 	EffectiveTo   *time.Time      `json:"effective_to"`
@@ -250,6 +265,7 @@ type UpdateCustomPolicyParams struct {
 
 func (q *Queries) UpdateCustomPolicy(ctx context.Context, arg UpdateCustomPolicyParams) (CustomPolicy, error) {
 	row := q.db.QueryRow(ctx, updateCustomPolicy,
+		arg.Base,
 		arg.Operator,
 		arg.Value,
 		arg.EffectiveFrom,
@@ -267,6 +283,8 @@ func (q *Queries) UpdateCustomPolicy(ctx context.Context, arg UpdateCustomPolicy
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
+		&i.Unit,
+		&i.Base,
 		&i.Operator,
 		&i.Value,
 		&i.EffectiveFrom,

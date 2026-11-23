@@ -48,8 +48,8 @@ func TestVersionedKeyCarriesGenerationAndInvalidateMissesOldKey(t *testing.T) {
 	cache := &memoryCache{values: map[string]string{}}
 	versioned := newTestVersioned(cache)
 
-	key := versioned.Key(ctx, NamespaceUnits, "item", 1)
-	if key != "policy-service:units:0:item:1" {
+	key := versioned.Key(ctx, NamespacePolicyTypes, "item", 1)
+	if key != "policy-service:policy:types:0:item:1" {
 		t.Fatalf("key = %q", key)
 	}
 	Write(ctx, versioned, key, 42)
@@ -57,8 +57,8 @@ func TestVersionedKeyCarriesGenerationAndInvalidateMissesOldKey(t *testing.T) {
 		t.Fatalf("Read() = %d, %v", value, ok)
 	}
 
-	versioned.Invalidate(ctx, NamespaceUnits)
-	newKey := versioned.Key(ctx, NamespaceUnits, "item", 1)
+	versioned.Invalidate(ctx, NamespacePolicyTypes)
+	newKey := versioned.Key(ctx, NamespacePolicyTypes, "item", 1)
 	if newKey == key {
 		t.Fatal("Invalidate() must change the namespace generation")
 	}

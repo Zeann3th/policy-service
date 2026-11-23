@@ -125,6 +125,7 @@ func (t *reservationTx) Usage(ctx context.Context, key reservation.UsageKey) (de
 		Channel:         key.Channel,
 		Direction:       string(key.Direction),
 		WindowType:      string(key.WindowType),
+		Unit:            string(key.Unit),
 		WindowStart:     date(key.WindowStart),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -141,6 +142,7 @@ func (t *reservationTx) Apply(ctx context.Context, entry reservation.LedgerEntry
 		Channel:         entry.Channel,
 		Direction:       string(entry.Direction),
 		WindowType:      string(entry.WindowType),
+		Unit:            string(entry.Unit),
 		WindowStart:     date(entry.WindowStart),
 		Delta:           entry.Delta,
 	})
@@ -162,6 +164,7 @@ func (t *reservationTx) Apply(ctx context.Context, entry reservation.LedgerEntry
 		Channel:              entry.Channel,
 		Direction:            string(entry.Direction),
 		WindowType:           string(entry.WindowType),
+		Unit:                 string(entry.Unit),
 		WindowStart:          date(entry.WindowStart),
 		Delta:                entry.Delta,
 		PolicyID:             entry.PolicyID,
@@ -180,20 +183,23 @@ func (t *reservationTx) Finish(ctx context.Context, id uuid.UUID, createdAt time
 	return finish(ctx, t.queries, id, createdAt, status, result)
 }
 
-func (t *reservationTx) Transition(ctx context.Context, id uuid.UUID, createdAt time.Time, from, to reservation.Status) error {
-	rows, err := t.queries.TransitionReservation(ctx, codegen.TransitionReservationParams{
+func (t *reservationTx) Transition(ctx context.Context, id uuid.UUID, createdAt time.Time, from, to reservation.Status) (time.Time, error) {
+	updatedAt, err := t.queries.TransitionReservation(ctx, codegen.TransitionReservationParams{
 		Status:     string(to),
 		ID:         id,
 		CreatedAt:  createdAt,
 		FromStatus: string(from),
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, core.ErrConflict.WithMessage(fmt.Sprintf("reservation %s is no longer %s", id, from))
+	}
 	if err != nil {
-		return fmt.Errorf("set reservation %s %s: %w", id, to, err)
+		return time.Time{}, fmt.Errorf("set reservation %s %s: %w", id, to, err)
 	}
-	if rows != 1 {
-		return core.ErrConflict.WithMessage(fmt.Sprintf("reservation %s is no longer %s", id, from))
+	if updatedAt == nil {
+		return time.Time{}, fmt.Errorf("set reservation %s %s: updated_at not set", id, to)
 	}
-	return nil
+	return *updatedAt, nil
 }
 
 func (t *reservationTx) Entries(ctx context.Context, id uuid.UUID, createdAt time.Time, entryType reservation.EntryType) ([]reservation.LedgerEntry, error) {
@@ -223,6 +229,7 @@ func (t *reservationTx) Entries(ctx context.Context, id uuid.UUID, createdAt tim
 				Channel:         row.Channel,
 				Direction:       policy.Direction(row.Direction),
 				WindowType:      policy.WindowType(row.WindowType),
+				Unit:            policy.Unit(row.Unit),
 				WindowStart:     row.WindowStart.Time,
 			},
 			Delta:          row.Delta,

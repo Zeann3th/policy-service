@@ -34,8 +34,9 @@ type Tx interface {
 	// Finish moves a PROCESSING reservation to status and stores result.
 	Finish(ctx context.Context, id uuid.UUID, createdAt time.Time, status Status, result json.RawMessage) error
 	// Transition moves a reservation from one status to another, keeping its
-	// result; core.ErrConflict when it is no longer in from.
-	Transition(ctx context.Context, id uuid.UUID, createdAt time.Time, from, to Status) error
+	// result, and returns the time of the transition (its updated_at);
+	// core.ErrConflict when it is no longer in from.
+	Transition(ctx context.Context, id uuid.UUID, createdAt time.Time, from, to Status) (time.Time, error)
 	// Entries returns the reservation's ledger entries of one type.
 	Entries(ctx context.Context, id uuid.UUID, createdAt time.Time, entryType EntryType) ([]LedgerEntry, error)
 }

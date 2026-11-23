@@ -2,6 +2,9 @@ package policy
 
 import (
 	"testing"
+	"time"
+
+	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 
 	"github.com/shopspring/decimal"
 )
@@ -55,6 +58,60 @@ func TestPolicyResponseIncludesWindowType(t *testing.T) {
 		response := policyResponse(Policy{WindowType: test.input})
 		if response.WindowType != test.want {
 			t.Fatalf("policyResponse(%q).windowType = %q, want %q", test.input, response.WindowType, test.want)
+		}
+	}
+}
+
+func TestCacheTTLStopsAtNextEffectiveBoundary(t *testing.T) {
+	now := time.Date(2026, time.November, 23, 10, 0, 0, 0, time.UTC)
+	at := func(d time.Duration) *time.Time { value := now.Add(d); return &value }
+	for _, test := range []struct {
+		name      string
+		policies  []Policy
+		nextStart *time.Time
+		want      time.Duration
+	}{
+		{name: "no boundary", policies: []Policy{{}}, want: cachecore.TTL},
+		{name: "boundary after TTL", nextStart: at(time.Hour), want: cachecore.TTL},
+		{name: "next start", nextStart: at(5 * time.Minute), want: 5 * time.Minute},
+		{name: "earliest end", policies: []Policy{{EffectiveTo: at(3 * time.Minute)}, {EffectiveTo: at(7 * time.Minute)}}, nextStart: at(5 * time.Minute), want: 3 * time.Minute},
+	} {
+		if got := cacheTTL(test.policies, test.nextStart, now); got != test.want {
+			t.Errorf("%s: ttl = %s, want %s", test.name, got, test.want)
+		}
+	}
+}
+
+func TestKindCheckEnforcesShape(t *testing.T) {
+	for _, test := range []struct {
+		kind     Kind
+		unit     Unit
+		base     Base
+		operator Operator
+		window   WindowType
+		ok       bool
+	}{
+		{KindLimit, UnitAmount, "", OpLTE, WindowDaily, true},
+		{KindLimit, UnitCount, "", OpLTE, WindowNone, true},
+		{KindLimit, "", "", OpLTE, WindowNone, false},
+		{KindLimit, UnitAmount, "", "", WindowNone, false},
+		{KindLimit, UnitAmount, BaseAmount, OpLTE, WindowNone, false},
+		{KindWaiver, UnitCount, "", "", WindowMonthly, true},
+		{KindWaiver, UnitAmount, "", "", WindowMonthly, false},
+		{KindWaiver, UnitCount, "", OpLT, WindowMonthly, false},
+		{KindFee, "", "", "", WindowNone, true},
+		{KindFee, "", BaseAmount, "", WindowNone, true},
+		{KindFee, "", BaseFee, "", WindowNone, false},
+		{KindFee, UnitAmount, "", "", WindowNone, false},
+		{KindFee, "", "", OpEQ, WindowNone, false},
+		{KindFee, "", "", "", WindowDaily, false},
+		{KindDiscount, "", BaseFee, "", WindowNone, true},
+		{KindDiscount, "", BaseNetFee, "", WindowNone, false},
+		{KindTax, "", BaseNetFee, "", WindowNone, true},
+		{"REVENUE_SHARE", "", "", "", WindowNone, false},
+	} {
+		if err := test.kind.Check(test.unit, test.base, test.operator, test.window); (err == nil) != test.ok {
+			t.Errorf("%s unit=%q base=%q operator=%q window=%s: err = %v, want ok %v", test.kind, test.unit, test.base, test.operator, test.window, err, test.ok)
 		}
 	}
 }

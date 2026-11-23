@@ -6,41 +6,29 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE TABLE units (
-  id bigserial PRIMARY KEY,
-  code text NOT NULL UNIQUE,
-  active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz
-);
-
-INSERT INTO units (code) VALUES ('BALANCE'), ('AMOUNT'), ('COUNT'), ('PERCENT');
-
+-- A policy type is a name and a kind, nothing more. How a value is read
+-- (unit, base, operator, window) lives on the policy rows.
 -- kind: LIMIT | WAIVER | FEE | TAX | DISCOUNT
--- The window lives on the policy rows, not on the type.
 CREATE TABLE policy_types (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE,
   description text,
-  unit_id bigint NOT NULL REFERENCES units (id) ON DELETE RESTRICT,
-  kind text NOT NULL DEFAULT 'LIMIT',
+  kind text NOT NULL,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO policy_types (code, description, unit_id, kind)
-SELECT v.code, v.description, u.id, v.kind
-FROM (VALUES
-  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'BALANCE', 'LIMIT'),
-  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'BALANCE', 'LIMIT'),
-  ('TXN_MIN_AMT', 'Minimum amount of a single transaction', 'AMOUNT', 'LIMIT'),
-  ('TXN_MAX_AMT', 'Maximum amount of a single transaction', 'AMOUNT', 'LIMIT'),
-  ('TOTAL_MAX_AMT', 'Maximum total over a window', 'AMOUNT', 'LIMIT'),
-  ('NO_FEE_TRANSACTION', 'First N transactions per window are free', 'COUNT', 'WAIVER'),
-  ('FEE_AMT', 'Flat fee per transaction', 'AMOUNT', 'FEE')
-) AS v (code, description, unit, kind)
-JOIN units u ON u.code = v.unit;
+INSERT INTO policy_types (code, description, kind) VALUES
+  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'LIMIT'),
+  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'LIMIT'),
+  ('TXN_MIN', 'Minimum of a single transaction', 'LIMIT'),
+  ('TXN_MAX', 'Maximum of a single transaction', 'LIMIT'),
+  ('TOTAL_MAX', 'Maximum total over a window', 'LIMIT'),
+  ('NO_FEE_TRANSACTION', 'First N transactions per window are free', 'WAIVER'),
+  ('TXN_FEE', 'Fee per transaction', 'FEE'),
+  ('TXN_DISCOUNT', 'Discount per transaction', 'DISCOUNT'),
+  ('TXN_TAX', 'Tax per transaction', 'TAX');
 
 CREATE TABLE policy_groups (
   id bigserial PRIMARY KEY,
@@ -56,8 +44,17 @@ CREATE TABLE policy_groups (
 -- recorded in usage_ledger never collides across the two tables.
 CREATE SEQUENCE policy_id_seq;
 
--- transaction_type / channel / direction / window_type are selectors and
--- are immutable: changing one means a new row.
+-- A policy row says everything about how its value is read. The value
+-- columns each kind uses (enforced in the application):
+--   LIMIT     unit AMOUNT | COUNT | BALANCE, operator, any window
+--   WAIVER    unit COUNT, any window (free while usage < value)
+--   FEE       base NULL | AMOUNT, window NONE
+--   DISCOUNT  base NULL | AMOUNT | FEE, window NONE
+--   TAX       base NULL | AMOUNT | FEE | NET_FEE, window NONE
+-- base NULL: value is a flat amount; otherwise value is a percentage of the
+-- base (NET_FEE = fee minus fee-based discounts).
+-- policy_type_id / transaction_type / channel / direction / window_type /
+-- unit are the identity and are immutable: changing one means a new row.
 -- direction: ALL | OUT | IN; window_type: NONE | DAILY | MONTHLY | LIFETIME
 -- operator: EQ | NEQ | GT | GTE | LT | LTE
 CREATE TABLE policies (
@@ -68,8 +65,12 @@ CREATE TABLE policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
-  operator text NOT NULL,
+  unit text, -- LIMIT / WAIVER only
+  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
+  operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
+  effective_from timestamptz NOT NULL DEFAULT now(),
+  effective_to timestamptz, -- NULL: effective with no end
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
@@ -80,10 +81,14 @@ CREATE UNIQUE INDEX policies_identity_idx ON policies (
   transaction_type,
   channel,
   direction,
-  window_type
-);
+  window_type,
+  unit
+) NULLS NOT DISTINCT;
 
 CREATE INDEX policies_group_page_idx ON policies (policy_group_id, id);
+
+-- resolve: a group's policies effective now
+CREATE INDEX policies_group_effective_idx ON policies (policy_group_id, effective_from, effective_to);
 
 CREATE TABLE custom_policies (
   id bigint PRIMARY KEY DEFAULT nextval('policy_id_seq'),
@@ -93,7 +98,9 @@ CREATE TABLE custom_policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
-  operator text NOT NULL,
+  unit text, -- LIMIT / WAIVER only
+  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
+  operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
   effective_from timestamptz NOT NULL DEFAULT now(),
   effective_to timestamptz,
@@ -109,10 +116,14 @@ CREATE UNIQUE INDEX custom_policies_identity_idx ON custom_policies (
   transaction_type,
   channel,
   direction,
-  window_type
-);
+  window_type,
+  unit
+) NULLS NOT DISTINCT;
 
 CREATE INDEX custom_policies_wallet_page_idx ON custom_policies (wallet_id, id);
+
+-- resolve: a wallet's custom policies effective now
+CREATE INDEX custom_policies_wallet_effective_idx ON custom_policies (wallet_id, effective_from, effective_to);
 
 CREATE INDEX custom_policies_expiry_idx ON custom_policies (effective_to)
 WHERE
@@ -124,7 +135,7 @@ WHERE
 -- ---------------------------------------------------------------------
 CREATE TABLE policy_audit_logs (
   id bigserial,
-  entity text NOT NULL, -- unit | policy_type | policy_group | policy | custom_policy
+  entity text NOT NULL, -- policy_type | policy_group | policy | custom_policy
   entity_key text NOT NULL,
   action text NOT NULL, -- INSERT | UPDATE | DELETE
   old_value jsonb,
@@ -149,11 +160,11 @@ SELECT
 
 -- ---------------------------------------------------------------------
 -- usages: running totals per wallet and scope. The scope comes from the
--- selectors of the matched policy, never from a policy id, so usage
+-- type, selectors and unit of the matched policy, never from a policy id, so usage
 -- outlives policy edits. Stateless policies (window NONE) have no row.
 -- window_start: the day (DAILY), the first day of the month (MONTHLY) or
 -- 1970-01-01 (LIFETIME), in UTC.
--- value: COUNT adds 1, AMOUNT adds the transaction amount.
+-- unit COUNT adds 1 to value, unit AMOUNT adds the transaction amount.
 -- List partitions reject any window_type other than the three below.
 -- ---------------------------------------------------------------------
 CREATE TABLE usages (
@@ -163,6 +174,7 @@ CREATE TABLE usages (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL,
+  unit text NOT NULL,
   window_start date NOT NULL,
   value numeric(24, 4) NOT NULL DEFAULT 0,
   PRIMARY KEY (
@@ -172,6 +184,7 @@ CREATE TABLE usages (
     channel,
     direction,
     window_type,
+    unit,
     window_start
   )
 )
@@ -269,6 +282,7 @@ CREATE TABLE usage_ledger (
   channel text NOT NULL,
   direction text NOT NULL,
   window_type text NOT NULL,
+  unit text NOT NULL,
   window_start date NOT NULL,
   delta numeric(24, 4) NOT NULL, -- RESERVE: 1 for COUNT, the amount for AMOUNT; RELEASE: the negation
   -- audit snapshot
@@ -287,7 +301,8 @@ CREATE TABLE usage_ledger (
     transaction_type,
     channel,
     direction,
-    window_type
+    window_type,
+    unit
   ),
   FOREIGN KEY (reservation_id, reservation_created_at)
     REFERENCES reservations (id, created_at) ON DELETE RESTRICT
@@ -302,11 +317,6 @@ SELECT
     p_interval := '1 month',
     p_premake := 4
   );
-
-CREATE TABLE processed_events (
-  event_id text PRIMARY KEY,
-  processed_at timestamptz NOT NULL DEFAULT now()
-);
 
 CREATE TABLE outbox (
   id bigserial PRIMARY KEY,
@@ -324,10 +334,6 @@ WHERE
 -- ---------------------------------------------------------------------
 -- updated_at triggers: fire only when the row actually changed
 -- ---------------------------------------------------------------------
-CREATE TRIGGER units_set_updated_at
-BEFORE UPDATE ON units FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
-EXECUTE FUNCTION set_updated_at ();
-
 CREATE TRIGGER policy_types_set_updated_at
 BEFORE UPDATE ON policy_types FOR EACH ROW WHEN (OLD.* IS DISTINCT FROM NEW.*)
 EXECUTE FUNCTION set_updated_at ();

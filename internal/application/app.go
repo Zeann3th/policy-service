@@ -15,7 +15,6 @@ import (
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 	rediscache "github.com/zeann3th/policy-service/internal/infrastructure/cache"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 	"github.com/zeann3th/policy-service/internal/infrastructure/postgres"
@@ -47,19 +46,18 @@ func Run() error {
 	applicationCache := rediscache.New(redisClient)
 	responseCache := cachecore.NewVersioned(logger, applicationCache, cfg.ServiceName)
 	store := postgres.NewStore(db)
-	unitService := unit.NewService(store, responseCache)
 	groupService := policy.NewGroupService(store, responseCache)
 	typeService := policy.NewTypeService(store, responseCache)
-	policyService := policy.NewService(store, store, responseCache)
+	policyService := policy.NewService(store, responseCache)
 	reservationService := reservation.NewService(postgres.NewReservationStore(db), policyService)
 	cacheService := cachecore.NewService(logger, applicationCache, cfg.ServiceName)
 
-	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
+	httpServer, err := httpserver.New(cfg, logger, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create HTTP server: %w", err)
 	}
 
-	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
+	grpcServer, err := grpcserver.New(cfg, logger, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}

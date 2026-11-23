@@ -12,7 +12,6 @@ import (
 
 const (
 	NamespaceAll            = "all"
-	NamespaceUnits          = "units"
 	NamespacePolicyTypes    = "policy:types"
 	NamespacePolicyGroups   = "policy:groups"
 	NamespacePolicies       = "policies"
@@ -21,7 +20,6 @@ const (
 )
 
 var namespaceOrder = []string{
-	NamespaceUnits,
 	NamespacePolicyTypes,
 	NamespacePolicyGroups,
 	NamespacePolicies,
@@ -30,7 +28,6 @@ var namespaceOrder = []string{
 }
 
 var namespaces = map[string]struct{}{
-	NamespaceUnits:          {},
 	NamespacePolicyTypes:    {},
 	NamespacePolicyGroups:   {},
 	NamespacePolicies:       {},
@@ -40,7 +37,7 @@ var namespaces = map[string]struct{}{
 
 type ReloadRequest struct {
 	Key        string   `example:"policy:config:0:CU0001:VND:1" json:"key"`
-	Namespaces []string `enums:"all,units,policy:types,policy:groups,policies,policy:custom,policy:config" json:"namespaces"`
+	Namespaces []string `enums:"all,policy:types,policy:groups,policies,policy:custom,policy:config" json:"namespaces"`
 	UpdatedBy  string   `binding:"required" example:"admin" json:"updatedBy"`
 }
 

@@ -53,14 +53,15 @@ type AppliedPolicy struct {
 	PolicyID        int64             `json:"policyId"`
 	PolicyType      string            `json:"policyType"`
 	Kind            policy.Kind       `enums:"LIMIT,WAIVER,FEE,TAX,DISCOUNT" json:"kind"`
-	Unit            string            `json:"unit"`
+	Unit            policy.Unit       `enums:"AMOUNT,COUNT,BALANCE" json:"unit,omitempty"`
+	Base            policy.Base       `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
 	Source          policy.Source     `enums:"SYSTEM,USER" json:"source"`
 	TransactionType string            `json:"transactionType"`
 	Channel         string            `json:"channel"`
 	Direction       policy.Direction  `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      policy.WindowType `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	WindowStart     string            `example:"2026-11-23" json:"windowStart,omitempty"`
-	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
+	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal   `json:"value" swaggertype:"string"`
 	// Usage is the window total including this request (not stored when rejected).
 	Usage    *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`

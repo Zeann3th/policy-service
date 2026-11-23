@@ -7,7 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
-	"github.com/zeann3th/policy-service/internal/core/unit"
 )
 
 type commonHandler struct {
@@ -15,13 +14,6 @@ type commonHandler struct {
 
 type healthResponse struct {
 	Status string `json:"status" example:"ok"`
-}
-
-type unitPageResponse struct {
-	Items []unit.Response `json:"items"`
-	Page  int32           `json:"page" example:"1"`
-	Limit int32           `json:"limit" example:"20"`
-	Total int64           `json:"total" example:"1"`
 }
 
 type policyTypePageResponse struct {

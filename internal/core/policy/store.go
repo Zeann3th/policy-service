@@ -1,10 +1,17 @@
 package policy
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Store interface {
 	GetGroupID(ctx context.Context, walletType, currency, tier string) (int64, error)
+	// GetPoliciesByGroupID returns the group's policies effective now.
 	GetPoliciesByGroupID(ctx context.Context, groupID int64) ([]Policy, error)
+	// GetNextPolicyStart returns when the group's next policy becomes
+	// effective, or nil when none is scheduled.
+	GetNextPolicyStart(ctx context.Context, groupID int64) (*time.Time, error)
 	GetActiveCustomPolicies(ctx context.Context, walletID string) ([]CustomPolicy, error)
 
 	CreateType(context.Context, CreatePolicyTypeRequest) (PolicyType, error)

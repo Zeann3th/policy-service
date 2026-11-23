@@ -82,13 +82,19 @@ func (s *service) Reserve(ctx context.Context, request ReserveRequest) (ReserveR
 
 // Release reverses a RESERVED reservation, found by its original request id.
 //
-//  1. Find the reservation (outside any transaction); only RESERVED can be
-//     released.
+//  1. Find the reservation (outside any transaction). An already RELEASED
+//     one returns the original release response (idempotent); anything else
+//     but RESERVED is a conflict.
 //  2. In one transaction holding the same wallet locks as Reserve: move it
 //     to RELEASED (guarding against a concurrent release), read its RESERVE
 //     ledger entries and apply each one negated as a RELEASE entry, to the
 //     same usage window it was reserved in.
-//  3. On failure the transaction rolls back and it stays RESERVED.
+//  3. A concurrent release that won the race makes this one return the same
+//     response. On any other failure the transaction rolls back and it stays
+//     RESERVED.
+//
+// The response time is the release time stored on the reservation
+// (updated_at; RELEASED is final), so every call returns identical data.
 func (s *service) Release(ctx context.Context, requestID string) (ReleaseResponse, error) {
 	if strings.TrimSpace(requestID) == "" {
 		return ReleaseResponse{}, core.ErrBadRequest.WithMessage("requestId is required")
@@ -97,14 +103,19 @@ func (s *service) Release(ctx context.Context, requestID string) (ReleaseRespons
 	if err != nil {
 		return ReleaseResponse{}, err
 	}
+	if value.Status == StatusReleased {
+		return releaseResponse(value), nil
+	}
 	if value.Status != StatusReserved {
 		return ReleaseResponse{}, notReserved(value.Status)
 	}
 
 	err = s.store.Transact(ctx, []string{value.Sender.WalletID, value.Receiver.WalletID}, func(tx Tx) error {
-		if err := tx.Transition(ctx, value.ID, value.CreatedAt, StatusReserved, StatusReleased); err != nil {
+		releasedAt, err := tx.Transition(ctx, value.ID, value.CreatedAt, StatusReserved, StatusReleased)
+		if err != nil {
 			return err
 		}
+		value.Status, value.UpdatedAt = StatusReleased, &releasedAt
 		entries, err := tx.Entries(ctx, value.ID, value.CreatedAt, EntryReserve)
 		if err != nil {
 			return err
@@ -117,10 +128,24 @@ func (s *service) Release(ctx context.Context, requestID string) (ReleaseRespons
 		}
 		return nil
 	})
+	if errors.Is(err, core.ErrConflict) {
+		// another release of the same request won the race
+		if current, findErr := s.store.Find(ctx, requestID); findErr == nil && current.Status == StatusReleased {
+			return releaseResponse(current), nil
+		}
+	}
 	if err != nil {
 		return ReleaseResponse{}, err
 	}
-	return ReleaseResponse{ReservationID: value.ID, RequestID: value.RequestID, Status: StatusReleased, ResponseTime: time.Now()}, nil
+	return releaseResponse(value), nil
+}
+
+func releaseResponse(value Reservation) ReleaseResponse {
+	response := ReleaseResponse{ReservationID: value.ID, RequestID: value.RequestID, Status: value.Status}
+	if value.UpdatedAt != nil {
+		response.ResponseTime = *value.UpdatedAt
+	}
+	return response
 }
 
 func notReserved(status Status) error {

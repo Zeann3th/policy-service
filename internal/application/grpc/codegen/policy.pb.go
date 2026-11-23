@@ -1182,6 +1182,74 @@ func (x *PolicyGroup) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type PolicyGroupPage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*PolicyGroup         `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Total         int64                  `protobuf:"varint,4,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PolicyGroupPage) Reset() {
+	*x = PolicyGroupPage{}
+	mi := &file_proto_policy_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PolicyGroupPage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyGroupPage) ProtoMessage() {}
+
+func (x *PolicyGroupPage) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyGroupPage.ProtoReflect.Descriptor instead.
+func (*PolicyGroupPage) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *PolicyGroupPage) GetItems() []*PolicyGroup {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *PolicyGroupPage) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *PolicyGroupPage) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *PolicyGroupPage) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 type CreatePolicyGroupRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WalletType    string                 `protobuf:"bytes,1,opt,name=wallet_type,json=walletType,proto3" json:"wallet_type,omitempty"`
@@ -1194,7 +1262,7 @@ type CreatePolicyGroupRequest struct {
 
 func (x *CreatePolicyGroupRequest) Reset() {
 	*x = CreatePolicyGroupRequest{}
-	mi := &file_proto_policy_proto_msgTypes[18]
+	mi := &file_proto_policy_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1206,7 +1274,7 @@ func (x *CreatePolicyGroupRequest) String() string {
 func (*CreatePolicyGroupRequest) ProtoMessage() {}
 
 func (x *CreatePolicyGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[18]
+	mi := &file_proto_policy_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1219,7 +1287,7 @@ func (x *CreatePolicyGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePolicyGroupRequest.ProtoReflect.Descriptor instead.
 func (*CreatePolicyGroupRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{18}
+	return file_proto_policy_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreatePolicyGroupRequest) GetWalletType() string {
@@ -1273,7 +1341,7 @@ type Policy struct {
 
 func (x *Policy) Reset() {
 	*x = Policy{}
-	mi := &file_proto_policy_proto_msgTypes[19]
+	mi := &file_proto_policy_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1285,7 +1353,7 @@ func (x *Policy) String() string {
 func (*Policy) ProtoMessage() {}
 
 func (x *Policy) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[19]
+	mi := &file_proto_policy_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1298,7 +1366,7 @@ func (x *Policy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Policy.ProtoReflect.Descriptor instead.
 func (*Policy) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{19}
+	return file_proto_policy_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Policy) GetId() uint64 {
@@ -1418,7 +1486,7 @@ type PolicyPage struct {
 
 func (x *PolicyPage) Reset() {
 	*x = PolicyPage{}
-	mi := &file_proto_policy_proto_msgTypes[20]
+	mi := &file_proto_policy_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1430,7 +1498,7 @@ func (x *PolicyPage) String() string {
 func (*PolicyPage) ProtoMessage() {}
 
 func (x *PolicyPage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[20]
+	mi := &file_proto_policy_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1443,7 +1511,7 @@ func (x *PolicyPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyPage.ProtoReflect.Descriptor instead.
 func (*PolicyPage) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{20}
+	return file_proto_policy_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PolicyPage) GetItems() []*Policy {
@@ -1495,7 +1563,7 @@ type CreatePolicyRequest struct {
 
 func (x *CreatePolicyRequest) Reset() {
 	*x = CreatePolicyRequest{}
-	mi := &file_proto_policy_proto_msgTypes[21]
+	mi := &file_proto_policy_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1507,7 +1575,7 @@ func (x *CreatePolicyRequest) String() string {
 func (*CreatePolicyRequest) ProtoMessage() {}
 
 func (x *CreatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[21]
+	mi := &file_proto_policy_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1520,7 +1588,7 @@ func (x *CreatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*CreatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{21}
+	return file_proto_policy_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *CreatePolicyRequest) GetGroupId() uint64 {
@@ -1630,7 +1698,7 @@ type UpdatePolicyRequest struct {
 
 func (x *UpdatePolicyRequest) Reset() {
 	*x = UpdatePolicyRequest{}
-	mi := &file_proto_policy_proto_msgTypes[22]
+	mi := &file_proto_policy_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1642,7 +1710,7 @@ func (x *UpdatePolicyRequest) String() string {
 func (*UpdatePolicyRequest) ProtoMessage() {}
 
 func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[22]
+	mi := &file_proto_policy_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1655,7 +1723,7 @@ func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{22}
+	return file_proto_policy_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *UpdatePolicyRequest) GetGroupId() uint64 {
@@ -1739,7 +1807,7 @@ type CustomPolicy struct {
 
 func (x *CustomPolicy) Reset() {
 	*x = CustomPolicy{}
-	mi := &file_proto_policy_proto_msgTypes[23]
+	mi := &file_proto_policy_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1751,7 +1819,7 @@ func (x *CustomPolicy) String() string {
 func (*CustomPolicy) ProtoMessage() {}
 
 func (x *CustomPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[23]
+	mi := &file_proto_policy_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1764,7 +1832,7 @@ func (x *CustomPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomPolicy.ProtoReflect.Descriptor instead.
 func (*CustomPolicy) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{23}
+	return file_proto_policy_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CustomPolicy) GetId() uint64 {
@@ -1898,7 +1966,7 @@ type CustomPolicyPage struct {
 
 func (x *CustomPolicyPage) Reset() {
 	*x = CustomPolicyPage{}
-	mi := &file_proto_policy_proto_msgTypes[24]
+	mi := &file_proto_policy_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +1978,7 @@ func (x *CustomPolicyPage) String() string {
 func (*CustomPolicyPage) ProtoMessage() {}
 
 func (x *CustomPolicyPage) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[24]
+	mi := &file_proto_policy_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +1991,7 @@ func (x *CustomPolicyPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomPolicyPage.ProtoReflect.Descriptor instead.
 func (*CustomPolicyPage) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{24}
+	return file_proto_policy_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CustomPolicyPage) GetItems() []*CustomPolicy {
@@ -1976,7 +2044,7 @@ type CreateCustomPolicyRequest struct {
 
 func (x *CreateCustomPolicyRequest) Reset() {
 	*x = CreateCustomPolicyRequest{}
-	mi := &file_proto_policy_proto_msgTypes[25]
+	mi := &file_proto_policy_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1988,7 +2056,7 @@ func (x *CreateCustomPolicyRequest) String() string {
 func (*CreateCustomPolicyRequest) ProtoMessage() {}
 
 func (x *CreateCustomPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[25]
+	mi := &file_proto_policy_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2001,7 +2069,7 @@ func (x *CreateCustomPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCustomPolicyRequest.ProtoReflect.Descriptor instead.
 func (*CreateCustomPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{25}
+	return file_proto_policy_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CreateCustomPolicyRequest) GetWalletId() string {
@@ -2119,7 +2187,7 @@ type UpdateCustomPolicyRequest struct {
 
 func (x *UpdateCustomPolicyRequest) Reset() {
 	*x = UpdateCustomPolicyRequest{}
-	mi := &file_proto_policy_proto_msgTypes[26]
+	mi := &file_proto_policy_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2131,7 +2199,7 @@ func (x *UpdateCustomPolicyRequest) String() string {
 func (*UpdateCustomPolicyRequest) ProtoMessage() {}
 
 func (x *UpdateCustomPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[26]
+	mi := &file_proto_policy_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2144,7 +2212,7 @@ func (x *UpdateCustomPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCustomPolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCustomPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{26}
+	return file_proto_policy_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *UpdateCustomPolicyRequest) GetWalletId() string {
@@ -2221,7 +2289,7 @@ type ReloadCacheRequest struct {
 
 func (x *ReloadCacheRequest) Reset() {
 	*x = ReloadCacheRequest{}
-	mi := &file_proto_policy_proto_msgTypes[27]
+	mi := &file_proto_policy_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2233,7 +2301,7 @@ func (x *ReloadCacheRequest) String() string {
 func (*ReloadCacheRequest) ProtoMessage() {}
 
 func (x *ReloadCacheRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[27]
+	mi := &file_proto_policy_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2246,7 +2314,7 @@ func (x *ReloadCacheRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadCacheRequest.ProtoReflect.Descriptor instead.
 func (*ReloadCacheRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{27}
+	return file_proto_policy_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ReloadCacheRequest) GetKey() string {
@@ -2280,7 +2348,7 @@ type ReloadCacheResponse struct {
 
 func (x *ReloadCacheResponse) Reset() {
 	*x = ReloadCacheResponse{}
-	mi := &file_proto_policy_proto_msgTypes[28]
+	mi := &file_proto_policy_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2292,7 +2360,7 @@ func (x *ReloadCacheResponse) String() string {
 func (*ReloadCacheResponse) ProtoMessage() {}
 
 func (x *ReloadCacheResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[28]
+	mi := &file_proto_policy_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2305,7 +2373,7 @@ func (x *ReloadCacheResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadCacheResponse.ProtoReflect.Descriptor instead.
 func (*ReloadCacheResponse) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{28}
+	return file_proto_policy_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ReloadCacheResponse) GetEvicted() bool {
@@ -2333,7 +2401,7 @@ type ReservationParty struct {
 
 func (x *ReservationParty) Reset() {
 	*x = ReservationParty{}
-	mi := &file_proto_policy_proto_msgTypes[29]
+	mi := &file_proto_policy_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2345,7 +2413,7 @@ func (x *ReservationParty) String() string {
 func (*ReservationParty) ProtoMessage() {}
 
 func (x *ReservationParty) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[29]
+	mi := &file_proto_policy_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2358,7 +2426,7 @@ func (x *ReservationParty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReservationParty.ProtoReflect.Descriptor instead.
 func (*ReservationParty) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{29}
+	return file_proto_policy_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ReservationParty) GetWalletId() string {
@@ -2397,7 +2465,7 @@ type ReserveRequest struct {
 
 func (x *ReserveRequest) Reset() {
 	*x = ReserveRequest{}
-	mi := &file_proto_policy_proto_msgTypes[30]
+	mi := &file_proto_policy_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2409,7 +2477,7 @@ func (x *ReserveRequest) String() string {
 func (*ReserveRequest) ProtoMessage() {}
 
 func (x *ReserveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[30]
+	mi := &file_proto_policy_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2422,7 +2490,7 @@ func (x *ReserveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveRequest.ProtoReflect.Descriptor instead.
 func (*ReserveRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{30}
+	return file_proto_policy_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ReserveRequest) GetRequestId() string {
@@ -2491,13 +2559,14 @@ type AppliedPolicy struct {
 	Usage           *string                `protobuf:"bytes,13,opt,name=usage,proto3,oneof" json:"usage,omitempty"`
 	Violated        bool                   `protobuf:"varint,14,opt,name=violated,proto3" json:"violated,omitempty"`
 	Base            string                 `protobuf:"bytes,15,opt,name=base,proto3" json:"base,omitempty"`
+	Charge          *string                `protobuf:"bytes,16,opt,name=charge,proto3,oneof" json:"charge,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *AppliedPolicy) Reset() {
 	*x = AppliedPolicy{}
-	mi := &file_proto_policy_proto_msgTypes[31]
+	mi := &file_proto_policy_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2509,7 +2578,7 @@ func (x *AppliedPolicy) String() string {
 func (*AppliedPolicy) ProtoMessage() {}
 
 func (x *AppliedPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[31]
+	mi := &file_proto_policy_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2522,7 +2591,7 @@ func (x *AppliedPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppliedPolicy.ProtoReflect.Descriptor instead.
 func (*AppliedPolicy) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{31}
+	return file_proto_policy_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *AppliedPolicy) GetPolicyId() uint64 {
@@ -2630,6 +2699,13 @@ func (x *AppliedPolicy) GetBase() string {
 	return ""
 }
 
+func (x *AppliedPolicy) GetCharge() string {
+	if x != nil && x.Charge != nil {
+		return *x.Charge
+	}
+	return ""
+}
+
 type PartyResult struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	WalletId        string                 `protobuf:"bytes,1,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
@@ -2644,7 +2720,7 @@ type PartyResult struct {
 
 func (x *PartyResult) Reset() {
 	*x = PartyResult{}
-	mi := &file_proto_policy_proto_msgTypes[32]
+	mi := &file_proto_policy_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2656,7 +2732,7 @@ func (x *PartyResult) String() string {
 func (*PartyResult) ProtoMessage() {}
 
 func (x *PartyResult) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[32]
+	mi := &file_proto_policy_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2669,7 +2745,7 @@ func (x *PartyResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartyResult.ProtoReflect.Descriptor instead.
 func (*PartyResult) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{32}
+	return file_proto_policy_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *PartyResult) GetWalletId() string {
@@ -2728,7 +2804,7 @@ type ReserveResponse struct {
 
 func (x *ReserveResponse) Reset() {
 	*x = ReserveResponse{}
-	mi := &file_proto_policy_proto_msgTypes[33]
+	mi := &file_proto_policy_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2740,7 +2816,7 @@ func (x *ReserveResponse) String() string {
 func (*ReserveResponse) ProtoMessage() {}
 
 func (x *ReserveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[33]
+	mi := &file_proto_policy_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2753,7 +2829,7 @@ func (x *ReserveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReserveResponse.ProtoReflect.Descriptor instead.
 func (*ReserveResponse) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{33}
+	return file_proto_policy_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ReserveResponse) GetReservationId() string {
@@ -2798,6 +2874,303 @@ func (x *ReserveResponse) GetResponseTime() *timestamppb.Timestamp {
 	return nil
 }
 
+type DryRunRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TransactionType string                 `protobuf:"bytes,1,opt,name=transaction_type,json=transactionType,proto3" json:"transaction_type,omitempty"`
+	Channel         string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
+	Currency        string                 `protobuf:"bytes,3,opt,name=currency,proto3" json:"currency,omitempty"`
+	Amount          string                 `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Sender          *ReservationParty      `protobuf:"bytes,5,opt,name=sender,proto3" json:"sender,omitempty"`
+	Receiver        *ReservationParty      `protobuf:"bytes,6,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	// usage before this transaction by policy id, replacing the live value
+	SenderUsage   map[uint64]string `protobuf:"bytes,7,rep,name=sender_usage,json=senderUsage,proto3" json:"sender_usage,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ReceiverUsage map[uint64]string `protobuf:"bytes,8,rep,name=receiver_usage,json=receiverUsage,proto3" json:"receiver_usage,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DryRunRequest) Reset() {
+	*x = DryRunRequest{}
+	mi := &file_proto_policy_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DryRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DryRunRequest) ProtoMessage() {}
+
+func (x *DryRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DryRunRequest.ProtoReflect.Descriptor instead.
+func (*DryRunRequest) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *DryRunRequest) GetTransactionType() string {
+	if x != nil {
+		return x.TransactionType
+	}
+	return ""
+}
+
+func (x *DryRunRequest) GetChannel() string {
+	if x != nil {
+		return x.Channel
+	}
+	return ""
+}
+
+func (x *DryRunRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *DryRunRequest) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *DryRunRequest) GetSender() *ReservationParty {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
+}
+
+func (x *DryRunRequest) GetReceiver() *ReservationParty {
+	if x != nil {
+		return x.Receiver
+	}
+	return nil
+}
+
+func (x *DryRunRequest) GetSenderUsage() map[uint64]string {
+	if x != nil {
+		return x.SenderUsage
+	}
+	return nil
+}
+
+func (x *DryRunRequest) GetReceiverUsage() map[uint64]string {
+	if x != nil {
+		return x.ReceiverUsage
+	}
+	return nil
+}
+
+type DryRunUsage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PolicyId      uint64                 `protobuf:"varint,1,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
+	WindowStart   string                 `protobuf:"bytes,2,opt,name=window_start,json=windowStart,proto3" json:"window_start,omitempty"`
+	Live          string                 `protobuf:"bytes,3,opt,name=live,proto3" json:"live,omitempty"`
+	Used          string                 `protobuf:"bytes,4,opt,name=used,proto3" json:"used,omitempty"`
+	Overridden    bool                   `protobuf:"varint,5,opt,name=overridden,proto3" json:"overridden,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DryRunUsage) Reset() {
+	*x = DryRunUsage{}
+	mi := &file_proto_policy_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DryRunUsage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DryRunUsage) ProtoMessage() {}
+
+func (x *DryRunUsage) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DryRunUsage.ProtoReflect.Descriptor instead.
+func (*DryRunUsage) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *DryRunUsage) GetPolicyId() uint64 {
+	if x != nil {
+		return x.PolicyId
+	}
+	return 0
+}
+
+func (x *DryRunUsage) GetWindowStart() string {
+	if x != nil {
+		return x.WindowStart
+	}
+	return ""
+}
+
+func (x *DryRunUsage) GetLive() string {
+	if x != nil {
+		return x.Live
+	}
+	return ""
+}
+
+func (x *DryRunUsage) GetUsed() string {
+	if x != nil {
+		return x.Used
+	}
+	return ""
+}
+
+func (x *DryRunUsage) GetOverridden() bool {
+	if x != nil {
+		return x.Overridden
+	}
+	return false
+}
+
+type DryRunSide struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Result        *PartyResult           `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"`
+	Usage         []*DryRunUsage         `protobuf:"bytes,2,rep,name=usage,proto3" json:"usage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DryRunSide) Reset() {
+	*x = DryRunSide{}
+	mi := &file_proto_policy_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DryRunSide) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DryRunSide) ProtoMessage() {}
+
+func (x *DryRunSide) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DryRunSide.ProtoReflect.Descriptor instead.
+func (*DryRunSide) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *DryRunSide) GetResult() *PartyResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *DryRunSide) GetUsage() []*DryRunUsage {
+	if x != nil {
+		return x.Usage
+	}
+	return nil
+}
+
+type DryRunResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Sender        *DryRunSide            `protobuf:"bytes,2,opt,name=sender,proto3" json:"sender,omitempty"`
+	Receiver      *DryRunSide            `protobuf:"bytes,3,opt,name=receiver,proto3" json:"receiver,omitempty"`
+	EvaluatedAt   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=evaluated_at,json=evaluatedAt,proto3" json:"evaluated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DryRunResponse) Reset() {
+	*x = DryRunResponse{}
+	mi := &file_proto_policy_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DryRunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DryRunResponse) ProtoMessage() {}
+
+func (x *DryRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_policy_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DryRunResponse.ProtoReflect.Descriptor instead.
+func (*DryRunResponse) Descriptor() ([]byte, []int) {
+	return file_proto_policy_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *DryRunResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *DryRunResponse) GetSender() *DryRunSide {
+	if x != nil {
+		return x.Sender
+	}
+	return nil
+}
+
+func (x *DryRunResponse) GetReceiver() *DryRunSide {
+	if x != nil {
+		return x.Receiver
+	}
+	return nil
+}
+
+func (x *DryRunResponse) GetEvaluatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EvaluatedAt
+	}
+	return nil
+}
+
 type ReleaseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
@@ -2807,7 +3180,7 @@ type ReleaseRequest struct {
 
 func (x *ReleaseRequest) Reset() {
 	*x = ReleaseRequest{}
-	mi := &file_proto_policy_proto_msgTypes[34]
+	mi := &file_proto_policy_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2819,7 +3192,7 @@ func (x *ReleaseRequest) String() string {
 func (*ReleaseRequest) ProtoMessage() {}
 
 func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[34]
+	mi := &file_proto_policy_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2832,7 +3205,7 @@ func (x *ReleaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseRequest) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{34}
+	return file_proto_policy_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ReleaseRequest) GetRequestId() string {
@@ -2854,7 +3227,7 @@ type ReleaseResponse struct {
 
 func (x *ReleaseResponse) Reset() {
 	*x = ReleaseResponse{}
-	mi := &file_proto_policy_proto_msgTypes[35]
+	mi := &file_proto_policy_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2866,7 +3239,7 @@ func (x *ReleaseResponse) String() string {
 func (*ReleaseResponse) ProtoMessage() {}
 
 func (x *ReleaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_policy_proto_msgTypes[35]
+	mi := &file_proto_policy_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2879,7 +3252,7 @@ func (x *ReleaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseResponse) Descriptor() ([]byte, []int) {
-	return file_proto_policy_proto_rawDescGZIP(), []int{35}
+	return file_proto_policy_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ReleaseResponse) GetReservationId() string {
@@ -3019,7 +3392,12 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x8a\x01\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x84\x01\n" +
+	"\x0fPolicyGroupPage\x121\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.policy.ui.grpc.PolicyGroupR\x05items\x12\x12\n" +
+	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\x8a\x01\n" +
 	"\x18CreatePolicyGroupRequest\x12\x1f\n" +
 	"\vwallet_type\x18\x01 \x01(\tR\n" +
 	"walletType\x12\x1a\n" +
@@ -3163,7 +3541,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amount\x128\n" +
 	"\x06sender\x18\x06 \x01(\v2 .policy.ui.grpc.ReservationPartyR\x06sender\x12<\n" +
-	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xbb\x03\n" +
+	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xe3\x03\n" +
 	"\rAppliedPolicy\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\x04R\bpolicyId\x12\x1f\n" +
 	"\vpolicy_type\x18\x02 \x01(\tR\n" +
@@ -3182,8 +3560,10 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x05value\x18\f \x01(\tR\x05value\x12\x19\n" +
 	"\x05usage\x18\r \x01(\tH\x00R\x05usage\x88\x01\x01\x12\x1a\n" +
 	"\bviolated\x18\x0e \x01(\bR\bviolated\x12\x12\n" +
-	"\x04base\x18\x0f \x01(\tR\x04baseB\b\n" +
-	"\x06_usage\"\xd5\x01\n" +
+	"\x04base\x18\x0f \x01(\tR\x04base\x12\x1b\n" +
+	"\x06charge\x18\x10 \x01(\tH\x01R\x06charge\x88\x01\x01B\b\n" +
+	"\x06_usageB\t\n" +
+	"\a_charge\"\xd5\x01\n" +
 	"\vPartyResult\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x1f\n" +
 	"\vis_violated\x18\x02 \x01(\bR\n" +
@@ -3199,7 +3579,39 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x123\n" +
 	"\x06sender\x18\x04 \x01(\v2\x1b.policy.ui.grpc.PartyResultR\x06sender\x127\n" +
 	"\breceiver\x18\x05 \x01(\v2\x1b.policy.ui.grpc.PartyResultR\breceiver\x12?\n" +
-	"\rresponse_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\fresponseTime\"/\n" +
+	"\rresponse_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\fresponseTime\"\xae\x04\n" +
+	"\rDryRunRequest\x12)\n" +
+	"\x10transaction_type\x18\x01 \x01(\tR\x0ftransactionType\x12\x18\n" +
+	"\achannel\x18\x02 \x01(\tR\achannel\x12\x1a\n" +
+	"\bcurrency\x18\x03 \x01(\tR\bcurrency\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\tR\x06amount\x128\n" +
+	"\x06sender\x18\x05 \x01(\v2 .policy.ui.grpc.ReservationPartyR\x06sender\x12<\n" +
+	"\breceiver\x18\x06 \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\x12Q\n" +
+	"\fsender_usage\x18\a \x03(\v2..policy.ui.grpc.DryRunRequest.SenderUsageEntryR\vsenderUsage\x12W\n" +
+	"\x0ereceiver_usage\x18\b \x03(\v20.policy.ui.grpc.DryRunRequest.ReceiverUsageEntryR\rreceiverUsage\x1a>\n" +
+	"\x10SenderUsageEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x04R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a@\n" +
+	"\x12ReceiverUsageEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x04R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x95\x01\n" +
+	"\vDryRunUsage\x12\x1b\n" +
+	"\tpolicy_id\x18\x01 \x01(\x04R\bpolicyId\x12!\n" +
+	"\fwindow_start\x18\x02 \x01(\tR\vwindowStart\x12\x12\n" +
+	"\x04live\x18\x03 \x01(\tR\x04live\x12\x12\n" +
+	"\x04used\x18\x04 \x01(\tR\x04used\x12\x1e\n" +
+	"\n" +
+	"overridden\x18\x05 \x01(\bR\n" +
+	"overridden\"t\n" +
+	"\n" +
+	"DryRunSide\x123\n" +
+	"\x06result\x18\x01 \x01(\v2\x1b.policy.ui.grpc.PartyResultR\x06result\x121\n" +
+	"\x05usage\x18\x02 \x03(\v2\x1b.policy.ui.grpc.DryRunUsageR\x05usage\"\xd3\x01\n" +
+	"\x0eDryRunResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x122\n" +
+	"\x06sender\x18\x02 \x01(\v2\x1a.policy.ui.grpc.DryRunSideR\x06sender\x126\n" +
+	"\breceiver\x18\x03 \x01(\v2\x1a.policy.ui.grpc.DryRunSideR\breceiver\x12=\n" +
+	"\fevaluated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vevaluatedAt\"/\n" +
 	"\x0eReleaseRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\"\xb0\x01\n" +
@@ -3214,10 +3626,11 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\rGetPolicyType\x12\x19.policy.ui.grpc.IdRequest\x1a\x1a.policy.ui.grpc.PolicyType\x12N\n" +
 	"\x0fListPolicyTypes\x12\x1b.policy.ui.grpc.PageRequest\x1a\x1e.policy.ui.grpc.PolicyTypePage\x12W\n" +
 	"\x10UpdatePolicyType\x12'.policy.ui.grpc.UpdatePolicyTypeRequest\x1a\x1a.policy.ui.grpc.PolicyType\x12U\n" +
-	"\x10DeletePolicyType\x12!.policy.ui.grpc.DeleteByIdRequest\x1a\x1e.policy.ui.grpc.DeleteResponse2\x92\x02\n" +
+	"\x10DeletePolicyType\x12!.policy.ui.grpc.DeleteByIdRequest\x1a\x1e.policy.ui.grpc.DeleteResponse2\xe4\x02\n" +
 	"\x12PolicyGroupService\x12Z\n" +
 	"\x11CreatePolicyGroup\x12(.policy.ui.grpc.CreatePolicyGroupRequest\x1a\x1b.policy.ui.grpc.PolicyGroup\x12H\n" +
-	"\x0eGetPolicyGroup\x12\x19.policy.ui.grpc.IdRequest\x1a\x1b.policy.ui.grpc.PolicyGroup\x12V\n" +
+	"\x0eGetPolicyGroup\x12\x19.policy.ui.grpc.IdRequest\x1a\x1b.policy.ui.grpc.PolicyGroup\x12P\n" +
+	"\x10ListPolicyGroups\x12\x1b.policy.ui.grpc.PageRequest\x1a\x1f.policy.ui.grpc.PolicyGroupPage\x12V\n" +
 	"\x11DeletePolicyGroup\x12!.policy.ui.grpc.DeleteByIdRequest\x1a\x1e.policy.ui.grpc.DeleteResponse2\xc3\a\n" +
 	"\rPolicyService\x12b\n" +
 	"\x0fGetPolicyConfig\x12&.policy.ui.grpc.GetPolicyConfigRequest\x1a'.policy.ui.grpc.GetPolicyConfigResponse\x12K\n" +
@@ -3235,7 +3648,9 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\vReloadCache\x12\".policy.ui.grpc.ReloadCacheRequest\x1a#.policy.ui.grpc.ReloadCacheResponse2\xac\x01\n" +
 	"\x12ReservationService\x12J\n" +
 	"\aReserve\x12\x1e.policy.ui.grpc.ReserveRequest\x1a\x1f.policy.ui.grpc.ReserveResponse\x12J\n" +
-	"\aRelease\x12\x1e.policy.ui.grpc.ReleaseRequest\x1a\x1f.policy.ui.grpc.ReleaseResponseBKZIgithub.com/zeann3th/policy-service/internal/application/grpc/codegen;grpcb\x06proto3"
+	"\aRelease\x12\x1e.policy.ui.grpc.ReleaseRequest\x1a\x1f.policy.ui.grpc.ReleaseResponse2X\n" +
+	"\rDryRunService\x12G\n" +
+	"\x06DryRun\x12\x1d.policy.ui.grpc.DryRunRequest\x1a\x1e.policy.ui.grpc.DryRunResponseBKZIgithub.com/zeann3th/policy-service/internal/application/grpc/codegen;grpcb\x06proto3"
 
 var (
 	file_proto_policy_proto_rawDescOnce sync.Once
@@ -3249,7 +3664,7 @@ func file_proto_policy_proto_rawDescGZIP() []byte {
 	return file_proto_policy_proto_rawDescData
 }
 
-var file_proto_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_proto_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_proto_policy_proto_goTypes = []any{
 	(*PageRequest)(nil),               // 0: policy.ui.grpc.PageRequest
 	(*IdRequest)(nil),                 // 1: policy.ui.grpc.IdRequest
@@ -3269,107 +3684,128 @@ var file_proto_policy_proto_goTypes = []any{
 	(*CreatePolicyTypeRequest)(nil),   // 15: policy.ui.grpc.CreatePolicyTypeRequest
 	(*UpdatePolicyTypeRequest)(nil),   // 16: policy.ui.grpc.UpdatePolicyTypeRequest
 	(*PolicyGroup)(nil),               // 17: policy.ui.grpc.PolicyGroup
-	(*CreatePolicyGroupRequest)(nil),  // 18: policy.ui.grpc.CreatePolicyGroupRequest
-	(*Policy)(nil),                    // 19: policy.ui.grpc.Policy
-	(*PolicyPage)(nil),                // 20: policy.ui.grpc.PolicyPage
-	(*CreatePolicyRequest)(nil),       // 21: policy.ui.grpc.CreatePolicyRequest
-	(*UpdatePolicyRequest)(nil),       // 22: policy.ui.grpc.UpdatePolicyRequest
-	(*CustomPolicy)(nil),              // 23: policy.ui.grpc.CustomPolicy
-	(*CustomPolicyPage)(nil),          // 24: policy.ui.grpc.CustomPolicyPage
-	(*CreateCustomPolicyRequest)(nil), // 25: policy.ui.grpc.CreateCustomPolicyRequest
-	(*UpdateCustomPolicyRequest)(nil), // 26: policy.ui.grpc.UpdateCustomPolicyRequest
-	(*ReloadCacheRequest)(nil),        // 27: policy.ui.grpc.ReloadCacheRequest
-	(*ReloadCacheResponse)(nil),       // 28: policy.ui.grpc.ReloadCacheResponse
-	(*ReservationParty)(nil),          // 29: policy.ui.grpc.ReservationParty
-	(*ReserveRequest)(nil),            // 30: policy.ui.grpc.ReserveRequest
-	(*AppliedPolicy)(nil),             // 31: policy.ui.grpc.AppliedPolicy
-	(*PartyResult)(nil),               // 32: policy.ui.grpc.PartyResult
-	(*ReserveResponse)(nil),           // 33: policy.ui.grpc.ReserveResponse
-	(*ReleaseRequest)(nil),            // 34: policy.ui.grpc.ReleaseRequest
-	(*ReleaseResponse)(nil),           // 35: policy.ui.grpc.ReleaseResponse
-	(*timestamppb.Timestamp)(nil),     // 36: google.protobuf.Timestamp
+	(*PolicyGroupPage)(nil),           // 18: policy.ui.grpc.PolicyGroupPage
+	(*CreatePolicyGroupRequest)(nil),  // 19: policy.ui.grpc.CreatePolicyGroupRequest
+	(*Policy)(nil),                    // 20: policy.ui.grpc.Policy
+	(*PolicyPage)(nil),                // 21: policy.ui.grpc.PolicyPage
+	(*CreatePolicyRequest)(nil),       // 22: policy.ui.grpc.CreatePolicyRequest
+	(*UpdatePolicyRequest)(nil),       // 23: policy.ui.grpc.UpdatePolicyRequest
+	(*CustomPolicy)(nil),              // 24: policy.ui.grpc.CustomPolicy
+	(*CustomPolicyPage)(nil),          // 25: policy.ui.grpc.CustomPolicyPage
+	(*CreateCustomPolicyRequest)(nil), // 26: policy.ui.grpc.CreateCustomPolicyRequest
+	(*UpdateCustomPolicyRequest)(nil), // 27: policy.ui.grpc.UpdateCustomPolicyRequest
+	(*ReloadCacheRequest)(nil),        // 28: policy.ui.grpc.ReloadCacheRequest
+	(*ReloadCacheResponse)(nil),       // 29: policy.ui.grpc.ReloadCacheResponse
+	(*ReservationParty)(nil),          // 30: policy.ui.grpc.ReservationParty
+	(*ReserveRequest)(nil),            // 31: policy.ui.grpc.ReserveRequest
+	(*AppliedPolicy)(nil),             // 32: policy.ui.grpc.AppliedPolicy
+	(*PartyResult)(nil),               // 33: policy.ui.grpc.PartyResult
+	(*ReserveResponse)(nil),           // 34: policy.ui.grpc.ReserveResponse
+	(*DryRunRequest)(nil),             // 35: policy.ui.grpc.DryRunRequest
+	(*DryRunUsage)(nil),               // 36: policy.ui.grpc.DryRunUsage
+	(*DryRunSide)(nil),                // 37: policy.ui.grpc.DryRunSide
+	(*DryRunResponse)(nil),            // 38: policy.ui.grpc.DryRunResponse
+	(*ReleaseRequest)(nil),            // 39: policy.ui.grpc.ReleaseRequest
+	(*ReleaseResponse)(nil),           // 40: policy.ui.grpc.ReleaseResponse
+	nil,                               // 41: policy.ui.grpc.DryRunRequest.SenderUsageEntry
+	nil,                               // 42: policy.ui.grpc.DryRunRequest.ReceiverUsageEntry
+	(*timestamppb.Timestamp)(nil),     // 43: google.protobuf.Timestamp
 }
 var file_proto_policy_proto_depIdxs = []int32{
 	11, // 0: policy.ui.grpc.GetPolicyConfigResponse.rules:type_name -> policy.ui.grpc.PolicyRule
-	36, // 1: policy.ui.grpc.PolicyType.created_at:type_name -> google.protobuf.Timestamp
-	36, // 2: policy.ui.grpc.PolicyType.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 1: policy.ui.grpc.PolicyType.created_at:type_name -> google.protobuf.Timestamp
+	43, // 2: policy.ui.grpc.PolicyType.updated_at:type_name -> google.protobuf.Timestamp
 	13, // 3: policy.ui.grpc.PolicyTypePage.items:type_name -> policy.ui.grpc.PolicyType
-	36, // 4: policy.ui.grpc.PolicyGroup.created_at:type_name -> google.protobuf.Timestamp
-	36, // 5: policy.ui.grpc.PolicyGroup.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 6: policy.ui.grpc.Policy.created_at:type_name -> google.protobuf.Timestamp
-	36, // 7: policy.ui.grpc.Policy.updated_at:type_name -> google.protobuf.Timestamp
-	36, // 8: policy.ui.grpc.Policy.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 9: policy.ui.grpc.Policy.effective_to:type_name -> google.protobuf.Timestamp
-	19, // 10: policy.ui.grpc.PolicyPage.items:type_name -> policy.ui.grpc.Policy
-	36, // 11: policy.ui.grpc.CreatePolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 12: policy.ui.grpc.CreatePolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
-	36, // 13: policy.ui.grpc.UpdatePolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 14: policy.ui.grpc.UpdatePolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
-	36, // 15: policy.ui.grpc.CustomPolicy.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 16: policy.ui.grpc.CustomPolicy.effective_to:type_name -> google.protobuf.Timestamp
-	36, // 17: policy.ui.grpc.CustomPolicy.created_at:type_name -> google.protobuf.Timestamp
-	36, // 18: policy.ui.grpc.CustomPolicy.updated_at:type_name -> google.protobuf.Timestamp
-	23, // 19: policy.ui.grpc.CustomPolicyPage.items:type_name -> policy.ui.grpc.CustomPolicy
-	36, // 20: policy.ui.grpc.CreateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 21: policy.ui.grpc.CreateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
-	36, // 22: policy.ui.grpc.UpdateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
-	36, // 23: policy.ui.grpc.UpdateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
-	29, // 24: policy.ui.grpc.ReserveRequest.sender:type_name -> policy.ui.grpc.ReservationParty
-	29, // 25: policy.ui.grpc.ReserveRequest.receiver:type_name -> policy.ui.grpc.ReservationParty
-	31, // 26: policy.ui.grpc.PartyResult.applied_policies:type_name -> policy.ui.grpc.AppliedPolicy
-	32, // 27: policy.ui.grpc.ReserveResponse.sender:type_name -> policy.ui.grpc.PartyResult
-	32, // 28: policy.ui.grpc.ReserveResponse.receiver:type_name -> policy.ui.grpc.PartyResult
-	36, // 29: policy.ui.grpc.ReserveResponse.response_time:type_name -> google.protobuf.Timestamp
-	36, // 30: policy.ui.grpc.ReleaseResponse.response_time:type_name -> google.protobuf.Timestamp
-	15, // 31: policy.ui.grpc.PolicyTypeService.CreatePolicyType:input_type -> policy.ui.grpc.CreatePolicyTypeRequest
-	1,  // 32: policy.ui.grpc.PolicyTypeService.GetPolicyType:input_type -> policy.ui.grpc.IdRequest
-	0,  // 33: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:input_type -> policy.ui.grpc.PageRequest
-	16, // 34: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:input_type -> policy.ui.grpc.UpdatePolicyTypeRequest
-	2,  // 35: policy.ui.grpc.PolicyTypeService.DeletePolicyType:input_type -> policy.ui.grpc.DeleteByIdRequest
-	18, // 36: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:input_type -> policy.ui.grpc.CreatePolicyGroupRequest
-	1,  // 37: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:input_type -> policy.ui.grpc.IdRequest
-	2,  // 38: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:input_type -> policy.ui.grpc.DeleteByIdRequest
-	10, // 39: policy.ui.grpc.PolicyService.GetPolicyConfig:input_type -> policy.ui.grpc.GetPolicyConfigRequest
-	21, // 40: policy.ui.grpc.PolicyService.CreatePolicy:input_type -> policy.ui.grpc.CreatePolicyRequest
-	3,  // 41: policy.ui.grpc.PolicyService.GetPolicy:input_type -> policy.ui.grpc.ScopedIdRequest
-	4,  // 42: policy.ui.grpc.PolicyService.ListPolicies:input_type -> policy.ui.grpc.ScopedPageRequest
-	22, // 43: policy.ui.grpc.PolicyService.UpdatePolicy:input_type -> policy.ui.grpc.UpdatePolicyRequest
-	5,  // 44: policy.ui.grpc.PolicyService.DeletePolicy:input_type -> policy.ui.grpc.DeleteScopedRequest
-	25, // 45: policy.ui.grpc.PolicyService.CreateCustomPolicy:input_type -> policy.ui.grpc.CreateCustomPolicyRequest
-	6,  // 46: policy.ui.grpc.PolicyService.GetCustomPolicy:input_type -> policy.ui.grpc.WalletIdRequest
-	7,  // 47: policy.ui.grpc.PolicyService.ListCustomPolicies:input_type -> policy.ui.grpc.WalletPageRequest
-	26, // 48: policy.ui.grpc.PolicyService.UpdateCustomPolicy:input_type -> policy.ui.grpc.UpdateCustomPolicyRequest
-	8,  // 49: policy.ui.grpc.PolicyService.DeleteCustomPolicy:input_type -> policy.ui.grpc.DeleteCustomPolicyRequest
-	27, // 50: policy.ui.grpc.CacheService.ReloadCache:input_type -> policy.ui.grpc.ReloadCacheRequest
-	30, // 51: policy.ui.grpc.ReservationService.Reserve:input_type -> policy.ui.grpc.ReserveRequest
-	34, // 52: policy.ui.grpc.ReservationService.Release:input_type -> policy.ui.grpc.ReleaseRequest
-	13, // 53: policy.ui.grpc.PolicyTypeService.CreatePolicyType:output_type -> policy.ui.grpc.PolicyType
-	13, // 54: policy.ui.grpc.PolicyTypeService.GetPolicyType:output_type -> policy.ui.grpc.PolicyType
-	14, // 55: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:output_type -> policy.ui.grpc.PolicyTypePage
-	13, // 56: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:output_type -> policy.ui.grpc.PolicyType
-	9,  // 57: policy.ui.grpc.PolicyTypeService.DeletePolicyType:output_type -> policy.ui.grpc.DeleteResponse
-	17, // 58: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
-	17, // 59: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
-	9,  // 60: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:output_type -> policy.ui.grpc.DeleteResponse
-	12, // 61: policy.ui.grpc.PolicyService.GetPolicyConfig:output_type -> policy.ui.grpc.GetPolicyConfigResponse
-	19, // 62: policy.ui.grpc.PolicyService.CreatePolicy:output_type -> policy.ui.grpc.Policy
-	19, // 63: policy.ui.grpc.PolicyService.GetPolicy:output_type -> policy.ui.grpc.Policy
-	20, // 64: policy.ui.grpc.PolicyService.ListPolicies:output_type -> policy.ui.grpc.PolicyPage
-	19, // 65: policy.ui.grpc.PolicyService.UpdatePolicy:output_type -> policy.ui.grpc.Policy
-	9,  // 66: policy.ui.grpc.PolicyService.DeletePolicy:output_type -> policy.ui.grpc.DeleteResponse
-	23, // 67: policy.ui.grpc.PolicyService.CreateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	23, // 68: policy.ui.grpc.PolicyService.GetCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	24, // 69: policy.ui.grpc.PolicyService.ListCustomPolicies:output_type -> policy.ui.grpc.CustomPolicyPage
-	23, // 70: policy.ui.grpc.PolicyService.UpdateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
-	9,  // 71: policy.ui.grpc.PolicyService.DeleteCustomPolicy:output_type -> policy.ui.grpc.DeleteResponse
-	28, // 72: policy.ui.grpc.CacheService.ReloadCache:output_type -> policy.ui.grpc.ReloadCacheResponse
-	33, // 73: policy.ui.grpc.ReservationService.Reserve:output_type -> policy.ui.grpc.ReserveResponse
-	35, // 74: policy.ui.grpc.ReservationService.Release:output_type -> policy.ui.grpc.ReleaseResponse
-	53, // [53:75] is the sub-list for method output_type
-	31, // [31:53] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	43, // 4: policy.ui.grpc.PolicyGroup.created_at:type_name -> google.protobuf.Timestamp
+	43, // 5: policy.ui.grpc.PolicyGroup.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 6: policy.ui.grpc.PolicyGroupPage.items:type_name -> policy.ui.grpc.PolicyGroup
+	43, // 7: policy.ui.grpc.Policy.created_at:type_name -> google.protobuf.Timestamp
+	43, // 8: policy.ui.grpc.Policy.updated_at:type_name -> google.protobuf.Timestamp
+	43, // 9: policy.ui.grpc.Policy.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 10: policy.ui.grpc.Policy.effective_to:type_name -> google.protobuf.Timestamp
+	20, // 11: policy.ui.grpc.PolicyPage.items:type_name -> policy.ui.grpc.Policy
+	43, // 12: policy.ui.grpc.CreatePolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 13: policy.ui.grpc.CreatePolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	43, // 14: policy.ui.grpc.UpdatePolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 15: policy.ui.grpc.UpdatePolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	43, // 16: policy.ui.grpc.CustomPolicy.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 17: policy.ui.grpc.CustomPolicy.effective_to:type_name -> google.protobuf.Timestamp
+	43, // 18: policy.ui.grpc.CustomPolicy.created_at:type_name -> google.protobuf.Timestamp
+	43, // 19: policy.ui.grpc.CustomPolicy.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 20: policy.ui.grpc.CustomPolicyPage.items:type_name -> policy.ui.grpc.CustomPolicy
+	43, // 21: policy.ui.grpc.CreateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 22: policy.ui.grpc.CreateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	43, // 23: policy.ui.grpc.UpdateCustomPolicyRequest.effective_from:type_name -> google.protobuf.Timestamp
+	43, // 24: policy.ui.grpc.UpdateCustomPolicyRequest.effective_to:type_name -> google.protobuf.Timestamp
+	30, // 25: policy.ui.grpc.ReserveRequest.sender:type_name -> policy.ui.grpc.ReservationParty
+	30, // 26: policy.ui.grpc.ReserveRequest.receiver:type_name -> policy.ui.grpc.ReservationParty
+	32, // 27: policy.ui.grpc.PartyResult.applied_policies:type_name -> policy.ui.grpc.AppliedPolicy
+	33, // 28: policy.ui.grpc.ReserveResponse.sender:type_name -> policy.ui.grpc.PartyResult
+	33, // 29: policy.ui.grpc.ReserveResponse.receiver:type_name -> policy.ui.grpc.PartyResult
+	43, // 30: policy.ui.grpc.ReserveResponse.response_time:type_name -> google.protobuf.Timestamp
+	30, // 31: policy.ui.grpc.DryRunRequest.sender:type_name -> policy.ui.grpc.ReservationParty
+	30, // 32: policy.ui.grpc.DryRunRequest.receiver:type_name -> policy.ui.grpc.ReservationParty
+	41, // 33: policy.ui.grpc.DryRunRequest.sender_usage:type_name -> policy.ui.grpc.DryRunRequest.SenderUsageEntry
+	42, // 34: policy.ui.grpc.DryRunRequest.receiver_usage:type_name -> policy.ui.grpc.DryRunRequest.ReceiverUsageEntry
+	33, // 35: policy.ui.grpc.DryRunSide.result:type_name -> policy.ui.grpc.PartyResult
+	36, // 36: policy.ui.grpc.DryRunSide.usage:type_name -> policy.ui.grpc.DryRunUsage
+	37, // 37: policy.ui.grpc.DryRunResponse.sender:type_name -> policy.ui.grpc.DryRunSide
+	37, // 38: policy.ui.grpc.DryRunResponse.receiver:type_name -> policy.ui.grpc.DryRunSide
+	43, // 39: policy.ui.grpc.DryRunResponse.evaluated_at:type_name -> google.protobuf.Timestamp
+	43, // 40: policy.ui.grpc.ReleaseResponse.response_time:type_name -> google.protobuf.Timestamp
+	15, // 41: policy.ui.grpc.PolicyTypeService.CreatePolicyType:input_type -> policy.ui.grpc.CreatePolicyTypeRequest
+	1,  // 42: policy.ui.grpc.PolicyTypeService.GetPolicyType:input_type -> policy.ui.grpc.IdRequest
+	0,  // 43: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:input_type -> policy.ui.grpc.PageRequest
+	16, // 44: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:input_type -> policy.ui.grpc.UpdatePolicyTypeRequest
+	2,  // 45: policy.ui.grpc.PolicyTypeService.DeletePolicyType:input_type -> policy.ui.grpc.DeleteByIdRequest
+	19, // 46: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:input_type -> policy.ui.grpc.CreatePolicyGroupRequest
+	1,  // 47: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:input_type -> policy.ui.grpc.IdRequest
+	0,  // 48: policy.ui.grpc.PolicyGroupService.ListPolicyGroups:input_type -> policy.ui.grpc.PageRequest
+	2,  // 49: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:input_type -> policy.ui.grpc.DeleteByIdRequest
+	10, // 50: policy.ui.grpc.PolicyService.GetPolicyConfig:input_type -> policy.ui.grpc.GetPolicyConfigRequest
+	22, // 51: policy.ui.grpc.PolicyService.CreatePolicy:input_type -> policy.ui.grpc.CreatePolicyRequest
+	3,  // 52: policy.ui.grpc.PolicyService.GetPolicy:input_type -> policy.ui.grpc.ScopedIdRequest
+	4,  // 53: policy.ui.grpc.PolicyService.ListPolicies:input_type -> policy.ui.grpc.ScopedPageRequest
+	23, // 54: policy.ui.grpc.PolicyService.UpdatePolicy:input_type -> policy.ui.grpc.UpdatePolicyRequest
+	5,  // 55: policy.ui.grpc.PolicyService.DeletePolicy:input_type -> policy.ui.grpc.DeleteScopedRequest
+	26, // 56: policy.ui.grpc.PolicyService.CreateCustomPolicy:input_type -> policy.ui.grpc.CreateCustomPolicyRequest
+	6,  // 57: policy.ui.grpc.PolicyService.GetCustomPolicy:input_type -> policy.ui.grpc.WalletIdRequest
+	7,  // 58: policy.ui.grpc.PolicyService.ListCustomPolicies:input_type -> policy.ui.grpc.WalletPageRequest
+	27, // 59: policy.ui.grpc.PolicyService.UpdateCustomPolicy:input_type -> policy.ui.grpc.UpdateCustomPolicyRequest
+	8,  // 60: policy.ui.grpc.PolicyService.DeleteCustomPolicy:input_type -> policy.ui.grpc.DeleteCustomPolicyRequest
+	28, // 61: policy.ui.grpc.CacheService.ReloadCache:input_type -> policy.ui.grpc.ReloadCacheRequest
+	31, // 62: policy.ui.grpc.ReservationService.Reserve:input_type -> policy.ui.grpc.ReserveRequest
+	39, // 63: policy.ui.grpc.ReservationService.Release:input_type -> policy.ui.grpc.ReleaseRequest
+	35, // 64: policy.ui.grpc.DryRunService.DryRun:input_type -> policy.ui.grpc.DryRunRequest
+	13, // 65: policy.ui.grpc.PolicyTypeService.CreatePolicyType:output_type -> policy.ui.grpc.PolicyType
+	13, // 66: policy.ui.grpc.PolicyTypeService.GetPolicyType:output_type -> policy.ui.grpc.PolicyType
+	14, // 67: policy.ui.grpc.PolicyTypeService.ListPolicyTypes:output_type -> policy.ui.grpc.PolicyTypePage
+	13, // 68: policy.ui.grpc.PolicyTypeService.UpdatePolicyType:output_type -> policy.ui.grpc.PolicyType
+	9,  // 69: policy.ui.grpc.PolicyTypeService.DeletePolicyType:output_type -> policy.ui.grpc.DeleteResponse
+	17, // 70: policy.ui.grpc.PolicyGroupService.CreatePolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
+	17, // 71: policy.ui.grpc.PolicyGroupService.GetPolicyGroup:output_type -> policy.ui.grpc.PolicyGroup
+	18, // 72: policy.ui.grpc.PolicyGroupService.ListPolicyGroups:output_type -> policy.ui.grpc.PolicyGroupPage
+	9,  // 73: policy.ui.grpc.PolicyGroupService.DeletePolicyGroup:output_type -> policy.ui.grpc.DeleteResponse
+	12, // 74: policy.ui.grpc.PolicyService.GetPolicyConfig:output_type -> policy.ui.grpc.GetPolicyConfigResponse
+	20, // 75: policy.ui.grpc.PolicyService.CreatePolicy:output_type -> policy.ui.grpc.Policy
+	20, // 76: policy.ui.grpc.PolicyService.GetPolicy:output_type -> policy.ui.grpc.Policy
+	21, // 77: policy.ui.grpc.PolicyService.ListPolicies:output_type -> policy.ui.grpc.PolicyPage
+	20, // 78: policy.ui.grpc.PolicyService.UpdatePolicy:output_type -> policy.ui.grpc.Policy
+	9,  // 79: policy.ui.grpc.PolicyService.DeletePolicy:output_type -> policy.ui.grpc.DeleteResponse
+	24, // 80: policy.ui.grpc.PolicyService.CreateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	24, // 81: policy.ui.grpc.PolicyService.GetCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	25, // 82: policy.ui.grpc.PolicyService.ListCustomPolicies:output_type -> policy.ui.grpc.CustomPolicyPage
+	24, // 83: policy.ui.grpc.PolicyService.UpdateCustomPolicy:output_type -> policy.ui.grpc.CustomPolicy
+	9,  // 84: policy.ui.grpc.PolicyService.DeleteCustomPolicy:output_type -> policy.ui.grpc.DeleteResponse
+	29, // 85: policy.ui.grpc.CacheService.ReloadCache:output_type -> policy.ui.grpc.ReloadCacheResponse
+	34, // 86: policy.ui.grpc.ReservationService.Reserve:output_type -> policy.ui.grpc.ReserveResponse
+	40, // 87: policy.ui.grpc.ReservationService.Release:output_type -> policy.ui.grpc.ReleaseResponse
+	38, // 88: policy.ui.grpc.DryRunService.DryRun:output_type -> policy.ui.grpc.DryRunResponse
+	65, // [65:89] is the sub-list for method output_type
+	41, // [41:65] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_proto_policy_proto_init() }
@@ -3380,19 +3816,19 @@ func file_proto_policy_proto_init() {
 	file_proto_policy_proto_msgTypes[13].OneofWrappers = []any{}
 	file_proto_policy_proto_msgTypes[15].OneofWrappers = []any{}
 	file_proto_policy_proto_msgTypes[16].OneofWrappers = []any{}
-	file_proto_policy_proto_msgTypes[23].OneofWrappers = []any{}
-	file_proto_policy_proto_msgTypes[25].OneofWrappers = []any{}
+	file_proto_policy_proto_msgTypes[24].OneofWrappers = []any{}
 	file_proto_policy_proto_msgTypes[26].OneofWrappers = []any{}
-	file_proto_policy_proto_msgTypes[31].OneofWrappers = []any{}
+	file_proto_policy_proto_msgTypes[27].OneofWrappers = []any{}
+	file_proto_policy_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_policy_proto_rawDesc), len(file_proto_policy_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   36,
+			NumMessages:   43,
 			NumExtensions: 0,
-			NumServices:   5,
+			NumServices:   6,
 		},
 		GoTypes:           file_proto_policy_proto_goTypes,
 		DependencyIndexes: file_proto_policy_proto_depIdxs,

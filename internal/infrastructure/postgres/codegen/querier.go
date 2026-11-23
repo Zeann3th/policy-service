@@ -15,6 +15,7 @@ type Querier interface {
 	AddUsage(ctx context.Context, arg AddUsageParams) (decimal.Decimal, error)
 	CountCustomPolicies(ctx context.Context, walletID string) (int64, error)
 	CountPolicies(ctx context.Context, policyGroupID int64) (int64, error)
+	CountPolicyGroups(ctx context.Context) (int64, error)
 	CountPolicyTypes(ctx context.Context) (int64, error)
 	CreateCustomPolicy(ctx context.Context, arg CreateCustomPolicyParams) (CustomPolicy, error)
 	CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Policy, error)
@@ -44,6 +45,7 @@ type Querier interface {
 	GetUsageValue(ctx context.Context, arg GetUsageValueParams) (decimal.Decimal, error)
 	ListCustomPolicies(ctx context.Context, arg ListCustomPoliciesParams) ([]CustomPolicy, error)
 	ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]Policy, error)
+	ListPolicyGroups(ctx context.Context, arg ListPolicyGroupsParams) ([]PolicyGroup, error)
 	ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams) ([]PolicyType, error)
 	ListUsageLedger(ctx context.Context, arg ListUsageLedgerParams) ([]UsageLedger, error)
 	Lock(ctx context.Context, key int64) error

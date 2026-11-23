@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
+	"github.com/zeann3th/policy-service/internal/infrastructure/config"
 )
 
 type policyServiceStub struct {
@@ -161,6 +163,50 @@ func TestSwaggerDocumentsEveryRoute(t *testing.T) {
 			if _, ok := document.Paths[path][strings.ToLower(method)]; !ok {
 				t.Errorf("Swagger missing %s %s", method, path)
 			}
+		}
+	}
+}
+
+func TestSwaggerRouteFollowsConfig(t *testing.T) {
+	for enabled, want := range map[bool]int{false: http.StatusNotFound, true: http.StatusOK} {
+		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, SwaggerEnabled: enabled}}
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		server.listener.Close()
+		response := httptest.NewRecorder()
+		server.httpServer.Handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/policy-service/api/swagger/index.html", nil))
+		if response.Code != want {
+			t.Errorf("SwaggerEnabled=%v: status = %d, want %d", enabled, response.Code, want)
+		}
+	}
+}
+
+func TestCORSFollowsAllowedOrigins(t *testing.T) {
+	for _, test := range []struct {
+		origins []string
+		origin  string
+		want    string
+	}{
+		{nil, "http://localhost:3000", ""},
+		{[]string{"http://localhost:3000", "https://cms.example"}, "https://cms.example", "https://cms.example"},
+		{[]string{"http://localhost:3000"}, "https://evil.example", ""},
+		{[]string{"*"}, "https://anything.example", "*"},
+	} {
+		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, CORSOrigins: test.origins}}
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		server.listener.Close()
+		request := httptest.NewRequest(http.MethodOptions, "/policy-service/api/healthz", nil)
+		request.Header.Set("Origin", test.origin)
+		request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+		response := httptest.NewRecorder()
+		server.httpServer.Handler.ServeHTTP(response, request)
+		if got := response.Header().Get("Access-Control-Allow-Origin"); got != test.want {
+			t.Errorf("origins %v, origin %s: Access-Control-Allow-Origin = %q, want %q", test.origins, test.origin, got, test.want)
 		}
 	}
 }

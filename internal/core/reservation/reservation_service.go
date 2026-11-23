@@ -153,20 +153,29 @@ func notReserved(status Status) error {
 }
 
 func validate(request *ReserveRequest) error {
-	if request.Amount == nil || !request.Amount.IsPositive() {
-		return core.ErrBadRequest.WithMessage("amount must be positive")
-	}
-	if request.Amount.Exponent() < -moneyPlaces && !request.Amount.Equal(request.Amount.Round(moneyPlaces)) {
-		return core.ErrBadRequest.WithMessage(fmt.Sprintf("amount supports at most %d decimal places", moneyPlaces))
+	if err := ValidateTransaction(request.Amount, request.Sender, request.Receiver); err != nil {
+		return err
 	}
 	if strings.TrimSpace(request.RequestID) == "" {
 		return core.ErrBadRequest.WithMessage("requestId is required")
 	}
-	if request.Sender.WalletID == request.Receiver.WalletID {
-		return core.ErrBadRequest.WithMessage("sender and receiver must be different wallets")
-	}
 	if request.Channel == "" {
 		request.Channel = policy.All
+	}
+	return nil
+}
+
+// ValidateTransaction checks the amount and the two sides of a transaction,
+// for a reservation and a dry run alike.
+func ValidateTransaction(amount *decimal.Decimal, sender, receiver PartyRequest) error {
+	if amount == nil || !amount.IsPositive() {
+		return core.ErrBadRequest.WithMessage("amount must be positive")
+	}
+	if amount.Exponent() < -moneyPlaces && !amount.Equal(amount.Round(moneyPlaces)) {
+		return core.ErrBadRequest.WithMessage(fmt.Sprintf("amount supports at most %d decimal places", moneyPlaces))
+	}
+	if sender.WalletID == receiver.WalletID {
+		return core.ErrBadRequest.WithMessage("sender and receiver must be different wallets")
 	}
 	return nil
 }
@@ -176,7 +185,7 @@ func party(request PartyRequest) Party {
 }
 
 func (s *service) resolve(ctx context.Context, request ReserveRequest, side PartyRequest, direction policy.Direction, name string) ([]policy.Policy, error) {
-	policies, err := s.policies.Resolve(ctx, policy.ResolveRequest{
+	return ResolveParty(ctx, s.policies, policy.ResolveRequest{
 		WalletID:        side.WalletID,
 		WalletType:      side.WalletType,
 		Currency:        request.Currency,
@@ -184,7 +193,13 @@ func (s *service) resolve(ctx context.Context, request ReserveRequest, side Part
 		TransactionType: request.TransactionType,
 		Channel:         request.Channel,
 		Direction:       direction,
-	})
+	}, name)
+}
+
+// ResolveParty returns the policies covering one side (name) of a
+// transaction; a side without any policy is a bad request.
+func ResolveParty(ctx context.Context, resolver PolicyResolver, request policy.ResolveRequest, name string) ([]policy.Policy, error) {
+	policies, err := resolver.Resolve(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %s policies: %w", name, err)
 	}

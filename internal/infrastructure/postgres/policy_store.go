@@ -293,6 +293,19 @@ func (s *Store) GetGroup(ctx context.Context, id int64) (policy.PolicyGroup, err
 	return toPolicyGroup(v), mapDBError(e)
 }
 
+func (s *Store) ListGroups(ctx context.Context, l, o int32) ([]policy.PolicyGroup, int64, error) {
+	vs, e := s.queries.ListPolicyGroups(ctx, codegen.ListPolicyGroupsParams{PageLimit: l, PageOffset: o})
+	if e != nil {
+		return nil, 0, e
+	}
+	total, e := s.queries.CountPolicyGroups(ctx)
+	out := make([]policy.PolicyGroup, len(vs))
+	for i, v := range vs {
+		out[i] = toPolicyGroup(v)
+	}
+	return out, total, e
+}
+
 func (s *Store) DeleteGroup(ctx context.Context, id int64, actor string) error {
 	return s.transact(ctx, func(q *codegen.Queries) error {
 		v, e := q.DeletePolicyGroup(ctx, id)

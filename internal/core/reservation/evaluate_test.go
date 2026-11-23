@@ -207,3 +207,37 @@ func TestEvaluateRejectsUnmeasurableLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestEvaluateReportsEachLineCharge(t *testing.T) {
+	fee := c(1, policy.KindFee, policy.BaseAmount, "1")
+	tax := c(2, policy.KindTax, policy.BaseFee, "10")
+	waiver := p(3, policy.KindWaiver, policy.UnitCount, policy.WindowMonthly, "", "1")
+	charges := func(result PartyResult) map[int64]string {
+		lines := map[int64]string{}
+		for _, applied := range result.AppliedPolicies {
+			if applied.Charge != nil {
+				lines[applied.PolicyID] = applied.Charge.String()
+			}
+		}
+		return lines
+	}
+
+	// waiver used up: fee 1% of 100000 = 1000, tax 10% of it = 100
+	used := map[UsageKey]decimal.Decimal{usageKey("w", waiver, at): d("1")}
+	result, _, err := evaluate("w", d("100000"), []policy.Policy{fee, tax, waiver}, used, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := charges(result); got[1] != "1000" || got[2] != "100" || len(got) != 2 {
+		t.Fatalf("line charges = %v", got)
+	}
+
+	// waived: the fee line charges nothing, so neither does the tax on it
+	result, _, err = evaluate("w", d("100000"), []policy.Policy{fee, tax, waiver}, nil, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := charges(result); got[1] != "0" || got[2] != "0" {
+		t.Fatalf("waived line charges = %v", got)
+	}
+}

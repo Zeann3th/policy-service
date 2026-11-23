@@ -17,6 +17,7 @@ service PolicyTypeService {
 service PolicyGroupService {
   rpc CreatePolicyGroup(CreatePolicyGroupRequest) returns (PolicyGroup);
   rpc GetPolicyGroup(IdRequest) returns (PolicyGroup);
+  rpc ListPolicyGroups(PageRequest) returns (PolicyGroupPage);
   rpc DeletePolicyGroup(DeleteByIdRequest) returns (DeleteResponse);
 }
 
@@ -41,6 +42,11 @@ service CacheService {
 service ReservationService {
   rpc Reserve(ReserveRequest) returns (ReserveResponse);
   rpc Release(ReleaseRequest) returns (ReleaseResponse);
+}
+
+// Evaluates a transaction like Reserve against live usage; saves nothing.
+service DryRunService {
+  rpc DryRun(DryRunRequest) returns (DryRunResponse);
 }
 
 message PageRequest {
@@ -152,6 +158,12 @@ message PolicyGroup {
   string tier = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
+}
+message PolicyGroupPage {
+  repeated PolicyGroup items = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  int64 total = 4;
 }
 message CreatePolicyGroupRequest {
   string wallet_type = 1;
@@ -302,6 +314,7 @@ message AppliedPolicy {
   optional string usage = 13;
   bool violated = 14;
   string base = 15;
+  optional string charge = 16;
 }
 message PartyResult {
   string wallet_id = 1;
@@ -318,6 +331,34 @@ message ReserveResponse {
   PartyResult sender = 4;
   PartyResult receiver = 5;
   google.protobuf.Timestamp response_time = 6;
+}
+message DryRunRequest {
+  string transaction_type = 1;
+  string channel = 2;
+  string currency = 3;
+  string amount = 4;
+  ReservationParty sender = 5;
+  ReservationParty receiver = 6;
+  // usage before this transaction by policy id, replacing the live value
+  map<uint64, string> sender_usage = 7;
+  map<uint64, string> receiver_usage = 8;
+}
+message DryRunUsage {
+  uint64 policy_id = 1;
+  string window_start = 2;
+  string live = 3;
+  string used = 4;
+  bool overridden = 5;
+}
+message DryRunSide {
+  PartyResult result = 1;
+  repeated DryRunUsage usage = 2;
+}
+message DryRunResponse {
+  string status = 1;
+  DryRunSide sender = 2;
+  DryRunSide receiver = 3;
+  google.protobuf.Timestamp evaluated_at = 4;
 }
 message ReleaseRequest {
   string request_id = 1;

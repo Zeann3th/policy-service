@@ -275,6 +275,7 @@ var PolicyTypeService_ServiceDesc = grpc.ServiceDesc{
 const (
 	PolicyGroupService_CreatePolicyGroup_FullMethodName = "/policy.ui.grpc.PolicyGroupService/CreatePolicyGroup"
 	PolicyGroupService_GetPolicyGroup_FullMethodName    = "/policy.ui.grpc.PolicyGroupService/GetPolicyGroup"
+	PolicyGroupService_ListPolicyGroups_FullMethodName  = "/policy.ui.grpc.PolicyGroupService/ListPolicyGroups"
 	PolicyGroupService_DeletePolicyGroup_FullMethodName = "/policy.ui.grpc.PolicyGroupService/DeletePolicyGroup"
 )
 
@@ -284,6 +285,7 @@ const (
 type PolicyGroupServiceClient interface {
 	CreatePolicyGroup(ctx context.Context, in *CreatePolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
 	GetPolicyGroup(ctx context.Context, in *IdRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
+	ListPolicyGroups(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*PolicyGroupPage, error)
 	DeletePolicyGroup(ctx context.Context, in *DeleteByIdRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
@@ -315,6 +317,16 @@ func (c *policyGroupServiceClient) GetPolicyGroup(ctx context.Context, in *IdReq
 	return out, nil
 }
 
+func (c *policyGroupServiceClient) ListPolicyGroups(ctx context.Context, in *PageRequest, opts ...grpc.CallOption) (*PolicyGroupPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PolicyGroupPage)
+	err := c.cc.Invoke(ctx, PolicyGroupService_ListPolicyGroups_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *policyGroupServiceClient) DeletePolicyGroup(ctx context.Context, in *DeleteByIdRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
@@ -331,6 +343,7 @@ func (c *policyGroupServiceClient) DeletePolicyGroup(ctx context.Context, in *De
 type PolicyGroupServiceServer interface {
 	CreatePolicyGroup(context.Context, *CreatePolicyGroupRequest) (*PolicyGroup, error)
 	GetPolicyGroup(context.Context, *IdRequest) (*PolicyGroup, error)
+	ListPolicyGroups(context.Context, *PageRequest) (*PolicyGroupPage, error)
 	DeletePolicyGroup(context.Context, *DeleteByIdRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedPolicyGroupServiceServer()
 }
@@ -347,6 +360,9 @@ func (UnimplementedPolicyGroupServiceServer) CreatePolicyGroup(context.Context, 
 }
 func (UnimplementedPolicyGroupServiceServer) GetPolicyGroup(context.Context, *IdRequest) (*PolicyGroup, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetPolicyGroup not implemented")
+}
+func (UnimplementedPolicyGroupServiceServer) ListPolicyGroups(context.Context, *PageRequest) (*PolicyGroupPage, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPolicyGroups not implemented")
 }
 func (UnimplementedPolicyGroupServiceServer) DeletePolicyGroup(context.Context, *DeleteByIdRequest) (*DeleteResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeletePolicyGroup not implemented")
@@ -408,6 +424,24 @@ func _PolicyGroupService_GetPolicyGroup_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PolicyGroupService_ListPolicyGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PolicyGroupServiceServer).ListPolicyGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PolicyGroupService_ListPolicyGroups_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PolicyGroupServiceServer).ListPolicyGroups(ctx, req.(*PageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _PolicyGroupService_DeletePolicyGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteByIdRequest)
 	if err := dec(in); err != nil {
@@ -440,6 +474,10 @@ var PolicyGroupService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPolicyGroup",
 			Handler:    _PolicyGroupService_GetPolicyGroup_Handler,
+		},
+		{
+			MethodName: "ListPolicyGroups",
+			Handler:    _PolicyGroupService_ListPolicyGroups_Handler,
 		},
 		{
 			MethodName: "DeletePolicyGroup",
@@ -1168,6 +1206,112 @@ var ReservationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Release",
 			Handler:    _ReservationService_Release_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/policy.proto",
+}
+
+const (
+	DryRunService_DryRun_FullMethodName = "/policy.ui.grpc.DryRunService/DryRun"
+)
+
+// DryRunServiceClient is the client API for DryRunService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Evaluates a transaction like Reserve against live usage; saves nothing.
+type DryRunServiceClient interface {
+	DryRun(ctx context.Context, in *DryRunRequest, opts ...grpc.CallOption) (*DryRunResponse, error)
+}
+
+type dryRunServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDryRunServiceClient(cc grpc.ClientConnInterface) DryRunServiceClient {
+	return &dryRunServiceClient{cc}
+}
+
+func (c *dryRunServiceClient) DryRun(ctx context.Context, in *DryRunRequest, opts ...grpc.CallOption) (*DryRunResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DryRunResponse)
+	err := c.cc.Invoke(ctx, DryRunService_DryRun_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DryRunServiceServer is the server API for DryRunService service.
+// All implementations must embed UnimplementedDryRunServiceServer
+// for forward compatibility.
+//
+// Evaluates a transaction like Reserve against live usage; saves nothing.
+type DryRunServiceServer interface {
+	DryRun(context.Context, *DryRunRequest) (*DryRunResponse, error)
+	mustEmbedUnimplementedDryRunServiceServer()
+}
+
+// UnimplementedDryRunServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDryRunServiceServer struct{}
+
+func (UnimplementedDryRunServiceServer) DryRun(context.Context, *DryRunRequest) (*DryRunResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DryRun not implemented")
+}
+func (UnimplementedDryRunServiceServer) mustEmbedUnimplementedDryRunServiceServer() {}
+func (UnimplementedDryRunServiceServer) testEmbeddedByValue()                       {}
+
+// UnsafeDryRunServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DryRunServiceServer will
+// result in compilation errors.
+type UnsafeDryRunServiceServer interface {
+	mustEmbedUnimplementedDryRunServiceServer()
+}
+
+func RegisterDryRunServiceServer(s grpc.ServiceRegistrar, srv DryRunServiceServer) {
+	// If the following call panics, it indicates UnimplementedDryRunServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&DryRunService_ServiceDesc, srv)
+}
+
+func _DryRunService_DryRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DryRunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DryRunServiceServer).DryRun(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DryRunService_DryRun_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DryRunServiceServer).DryRun(ctx, req.(*DryRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DryRunService_ServiceDesc is the grpc.ServiceDesc for DryRunService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DryRunService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "policy.ui.grpc.DryRunService",
+	HandlerType: (*DryRunServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "DryRun",
+			Handler:    _DryRunService_DryRun_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

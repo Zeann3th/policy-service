@@ -77,12 +77,16 @@ func inParty(value *pb.ReservationParty) reservation.PartyRequest {
 func outPartyResult(value reservation.PartyResult) *pb.PartyResult {
 	result := &pb.PartyResult{WalletId: value.WalletID, IsViolated: value.IsViolated, Fee: value.Fee.String(), Discount: value.Discount.String(), Tax: value.Tax.String(), AppliedPolicies: make([]*pb.AppliedPolicy, len(value.AppliedPolicies))}
 	for i, applied := range value.AppliedPolicies {
-		var usage *string
+		var usage, charge *string
 		if applied.Usage != nil {
 			value := applied.Usage.String()
 			usage = &value
 		}
-		result.AppliedPolicies[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: string(applied.Unit), Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: usage, Violated: applied.Violated}
+		if applied.Charge != nil {
+			value := applied.Charge.String()
+			charge = &value
+		}
+		result.AppliedPolicies[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: string(applied.Unit), Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: usage, Charge: charge, Violated: applied.Violated}
 	}
 	return result
 }

@@ -10,6 +10,7 @@ import (
 type GroupService interface {
 	Create(context.Context, CreatePolicyGroupRequest) (PolicyGroupResponse, error)
 	Get(context.Context, int64) (PolicyGroupResponse, error)
+	List(context.Context, core.PageRequest) (core.Page[PolicyGroupResponse], error)
 	Delete(context.Context, int64, core.ActorRequest) error
 }
 
@@ -48,6 +49,23 @@ func (s *groupService) Get(ctx context.Context, id int64) (PolicyGroupResponse, 
 	}
 	value, err := s.store.GetGroup(ctx, id)
 	response := policyGroupResponse(value)
+	if err == nil {
+		cachecore.Write(ctx, s.cache, key, response)
+	}
+	return response, err
+}
+
+func (s *groupService) List(ctx context.Context, request core.PageRequest) (core.Page[PolicyGroupResponse], error) {
+	page, limit, offset := request.Values()
+	key := s.cache.Key(ctx, cachecore.NamespacePolicyGroups, "list", page, limit)
+	if cached, ok := cachecore.Read[core.Page[PolicyGroupResponse]](ctx, s.cache, key); ok {
+		return cached, nil
+	}
+	values, total, err := s.store.ListGroups(ctx, limit, offset)
+	response := core.Page[PolicyGroupResponse]{Items: make([]PolicyGroupResponse, len(values)), Page: page, Limit: limit, Total: total}
+	for i, value := range values {
+		response.Items[i] = policyGroupResponse(value)
+	}
 	if err == nil {
 		cachecore.Write(ctx, s.cache, key, response)
 	}

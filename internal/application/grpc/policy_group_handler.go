@@ -27,6 +27,22 @@ func (h *policyGroupHandler) CreatePolicyGroup(ctx context.Context, request *pb.
 	return outPolicyGroup(response), nil
 }
 
+func (h *policyGroupHandler) ListPolicyGroups(ctx context.Context, request *pb.PageRequest) (*pb.PolicyGroupPage, error) {
+	pageRequest, err := page(request.Page, request.Limit)
+	if err != nil {
+		return nil, err
+	}
+	response, err := h.service.List(ctx, pageRequest)
+	if err != nil {
+		return nil, grpcError(err)
+	}
+	result := &pb.PolicyGroupPage{Items: make([]*pb.PolicyGroup, len(response.Items)), Page: response.Page, Limit: response.Limit, Total: response.Total}
+	for i, value := range response.Items {
+		result.Items[i] = outPolicyGroup(value)
+	}
+	return result, nil
+}
+
 func (h *policyGroupHandler) GetPolicyGroup(ctx context.Context, request *pb.IdRequest) (*pb.PolicyGroup, error) {
 	id, err := intID(request.Id)
 	if err != nil {

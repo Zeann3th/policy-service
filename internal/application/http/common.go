@@ -16,6 +16,13 @@ type healthResponse struct {
 	Status string `json:"status" example:"ok"`
 }
 
+type policyGroupPageResponse struct {
+	Items []policy.PolicyGroupResponse `json:"items"`
+	Page  int32                        `json:"page" example:"1"`
+	Limit int32                        `json:"limit" example:"20"`
+	Total int64                        `json:"total" example:"1"`
+}
+
 type policyTypePageResponse struct {
 	Items []policy.PolicyTypeResponse `json:"items"`
 	Page  int32                       `json:"page" example:"1"`

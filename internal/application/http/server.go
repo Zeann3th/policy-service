@@ -7,12 +7,16 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"slices"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	docs "github.com/zeann3th/policy-service/docs"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
+	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/infrastructure/config"
@@ -33,15 +37,18 @@ func New(
 	policyService policy.Service,
 	cacheService cachecore.Service,
 	reservationService reservation.Service,
+	dryRunService dryrun.Service,
 ) (*Server, error) {
 	gin.SetMode(cfg.HTTP.GinMode)
 
 	router := gin.New()
 
 	router.Use(otelgin.Middleware(cfg.ServiceName), requestLogger(logger), gin.CustomRecoveryWithWriter(io.Discard, recoverPanic))
+	if len(cfg.HTTP.CORSOrigins) > 0 {
+		router.Use(corsMiddleware(cfg.HTTP.CORSOrigins))
+	}
 
 	prefixGroup := router.Group(fmt.Sprintf("/%s/api", cfg.ServiceName))
-	docs.SwaggerInfo.BasePath = fmt.Sprintf("/%s/api", cfg.ServiceName)
 
 	RegisterUtilityRoutes(prefixGroup)
 	RegisterPolicyGroupRoutes(prefixGroup, groupService)
@@ -49,7 +56,11 @@ func New(
 	RegisterPolicyRoutes(prefixGroup, policyService)
 	RegisterCacheRoutes(prefixGroup, cacheService)
 	RegisterReservationRoutes(prefixGroup, reservationService)
-	prefixGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	RegisterDryRunRoutes(prefixGroup, dryRunService)
+	if cfg.HTTP.SwaggerEnabled {
+		docs.SwaggerInfo.BasePath = fmt.Sprintf("/%s/api", cfg.ServiceName)
+		prefixGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	}
 
 	addr := fmt.Sprintf(":%s", cfg.HTTP.Port)
 	listener, err := net.Listen("tcp", addr)
@@ -65,6 +76,25 @@ func New(
 		listener: listener,
 		logger:   logger,
 	}, nil
+}
+
+// allOrigins in CORS_ALLOWED_ORIGINS allows any origin.
+const allOrigins = "*"
+
+// corsMiddleware lets the listed browser origins (or any, with "*") call the
+// API. No credentials are allowed, so "*" stays a valid response header.
+func corsMiddleware(origins []string) gin.HandlerFunc {
+	config := cors.Config{
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		MaxAge:       12 * time.Hour,
+	}
+	if slices.Contains(origins, allOrigins) {
+		config.AllowAllOrigins = true
+	} else {
+		config.AllowOrigins = origins
+	}
+	return cors.New(config)
 }
 
 func (s *Server) Start() error {

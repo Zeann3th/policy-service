@@ -64,6 +64,9 @@ type AppliedPolicy struct {
 	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal   `json:"value" swaggertype:"string"`
 	// Usage is the window total including this request (not stored when rejected).
-	Usage    *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
+	Usage *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
+	// Charge is what this FEE, DISCOUNT or TAX line computed, before the
+	// side's caps (discounts) and waiver (fees) are applied to the totals.
+	Charge   *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`
 	Violated bool             `json:"violated"`
 }

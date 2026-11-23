@@ -15,6 +15,7 @@ type policyGroupHandler struct {
 func RegisterPolicyGroupRoutes(routes *gin.RouterGroup, service policy.GroupService) {
 	handler := &policyGroupHandler{service: service}
 	routes.POST("/v1/policies/groups", handler.create)
+	routes.GET("/v1/policies/groups", handler.list)
 	routes.GET("/v1/policies/groups/:groupId", handler.get)
 	routes.DELETE("/v1/policies/groups/:groupId", handler.delete)
 }
@@ -57,6 +58,29 @@ func (h *policyGroupHandler) get(c *gin.Context) {
 		return
 	}
 	response, err := h.service.Get(c.Request.Context(), id)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// list godoc
+//
+//	@Summary	List policy groups
+//	@Tags		Policy Groups
+//	@Produce	json
+//	@Param		page	query		integer	false	"Page number"	default(1)	minimum(1)
+//	@Param		limit	query		integer	false	"Page size"		default(20)	minimum(1)	maximum(100)
+//	@Success	200		{object}	policyGroupPageResponse
+//	@Failure	400,500	{object}	core.AppError
+//	@Router		/v1/policies/groups [get]
+func (h *policyGroupHandler) list(c *gin.Context) {
+	page, ok := bindPage(c)
+	if !ok {
+		return
+	}
+	response, err := h.service.List(c.Request.Context(), page)
 	if err != nil {
 		handleError(c, err)
 		return

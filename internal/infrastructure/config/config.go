@@ -19,8 +19,12 @@ type Config struct {
 }
 
 type HTTP struct {
-	Port    string
-	GinMode string
+	Port           string
+	GinMode        string
+	SwaggerEnabled bool
+	// CORSOrigins are the browser origins allowed to call the API; "*"
+	// allows any origin, empty sends no CORS headers.
+	CORSOrigins []string
 }
 
 type GRPC struct {
@@ -62,12 +66,24 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	swaggerEnabled, err := getBoolOrDefault("SWAGGER_ENABLED", false)
+	if err != nil {
+		return nil, err
+	}
+
+	corsOrigins, err := getListOrDefault("CORS_ALLOWED_ORIGINS", nil)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		ServiceName: serviceName,
 		Environment: getOrDefault("ENVIRONMENT", "release"),
 		HTTP: HTTP{
-			Port:    getOrDefault("HTTP_PORT", "8080"),
-			GinMode: getOrDefault("GIN_MODE", "release"),
+			Port:           getOrDefault("HTTP_PORT", "8080"),
+			GinMode:        getOrDefault("GIN_MODE", "release"),
+			SwaggerEnabled: swaggerEnabled,
+			CORSOrigins:    corsOrigins,
 		},
 		GRPC: GRPC{
 			Port: getOrDefault("GRPC_PORT", "8081"),
@@ -108,6 +124,19 @@ func getIntOrDefault(key string, defaultValue int) (int, error) {
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
 		return 0, fmt.Errorf("malformed %s: %w", key, err)
+	}
+	return parsed, nil
+}
+
+func getBoolOrDefault(key string, defaultValue bool) (bool, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("malformed %s: %w", key, err)
 	}
 	return parsed, nil
 }

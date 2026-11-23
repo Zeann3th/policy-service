@@ -9,6 +9,17 @@ import (
 	"context"
 )
 
+const countPolicyGroups = `-- name: CountPolicyGroups :one
+SELECT count(*) FROM policy_groups
+`
+
+func (q *Queries) CountPolicyGroups(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPolicyGroups)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createPolicyGroup = `-- name: CreatePolicyGroup :one
 INSERT INTO policy_groups (wallet_type, currency, tier)
 VALUES ($1, upper(CAST($2 AS text)), $3) RETURNING id, wallet_type, currency, tier, created_at, updated_at
@@ -68,4 +79,41 @@ func (q *Queries) GetPolicyGroupByID(ctx context.Context, id int64) (PolicyGroup
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listPolicyGroups = `-- name: ListPolicyGroups :many
+SELECT id, wallet_type, currency, tier, created_at, updated_at FROM policy_groups
+ORDER BY wallet_type, currency, tier LIMIT $2 OFFSET $1
+`
+
+type ListPolicyGroupsParams struct {
+	PageOffset int32 `json:"page_offset"`
+	PageLimit  int32 `json:"page_limit"`
+}
+
+func (q *Queries) ListPolicyGroups(ctx context.Context, arg ListPolicyGroupsParams) ([]PolicyGroup, error) {
+	rows, err := q.db.Query(ctx, listPolicyGroups, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PolicyGroup
+	for rows.Next() {
+		var i PolicyGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.WalletType,
+			&i.Currency,
+			&i.Tier,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

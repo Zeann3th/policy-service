@@ -46,6 +46,105 @@ definitions:
       message:
         type: string
     type: object
+  dryrun.Overrides:
+    properties:
+      receiver:
+        additionalProperties:
+          type: string
+        type: object
+      sender:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  dryrun.Request:
+    properties:
+      amount:
+        example: "100000"
+        type: string
+      channel:
+        example: WEB
+        type: string
+      currency:
+        example: VND
+        type: string
+      receiver:
+        $ref: '#/definitions/reservation.PartyRequest'
+      sender:
+        $ref: '#/definitions/reservation.PartyRequest'
+      transactionType:
+        example: PAYMENT
+        type: string
+      usageOverrides:
+        allOf:
+        - $ref: '#/definitions/dryrun.Overrides'
+        description: |-
+          UsageOverrides replaces the live window total (before this
+          transaction) of a tracked policy, by policy id, per side.
+    required:
+    - amount
+    - currency
+    - receiver
+    - sender
+    - transactionType
+    type: object
+  dryrun.Response:
+    properties:
+      evaluatedAt:
+        format: date-time
+        type: string
+      receiver:
+        $ref: '#/definitions/dryrun.Side'
+      sender:
+        $ref: '#/definitions/dryrun.Side'
+      status:
+        allOf:
+        - $ref: '#/definitions/reservation.Status'
+        description: |-
+          Status is what a reservation would answer: REJECTED when either side
+          violates a limit, otherwise RESERVED.
+        enum:
+        - RESERVED
+        - REJECTED
+    type: object
+  dryrun.Side:
+    properties:
+      appliedPolicies:
+        items:
+          $ref: '#/definitions/reservation.AppliedPolicy'
+        type: array
+      discount:
+        example: "0"
+        type: string
+      fee:
+        example: "1100"
+        type: string
+      isViolated:
+        type: boolean
+      tax:
+        example: "0"
+        type: string
+      usage:
+        items:
+          $ref: '#/definitions/dryrun.Usage'
+        type: array
+      walletId:
+        type: string
+    type: object
+  dryrun.Usage:
+    properties:
+      live:
+        type: string
+      overridden:
+        type: boolean
+      policyId:
+        type: integer
+      used:
+        type: string
+      windowStart:
+        example: "2026-11-23"
+        type: string
+    type: object
   http.customPolicyPageResponse:
     properties:
       items:
@@ -67,6 +166,22 @@ definitions:
       status:
         example: ok
         type: string
+    type: object
+  http.policyGroupPageResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/policy.PolicyGroupResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 1
+        type: integer
     type: object
   http.policyPageResponse:
     properties:
@@ -715,6 +830,11 @@ definitions:
         - NET_FEE
       channel:
         type: string
+      charge:
+        description: |-
+          Charge is what this FEE, DISCOUNT or TAX line computed, before the
+          side's caps (discounts) and waiver (fees) are applied to the totals.
+        type: string
       direction:
         allOf:
         - $ref: '#/definitions/policy.Direction'
@@ -1207,6 +1327,39 @@ paths:
       tags:
       - Custom Policies
   /v1/policies/groups:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.policyGroupPageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: List policy groups
+      tags:
+      - Policy Groups
     post:
       consumes:
       - application/json
@@ -1786,6 +1939,39 @@ paths:
           schema:
             $ref: '#/definitions/core.AppError'
       summary: Release a reservation
+      tags:
+      - Reservations
+  /v1/reservations/dry-run:
+    post:
+      consumes:
+      - application/json
+      description: 'Evaluates the transaction exactly as POST /v1/reservations would,
+        against the effective policies and the wallets'' live usage (optionally overridden
+        per policy id), and saves nothing: no reservation, usage or ledger row, no
+        lock.'
+      parameters:
+      - description: Transaction
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dryrun.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dryrun.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/core.AppError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/core.AppError'
+      summary: Dry-run a reservation
       tags:
       - Reservations
 schemes:

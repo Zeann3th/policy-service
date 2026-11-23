@@ -22,6 +22,7 @@ type Store interface {
 
 	CreateGroup(context.Context, CreatePolicyGroupRequest) (PolicyGroup, error)
 	GetGroup(context.Context, int64) (PolicyGroup, error)
+	ListGroups(context.Context, int32, int32) ([]PolicyGroup, int64, error)
 	DeleteGroup(context.Context, int64, string) error
 
 	CreatePolicy(context.Context, int64, CreatePolicyRequest) (Policy, error)

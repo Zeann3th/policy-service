@@ -52,11 +52,6 @@ service ReservationService {
   rpc Release(ReleaseRequest) returns (ReleaseResponse);
 }
 
-// Evaluates a transaction like Reserve against live usage; saves nothing.
-service DryRunService {
-  rpc DryRun(DryRunRequest) returns (DryRunResponse);
-}
-
 message PageRequest {
   int32 page = 1;
   int32 limit = 2;
@@ -392,34 +387,6 @@ message ReserveResponse {
   PartyResult sender = 4;
   PartyResult receiver = 5;
   google.protobuf.Timestamp response_time = 6;
-}
-message DryRunRequest {
-  string transaction_type = 1;
-  string channel = 2;
-  string currency = 3;
-  string amount = 4;
-  ReservationParty sender = 5;
-  ReservationParty receiver = 6;
-  // usage before this transaction by policy id, replacing the live value
-  map<uint64, string> sender_usage = 7;
-  map<uint64, string> receiver_usage = 8;
-}
-message DryRunUsage {
-  uint64 policy_id = 1;
-  string window_start = 2;
-  string live = 3;
-  string used = 4;
-  bool overridden = 5;
-}
-message DryRunSide {
-  PartyResult result = 1;
-  repeated DryRunUsage usage = 2;
-}
-message DryRunResponse {
-  string status = 1;
-  DryRunSide sender = 2;
-  DryRunSide receiver = 3;
-  google.protobuf.Timestamp evaluated_at = 4;
 }
 message ReleaseRequest {
   string request_id = 1;

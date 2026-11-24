@@ -8,7 +8,6 @@ import (
 
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
-	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/core/unit"
@@ -32,7 +31,6 @@ func New(
 	policyService policy.Service,
 	cacheService cachecore.Service,
 	reservationService reservation.Service,
-	dryRunService dryrun.Service,
 ) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.GRPC.Port))
 	if err != nil {
@@ -48,7 +46,6 @@ func New(
 	pb.RegisterPolicyServiceServer(grpcServer, &policyHandler{service: policyService})
 	pb.RegisterCacheServiceServer(grpcServer, &cacheHandler{service: cacheService})
 	pb.RegisterReservationServiceServer(grpcServer, &reservationHandler{service: reservationService})
-	pb.RegisterDryRunServiceServer(grpcServer, &dryRunHandler{service: dryRunService})
 
 	return &Server{
 		grpcServer: grpcServer,

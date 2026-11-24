@@ -16,7 +16,6 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	docs "github.com/zeann3th/policy-service/docs"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
-	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/core/unit"
@@ -39,7 +38,6 @@ func New(
 	policyService policy.Service,
 	cacheService cachecore.Service,
 	reservationService reservation.Service,
-	dryRunService dryrun.Service,
 ) (*Server, error) {
 	gin.SetMode(cfg.HTTP.GinMode)
 
@@ -59,7 +57,6 @@ func New(
 	RegisterPolicyRoutes(prefixGroup, policyService)
 	RegisterCacheRoutes(prefixGroup, cacheService)
 	RegisterReservationRoutes(prefixGroup, reservationService)
-	RegisterDryRunRoutes(prefixGroup, dryRunService)
 	if cfg.HTTP.SwaggerEnabled {
 		docs.SwaggerInfo.BasePath = fmt.Sprintf("/%s/api", cfg.ServiceName)
 		prefixGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))

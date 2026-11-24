@@ -119,25 +119,6 @@ func (e *evaluation) track(p policy.Policy, delta, bound decimal.Decimal, applie
 	return current
 }
 
-// UsageKeys returns the usage window each tracked policy reads at time at,
-// by policy id.
-func UsageKeys(walletID string, policies []policy.Policy, at time.Time) map[int64]UsageKey {
-	keys := make(map[int64]UsageKey)
-	for _, p := range policies {
-		if tracked(p) {
-			keys[p.ID] = usageKey(walletID, p, at)
-		}
-	}
-	return keys
-}
-
-// Preview evaluates one side without touching storage; usage holds the
-// window totals before this transaction. It is what Reserve would decide.
-func Preview(walletID string, amount decimal.Decimal, policies []policy.Policy, usage map[UsageKey]decimal.Decimal, at time.Time) (PartyResult, error) {
-	result, _, err := evaluate(walletID, amount, policies, usage, at)
-	return result, err
-}
-
 // evaluate applies one side's policies to a transaction of amount at time at.
 // usage holds the current window totals of the side's tracked policies. Each
 // kind is handled by its strategy (see strategies). It returns the side's

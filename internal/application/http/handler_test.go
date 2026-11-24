@@ -172,7 +172,7 @@ func TestSwaggerDocumentsEveryRoute(t *testing.T) {
 func TestSwaggerRouteFollowsConfig(t *testing.T) {
 	for enabled, want := range map[bool]int{false: http.StatusNotFound, true: http.StatusOK} {
 		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, SwaggerEnabled: enabled}}
-		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil, nil)
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,7 +197,7 @@ func TestCORSFollowsAllowedOrigins(t *testing.T) {
 		{[]string{"*"}, "https://anything.example", "*"},
 	} {
 		cfg := &config.Config{ServiceName: "policy-service", HTTP: config.HTTP{Port: "0", GinMode: gin.TestMode, CORSOrigins: test.origins}}
-		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil, nil)
+		server, err := New(cfg, slog.New(slog.DiscardHandler), nil, nil, nil, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

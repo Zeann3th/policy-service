@@ -153,7 +153,7 @@ func notReserved(status Status) error {
 }
 
 func validate(request *ReserveRequest) error {
-	if err := ValidateTransaction(request.Amount, request.Sender, request.Receiver); err != nil {
+	if err := validateTransaction(request.Amount, request.Sender, request.Receiver); err != nil {
 		return err
 	}
 	if strings.TrimSpace(request.RequestID) == "" {
@@ -165,9 +165,8 @@ func validate(request *ReserveRequest) error {
 	return nil
 }
 
-// ValidateTransaction checks the amount and the two sides of a transaction,
-// for a reservation and a dry run alike.
-func ValidateTransaction(amount *decimal.Decimal, sender, receiver PartyRequest) error {
+// validateTransaction checks the amount and the two sides of a transaction.
+func validateTransaction(amount *decimal.Decimal, sender, receiver PartyRequest) error {
 	if amount == nil || !amount.IsPositive() {
 		return core.ErrBadRequest.WithMessage("amount must be positive")
 	}
@@ -185,7 +184,7 @@ func party(request PartyRequest) Party {
 }
 
 func (s *service) resolve(ctx context.Context, request ReserveRequest, side PartyRequest, direction policy.Direction, name string) ([]policy.Policy, error) {
-	return ResolveParty(ctx, s.policies, policy.ResolveRequest{
+	return resolveParty(ctx, s.policies, policy.ResolveRequest{
 		WalletID:        side.WalletID,
 		WalletType:      side.WalletType,
 		Currency:        request.Currency,
@@ -196,9 +195,9 @@ func (s *service) resolve(ctx context.Context, request ReserveRequest, side Part
 	}, name)
 }
 
-// ResolveParty returns the policies covering one side (name) of a
+// resolveParty returns the policies covering one side (name) of a
 // transaction; a side without any policy is a bad request.
-func ResolveParty(ctx context.Context, resolver PolicyResolver, request policy.ResolveRequest, name string) ([]policy.Policy, error) {
+func resolveParty(ctx context.Context, resolver PolicyResolver, request policy.ResolveRequest, name string) ([]policy.Policy, error) {
 	policies, err := resolver.Resolve(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %s policies: %w", name, err)

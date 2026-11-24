@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shopspring/decimal"
 	"github.com/zeann3th/policy-service/internal/core"
-	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	codegen "github.com/zeann3th/policy-service/internal/infrastructure/postgres/codegen"
@@ -120,12 +119,6 @@ type reservationTx struct {
 
 func (t *reservationTx) Usage(ctx context.Context, key reservation.UsageKey) (decimal.Decimal, error) {
 	return usage(ctx, t.queries, key)
-}
-
-// Usage reads a usage window outside any transaction and takes no lock; the
-// value may be stale by the time it is used (dry runs only).
-func (s *ReservationStore) Usage(ctx context.Context, key reservation.UsageKey) (decimal.Decimal, error) {
-	return usage(ctx, s.queries, key)
 }
 
 // usage is a window's total, zero when nothing was reserved in it yet.
@@ -277,7 +270,4 @@ func date(value time.Time) pgtype.Date {
 	return pgtype.Date{Time: value, Valid: true}
 }
 
-var (
-	_ reservation.Store  = (*ReservationStore)(nil)
-	_ dryrun.UsageReader = (*ReservationStore)(nil)
-)
+var _ reservation.Store = (*ReservationStore)(nil)

@@ -34,7 +34,7 @@ $$ LANGUAGE plpgsql;
 
 -- Catalog tables (units, policy_types) are the vocabulary; the code holds
 -- the behaviour (unit measures, charge types). Every policy is returned as
--- config (GET /v1/policies). The engine (reserve, dry run) only evaluates
+-- config (GET /v1/policies). The engine (reserve) only evaluates
 -- policies whose type is_enforced, and does nothing with a unit or type
 -- code it has no behaviour for. is_enforced is internal and never
 -- returned: COIN_MIN / COIN_MAX are config for the accounting service.

@@ -13,7 +13,6 @@ import (
 	grpcserver "github.com/zeann3th/policy-service/internal/application/grpc"
 	httpserver "github.com/zeann3th/policy-service/internal/application/http"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
-	"github.com/zeann3th/policy-service/internal/core/dryrun"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
 	"github.com/zeann3th/policy-service/internal/core/unit"
@@ -54,15 +53,14 @@ func Run() error {
 	policyService := policy.NewService(postgres.NewPolicyStore(db), rules, responseCache)
 	reservationStore := postgres.NewReservationStore(db)
 	reservationService := reservation.NewService(reservationStore, policyService)
-	dryRunService := dryrun.NewService(policyService, reservationStore)
 	cacheService := cachecore.NewService(logger, applicationCache, cfg.ServiceName)
 
-	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService, dryRunService)
+	httpServer, err := httpserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create HTTP server: %w", err)
 	}
 
-	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService, dryRunService)
+	grpcServer, err := grpcserver.New(cfg, logger, unitService, groupService, typeService, policyService, cacheService, reservationService)
 	if err != nil {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}

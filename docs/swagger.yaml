@@ -233,7 +233,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME
@@ -343,7 +343,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME
@@ -446,7 +446,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME
@@ -590,7 +590,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME
@@ -691,7 +691,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME
@@ -820,13 +820,15 @@ definitions:
     type: object
   policy.WindowType:
     enum:
-    - NONE
+    - TRANSACTION
     - DAILY
     - MONTHLY
     - LIFETIME
     type: string
+    x-enum-comments:
+      WindowTransaction: this transaction alone; nothing accumulates
     x-enum-varnames:
-    - WindowNone
+    - WindowTransaction
     - WindowDaily
     - WindowMonthly
     - WindowLifetime
@@ -910,7 +912,7 @@ definitions:
         allOf:
         - $ref: '#/definitions/policy.WindowType'
         enum:
-        - NONE
+        - TRANSACTION
         - DAILY
         - MONTHLY
         - LIFETIME

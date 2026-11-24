@@ -1970,7 +1970,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2122,7 +2122,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2274,7 +2274,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2485,7 +2485,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2640,7 +2640,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2814,13 +2814,16 @@ const docTemplate = `{
         "policy.WindowType": {
             "type": "string",
             "enum": [
-                "NONE",
+                "TRANSACTION",
                 "DAILY",
                 "MONTHLY",
                 "LIFETIME"
             ],
+            "x-enum-comments": {
+                "WindowTransaction": "this transaction alone; nothing accumulates"
+            },
             "x-enum-varnames": [
-                "WindowNone",
+                "WindowTransaction",
                 "WindowDaily",
                 "WindowMonthly",
                 "WindowLifetime"
@@ -2942,7 +2945,7 @@ const docTemplate = `{
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"

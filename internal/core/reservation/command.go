@@ -67,7 +67,7 @@ type AppliedPolicy struct {
 	TransactionType string            `json:"transactionType"`
 	Channel         string            `json:"channel"`
 	Direction       policy.Direction  `enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      policy.WindowType `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowType      policy.WindowType `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	WindowStart     string            `example:"2026-11-23" json:"windowStart,omitempty"`
 	Operator        policy.Operator   `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`
 	Value           decimal.Decimal   `json:"value" swaggertype:"string"`

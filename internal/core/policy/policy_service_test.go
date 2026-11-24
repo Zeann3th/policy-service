@@ -17,7 +17,7 @@ func TestMergePoliciesOverridesOnlyExactSelector(t *testing.T) {
 	}
 	custom := []CustomPolicy{
 		{PolicyTypeID: 1, TransactionType: All, Channel: All, Direction: DirectionOut, WindowType: WindowDaily, Value: decimal.NewFromInt(50)},
-		{PolicyTypeID: 1, TransactionType: "TRANSFER", Channel: All, Direction: DirectionOut, WindowType: WindowNone, Value: decimal.NewFromInt(25)},
+		{PolicyTypeID: 1, TransactionType: "TRANSFER", Channel: All, Direction: DirectionOut, WindowType: WindowTransaction, Value: decimal.NewFromInt(25)},
 	}
 
 	got := mergePolicies(system, custom)
@@ -34,7 +34,7 @@ func TestMergePoliciesOverridesOnlyExactSelector(t *testing.T) {
 	if !got[2].Value.Equal(decimal.NewFromInt(300)) || got[2].WindowType != WindowMonthly || got[2].Source != SourceSystem {
 		t.Fatalf("monthly policy changed: %#v", got[2])
 	}
-	if got[3].TransactionType != "TRANSFER" || got[3].Source != SourceCustom || got[3].WindowType != WindowNone {
+	if got[3].TransactionType != "TRANSFER" || got[3].Source != SourceCustom || got[3].WindowType != WindowTransaction {
 		t.Fatalf("specific selector not appended: %#v", got[3])
 	}
 }
@@ -53,7 +53,7 @@ func TestPolicyResponseIncludesWindowType(t *testing.T) {
 		want  WindowType
 	}{
 		{input: WindowDaily, want: WindowDaily},
-		{input: "", want: WindowNone},
+		{input: "", want: WindowTransaction},
 	} {
 		response := policyResponse(Policy{WindowType: test.input})
 		if response.WindowType != test.want {

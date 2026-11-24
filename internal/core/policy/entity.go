@@ -103,15 +103,15 @@ type Rules interface {
 type WindowType string
 
 const (
-	WindowNone     WindowType = "NONE"
-	WindowDaily    WindowType = "DAILY"
-	WindowMonthly  WindowType = "MONTHLY"
-	WindowLifetime WindowType = "LIFETIME"
+	WindowTransaction WindowType = "TRANSACTION" // this transaction alone; nothing accumulates
+	WindowDaily       WindowType = "DAILY"
+	WindowMonthly     WindowType = "MONTHLY"
+	WindowLifetime    WindowType = "LIFETIME"
 )
 
 func (w WindowType) Valid() bool {
 	switch w {
-	case WindowNone, WindowDaily, WindowMonthly, WindowLifetime:
+	case WindowTransaction, WindowDaily, WindowMonthly, WindowLifetime:
 		return true
 	}
 	return false

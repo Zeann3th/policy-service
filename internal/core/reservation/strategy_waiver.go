@@ -8,7 +8,7 @@ import (
 
 // waiverStrategy waives the fee while the window's usage, in the policy's
 // unit, is below the value ("the first 5 transfers a month are free"), or
-// always with window NONE. Every covered transaction counts, waived or not.
+// always with window TRANSACTION. Every covered transaction counts, waived or not.
 type waiverStrategy struct{}
 
 func (waiverStrategy) kind() policy.Kind { return policy.KindWaiver }
@@ -34,7 +34,7 @@ func (waiverStrategy) process(e *evaluation, policies []policy.Policy) error {
 			continue // a unit the code does not measure does nothing
 		}
 		applied := appliedPolicy(p)
-		if p.WindowType == policy.WindowNone {
+		if p.WindowType == policy.WindowTransaction {
 			e.waived = true
 			e.apply(applied)
 			continue

@@ -51,7 +51,7 @@ type PolicyResponse struct {
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType       `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowType      WindowType       `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Kind            Kind             `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
 	Role            Role             `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
 	IsEnforced      bool             `json:"isEnforced"`
@@ -72,7 +72,7 @@ type PolicyFields struct {
 	TransactionType string     `json:"transactionType"`
 	Channel         string     `json:"channel"`
 	Direction       Direction  `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType `binding:"omitempty,oneof=NONE DAILY MONTHLY LIFETIME" enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowType      WindowType `binding:"omitempty,oneof=TRANSACTION DAILY MONTHLY LIFETIME" enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	// Kind picks the strategy that evaluates the policy.
 	Kind Kind `binding:"required,oneof=LIMIT WAIVER AUXILIARY" enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
 	// Role is how an AUXILIARY charge applies; required for AUXILIARY.
@@ -120,7 +120,7 @@ type CustomPolicyResponse struct {
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType       `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowType      WindowType       `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Kind            Kind             `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
 	Role            Role             `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
 	IsEnforced      bool             `json:"isEnforced"`
@@ -178,7 +178,7 @@ type Rule struct {
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`
-	WindowType      WindowType       `enums:"NONE,DAILY,MONTHLY,LIFETIME" json:"windowType"`
+	WindowType      WindowType       `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
 	Unit            string           `example:"AMOUNT" json:"unit,omitempty"`
 	Base            Base             `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
 	Operator        Operator         `enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator,omitempty"`

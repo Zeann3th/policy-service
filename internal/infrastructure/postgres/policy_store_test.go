@@ -124,7 +124,7 @@ func TestPolicySchemaForeignKeysAndIDs(t *testing.T) {
 	}
 	for _, table := range []string{"policies", "custom_policies"} {
 		block := sql[strings.Index(sql, "CREATE TABLE "+table+" ("):strings.Index(sql, "CREATE UNIQUE INDEX "+table+"_identity_idx")]
-		for _, want := range []string{"window_type text NOT NULL DEFAULT 'NONE'", "unit_id bigint REFERENCES units (id) ON DELETE RESTRICT", "base text,", "operator text,", "cap numeric(24, 4)"} {
+		for _, want := range []string{"window_type text NOT NULL DEFAULT 'TRANSACTION'", "unit_id bigint REFERENCES units (id) ON DELETE RESTRICT", "base text,", "operator text,", "cap numeric(24, 4)"} {
 			if !strings.Contains(block, want) {
 				t.Errorf("%s must define %q", table, want)
 			}
@@ -236,7 +236,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 			TransactionType: "TRANSFER",
 			Channel:         "MOBILE",
 			Direction:       "IN",
-			WindowType:      "NONE",
+			WindowType:      "TRANSACTION",
 			Base:            text(policy.BaseNetFee),
 			Value:           decimal.RequireFromString("1000.2500"),
 		},
@@ -257,7 +257,7 @@ func TestToPoliciesMapsGeneratedRows(t *testing.T) {
 		value.TransactionType != rows[0].TransactionType ||
 		value.Channel != rows[0].Channel ||
 		value.Direction != policy.DirectionIn ||
-		value.WindowType != policy.WindowNone ||
+		value.WindowType != policy.WindowTransaction ||
 		!value.Value.Equal(rows[0].Value) {
 		t.Fatalf("toPolicies() value = %#v", value)
 	}

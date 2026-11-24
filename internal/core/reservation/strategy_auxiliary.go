@@ -98,14 +98,14 @@ func (auxiliaryStrategy) check(spec policy.Spec) error {
 		return errors.New("AUXILIARY policies take no operator")
 	case spec.Base != "" && !slices.Contains(allowed, spec.Base):
 		return fmt.Errorf("%s policies take base %v or none (flat)", spec.Role, allowed)
-	case spec.Window == policy.WindowNone && spec.Cap != nil:
-		return errors.New("a cap needs a window: it limits what is charged per window")
-	case spec.Window == policy.WindowNone && spec.Unit != "":
-		return errors.New("AUXILIARY policies take a unit only with a window (what the cap counts)")
-	case spec.Window != policy.WindowNone && spec.Cap == nil:
-		return errors.New("an AUXILIARY policy with a window needs a cap")
-	case spec.Window != policy.WindowNone && spec.Unit == "":
-		return errors.New("an AUXILIARY policy with a window needs a unit for its cap")
+	case spec.Window == policy.WindowTransaction && spec.Cap != nil:
+		return errors.New("a cap needs a DAILY, MONTHLY or LIFETIME window: it limits what is charged per window")
+	case spec.Window == policy.WindowTransaction && spec.Unit != "":
+		return errors.New("AUXILIARY policies take a unit only with a capped window (what the cap counts)")
+	case spec.Window != policy.WindowTransaction && spec.Cap == nil:
+		return errors.New("an AUXILIARY policy with a DAILY, MONTHLY or LIFETIME window needs a cap")
+	case spec.Window != policy.WindowTransaction && spec.Unit == "":
+		return errors.New("an AUXILIARY policy with a DAILY, MONTHLY or LIFETIME window needs a unit for its cap")
 	}
 	return nil
 }

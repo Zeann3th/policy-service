@@ -69,11 +69,11 @@ CREATE SEQUENCE policy_id_seq;
 --   role       AUXILIARY only: FEE | DISCOUNT | TAX, how the charge applies
 --   is_enforced  false: config only, the engine skips it
 --   LIMIT      unit, operator
---   WAIVER     unit; free while window usage < value (always with NONE)
+--   WAIVER     unit; free while window usage < value (always with TRANSACTION)
 --   AUXILIARY  role; base NULL (flat value) or AMOUNT | FEE | NET_FEE (value
 --              is a percentage of it); with a window, cap (in unit) limits
 --              what is charged per window
--- window_type: NONE = per transaction, nothing accumulates; DAILY / MONTHLY
+-- window_type: TRANSACTION = this transaction alone, nothing accumulates; DAILY / MONTHLY
 -- (UTC calendar); LIFETIME = accumulates and never resets.
 -- value and cap are never negative: the role decides the sign.
 -- policy_type_id / transaction_type / channel / direction / window_type /
@@ -87,7 +87,7 @@ CREATE TABLE policies (
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
-  window_type text NOT NULL DEFAULT 'NONE',
+  window_type text NOT NULL DEFAULT 'TRANSACTION',
   kind text NOT NULL,
   role text, -- AUXILIARY only
   is_enforced boolean NOT NULL DEFAULT true,
@@ -124,7 +124,7 @@ CREATE TABLE custom_policies (
   transaction_type text NOT NULL DEFAULT 'ALL',
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
-  window_type text NOT NULL DEFAULT 'NONE',
+  window_type text NOT NULL DEFAULT 'TRANSACTION',
   kind text NOT NULL,
   role text, -- AUXILIARY only
   is_enforced boolean NOT NULL DEFAULT true,
@@ -342,7 +342,7 @@ SELECT
 -- ---------------------------------------------------------------------
 -- usages: running totals per wallet and scope. The scope comes from the
 -- type, selectors, window and unit of the matched policy, never from a policy id, so usage
--- outlives policy edits. Stateless policies (window NONE) have no row.
+-- outlives policy edits. Stateless policies (window TRANSACTION) have no row.
 -- window_start: the day (DAILY), the first day of the month (MONTHLY) or
 -- 1970-01-01 (LIFETIME), in UTC.
 -- unit COUNT adds 1 to value, unit AMOUNT adds the money measured (the

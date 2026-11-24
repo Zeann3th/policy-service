@@ -31,7 +31,7 @@ func windowStart(window policy.WindowType, at time.Time) time.Time {
 // a window and a unit this service measures.
 func tracked(p policy.Policy) bool {
 	_, measured := measureOf(p.Unit)
-	return p.IsEnforced && p.WindowType != policy.WindowNone && p.UnitID != nil && measured
+	return p.IsEnforced && p.WindowType != policy.WindowTransaction && p.UnitID != nil && measured
 }
 
 func usageKey(walletID string, p policy.Policy, at time.Time) UsageKey {

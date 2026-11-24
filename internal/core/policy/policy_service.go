@@ -37,7 +37,7 @@ func NewService(store PolicyStore, rules Rules, cache *cachecore.Versioned) Serv
 
 func policyResponse(value Policy) PolicyResponse {
 	if value.WindowType == "" {
-		value.WindowType = WindowNone
+		value.WindowType = WindowTransaction
 	}
 	return PolicyResponse{
 		ID:              value.ID,
@@ -64,7 +64,7 @@ func policyResponse(value Policy) PolicyResponse {
 
 func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
 	if value.WindowType == "" {
-		value.WindowType = WindowNone
+		value.WindowType = WindowTransaction
 	}
 	return CustomPolicyResponse{
 		ID:              value.ID,
@@ -316,7 +316,7 @@ func (s *service) prepareNew(ctx context.Context, fields *PolicyFields) error {
 	fields.TransactionType, fields.Channel = defaults(fields.TransactionType, fields.Channel)
 	fields.Direction = defaultDirection(fields.Direction)
 	if fields.WindowType == "" {
-		fields.WindowType = WindowNone
+		fields.WindowType = WindowTransaction
 	}
 	if fields.IsEnforced == nil {
 		enforced := true

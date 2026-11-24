@@ -1967,7 +1967,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2119,7 +2119,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2271,7 +2271,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2482,7 +2482,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2637,7 +2637,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"
@@ -2811,13 +2811,16 @@
         "policy.WindowType": {
             "type": "string",
             "enum": [
-                "NONE",
+                "TRANSACTION",
                 "DAILY",
                 "MONTHLY",
                 "LIFETIME"
             ],
+            "x-enum-comments": {
+                "WindowTransaction": "this transaction alone; nothing accumulates"
+            },
             "x-enum-varnames": [
-                "WindowNone",
+                "WindowTransaction",
                 "WindowDaily",
                 "WindowMonthly",
                 "WindowLifetime"
@@ -2939,7 +2942,7 @@
                 },
                 "windowType": {
                     "enum": [
-                        "NONE",
+                        "TRANSACTION",
                         "DAILY",
                         "MONTHLY",
                         "LIFETIME"

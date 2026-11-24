@@ -35,7 +35,7 @@ const (
 )
 
 func c(id int64, role policy.Role, base policy.Base, value string) policy.Policy {
-	charge := p(id, policy.KindAuxiliary, "", policy.WindowNone, "", value)
+	charge := p(id, policy.KindAuxiliary, "", policy.WindowTransaction, "", value)
 	charge.PolicyType, charge.Role, charge.Base = "TXN_"+string(role), role, base
 	return charge
 }
@@ -89,10 +89,10 @@ func TestRegistryRejectsDuplicateKind(t *testing.T) {
 
 func TestEngineSkipsConfigOnlyAndUnknownPolicies(t *testing.T) {
 	// config only: the type is not enforced (balance limits for accounting)
-	balance := p(1, policy.KindLimit, "BALANCE", policy.WindowNone, policy.OpGTE, "1000000")
+	balance := p(1, policy.KindLimit, "BALANCE", policy.WindowTransaction, policy.OpGTE, "1000000")
 	balance.IsEnforced = false
 	// enforced, but the code has no behaviour for them: they do nothing
-	unmeasured := p(2, policy.KindLimit, "BALANCE", policy.WindowNone, policy.OpGTE, "1000000")
+	unmeasured := p(2, policy.KindLimit, "BALANCE", policy.WindowTransaction, policy.OpGTE, "1000000")
 	smsFee := c(3, "COMMISSION", "", "500")
 	unknownKind := c(4, "REVENUE_SHARE", "", "1")
 	unknownKind.Kind = "REVENUE_SHARE"
@@ -112,7 +112,7 @@ func TestEngineSkipsConfigOnlyAndUnknownPolicies(t *testing.T) {
 
 func TestEvaluateLimits(t *testing.T) {
 	daily := p(1, policy.KindLimit, policy.UnitAmount, policy.WindowDaily, policy.OpLTE, "1000")
-	single := p(2, policy.KindLimit, policy.UnitAmount, policy.WindowNone, policy.OpLTE, "500")
+	single := p(2, policy.KindLimit, policy.UnitAmount, policy.WindowTransaction, policy.OpLTE, "500")
 	usage := map[UsageKey]decimal.Decimal{usageKey("w", daily, at): d("700")}
 
 	result, entries, err := evaluate("w", d("400"), []policy.Policy{daily, single}, usage, at)
@@ -288,26 +288,26 @@ func TestRulesCheckWhatEachKindTakes(t *testing.T) {
 		ok   bool
 	}{
 		"daily amount limit":     {spec(policy.KindLimit, "", policy.UnitAmount, "", policy.OpLTE, policy.WindowDaily), true},
-		"balance limit":          {spec(policy.KindLimit, "", "BALANCE", "", policy.OpGTE, policy.WindowNone), true},
-		"limit without unit":     {spec(policy.KindLimit, "", "", "", policy.OpLTE, policy.WindowNone), false},
-		"limit without operator": {spec(policy.KindLimit, "", policy.UnitAmount, "", "", policy.WindowNone), false},
-		"limit with base":        {spec(policy.KindLimit, "", policy.UnitAmount, policy.BaseAmount, policy.OpLTE, policy.WindowNone), false},
+		"balance limit":          {spec(policy.KindLimit, "", "BALANCE", "", policy.OpGTE, policy.WindowTransaction), true},
+		"limit without unit":     {spec(policy.KindLimit, "", "", "", policy.OpLTE, policy.WindowTransaction), false},
+		"limit without operator": {spec(policy.KindLimit, "", policy.UnitAmount, "", "", policy.WindowTransaction), false},
+		"limit with base":        {spec(policy.KindLimit, "", policy.UnitAmount, policy.BaseAmount, policy.OpLTE, policy.WindowTransaction), false},
 		"monthly count waiver":   {spec(policy.KindWaiver, "", policy.UnitCount, "", "", policy.WindowMonthly), true},
 		"waiver with operator":   {spec(policy.KindWaiver, "", policy.UnitCount, "", policy.OpLT, policy.WindowMonthly), false},
-		"flat fee":               {spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowNone), true},
-		"fee on the amount":      {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseAmount, "", policy.WindowNone), true},
-		"fee on the fee":         {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseFee, "", policy.WindowNone), false},
-		"tax on net fee":         {spec(policy.KindAuxiliary, TypeTax, "", policy.BaseNetFee, "", policy.WindowNone), true},
-		"auxiliary without role": {spec(policy.KindAuxiliary, "", "", "", "", policy.WindowNone), false},
-		"unknown role":           {spec(policy.KindAuxiliary, "COMMISSION", "", "", "", policy.WindowNone), false},
-		"limit with a role":      {spec(policy.KindLimit, TypeFee, policy.UnitAmount, "", policy.OpLTE, policy.WindowNone), false},
-		"charge with operator":   {spec(policy.KindAuxiliary, TypeFee, "", "", policy.OpEQ, policy.WindowNone), false},
+		"flat fee":               {spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowTransaction), true},
+		"fee on the amount":      {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseAmount, "", policy.WindowTransaction), true},
+		"fee on the fee":         {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseFee, "", policy.WindowTransaction), false},
+		"tax on net fee":         {spec(policy.KindAuxiliary, TypeTax, "", policy.BaseNetFee, "", policy.WindowTransaction), true},
+		"auxiliary without role": {spec(policy.KindAuxiliary, "", "", "", "", policy.WindowTransaction), false},
+		"unknown role":           {spec(policy.KindAuxiliary, "COMMISSION", "", "", "", policy.WindowTransaction), false},
+		"limit with a role":      {spec(policy.KindLimit, TypeFee, policy.UnitAmount, "", policy.OpLTE, policy.WindowTransaction), false},
+		"charge with operator":   {spec(policy.KindAuxiliary, TypeFee, "", "", policy.OpEQ, policy.WindowTransaction), false},
 		"daily capped fee":       {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, policy.BaseAmount, "", policy.WindowDaily), &cap), true},
 		"window without cap":     {spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), false},
-		"cap without window":     {withCap(spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowNone), &cap), false},
-		"negative discount":      {withValue(spec(policy.KindAuxiliary, TypeDiscount, "", policy.BaseAmount, "", policy.WindowNone), negative), false},
+		"cap without window":     {withCap(spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowTransaction), &cap), false},
+		"negative discount":      {withValue(spec(policy.KindAuxiliary, TypeDiscount, "", policy.BaseAmount, "", policy.WindowTransaction), negative), false},
 		"negative cap":           {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), &negative), false},
-		"unknown kind":           {spec("REVENUE_SHARE", "X", "", "", "", policy.WindowNone), false},
+		"unknown kind":           {spec("REVENUE_SHARE", "X", "", "", "", policy.WindowTransaction), false},
 		"unknown window":         {spec(policy.KindLimit, "", policy.UnitAmount, "", policy.OpLTE, "WEEKLY"), false},
 	} {
 		if err := NewRules().Check(test.spec); (err == nil) != test.ok {

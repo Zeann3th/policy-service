@@ -56,6 +56,7 @@ func appliedPolicy(p policy.Policy) AppliedPolicy {
 		PolicyID:        p.ID,
 		PolicyType:      p.PolicyType,
 		Kind:            p.Kind,
+		Role:            p.Role,
 		Unit:            p.Unit,
 		Base:            p.Base,
 		Source:          p.Source,

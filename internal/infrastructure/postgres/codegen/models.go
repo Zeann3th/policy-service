@@ -20,6 +20,9 @@ type CustomPolicy struct {
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
 	WindowType      string           `json:"window_type"`
+	Kind            string           `json:"kind"`
+	Role            *string          `json:"role"`
+	IsEnforced      bool             `json:"is_enforced"`
 	UnitID          *int64           `json:"unit_id"`
 	Base            *string          `json:"base"`
 	Operator        *string          `json:"operator"`
@@ -50,6 +53,9 @@ type Policy struct {
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
 	WindowType      string           `json:"window_type"`
+	Kind            string           `json:"kind"`
+	Role            *string          `json:"role"`
+	IsEnforced      bool             `json:"is_enforced"`
 	UnitID          *int64           `json:"unit_id"`
 	Base            *string          `json:"base"`
 	Operator        *string          `json:"operator"`
@@ -85,8 +91,6 @@ type PolicyType struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
-	Kind        string     `json:"kind"`
-	IsEnforced  bool       `json:"is_enforced"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`

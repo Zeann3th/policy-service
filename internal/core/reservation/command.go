@@ -43,23 +43,24 @@ type ReleaseResponse struct {
 type PartyResult struct {
 	WalletID   string `json:"walletId"`
 	IsViolated bool   `json:"isViolated"`
-	// Charges is what each AUXILIARY policy type charges this side, in type
-	// order; a discount is negative. The side pays their sum.
+	// Charges is what each AUXILIARY role charges this side, in role order;
+	// a discount is negative. The side pays their sum.
 	Charges         []Charge        `json:"charges"`
 	AppliedPolicies []AppliedPolicy `json:"appliedPolicies"`
 }
 
-// Charge is one policy type's total for a side: positive is paid, negative
-// (a discount) is taken off.
+// Charge is one role's total for a side: positive is paid, negative (a
+// discount) is taken off.
 type Charge struct {
-	PolicyType string          `example:"TXN_FEE" json:"policyType"`
-	Amount     decimal.Decimal `example:"1100" json:"amount" swaggertype:"string"`
+	Role   policy.Role     `enums:"FEE,DISCOUNT,TAX" json:"role"`
+	Amount decimal.Decimal `example:"1100" json:"amount" swaggertype:"string"`
 }
 
 type AppliedPolicy struct {
 	PolicyID        int64             `json:"policyId"`
 	PolicyType      string            `json:"policyType"`
 	Kind            policy.Kind       `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
+	Role            policy.Role       `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
 	Unit            string            `example:"AMOUNT" json:"unit,omitempty"`
 	Base            policy.Base       `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
 	Source          policy.Source     `enums:"SYSTEM,USER" json:"source"`

@@ -9,22 +9,14 @@ import (
 	"github.com/zeann3th/policy-service/internal/core/policy"
 )
 
-// Policy type codes the auxiliary strategy charges. An AUXILIARY policy of
-// another type code does nothing here.
-const (
-	TypeFee      = "TXN_FEE"
-	TypeDiscount = "TXN_DISCOUNT"
-	TypeTax      = "TXN_TAX"
-)
-
-// chargeType is the behaviour of one AUXILIARY policy type. The auxiliary
-// strategy is the template: for every policy of the type it prices the
+// chargeType is the behaviour of one AUXILIARY role. The auxiliary
+// strategy is the template: for every policy of the role it prices the
 // line on its base, lets adjust change it, applies the policy's window cap
 // and records the usage; then settle turns the lines into the type's total
 // and publish makes bases available to later types. A nil hook keeps the
 // default.
 type chargeType struct {
-	code   string
+	role   policy.Role
 	bases  []policy.Base // what its policies may be a percentage of
 	credit bool          // taken off what the wallet pays (a discount)
 	// adjust changes a priced line before the cap; default: unchanged.
@@ -40,11 +32,11 @@ type chargeLine struct {
 	amount decimal.Decimal
 }
 
-// chargeTypes runs in this order; a type may only use bases published by
+// chargeTypes runs in role order; a role may only use bases published by
 // an earlier one.
 var chargeTypes = []chargeType{
 	{
-		code:  TypeFee,
+		role:  policy.RoleFee,
 		bases: []policy.Base{policy.BaseAmount},
 		adjust: func(e *evaluation, amount decimal.Decimal) decimal.Decimal {
 			if e.waived {
@@ -55,7 +47,7 @@ var chargeTypes = []chargeType{
 		publish: func(e *evaluation, total decimal.Decimal) { e.bases[policy.BaseFee] = total },
 	},
 	{
-		code:   TypeDiscount,
+		role:   policy.RoleDiscount,
 		bases:  []policy.Base{policy.BaseAmount, policy.BaseFee},
 		credit: true,
 		// flat and fee-based discounts come off the fee (at most the fee);
@@ -76,13 +68,13 @@ var chargeTypes = []chargeType{
 		},
 	},
 	{
-		code:  TypeTax,
+		role:  policy.RoleTax,
 		bases: []policy.Base{policy.BaseAmount, policy.BaseFee, policy.BaseNetFee},
 	},
 }
 
-func chargeTypeOf(code string) (chargeType, bool) {
-	index := slices.IndexFunc(chargeTypes, func(value chargeType) bool { return value.code == code })
+func chargeTypeOf(role policy.Role) (chargeType, bool) {
+	index := slices.IndexFunc(chargeTypes, func(value chargeType) bool { return value.role == role })
 	if index < 0 {
 		return chargeType{}, false
 	}
@@ -96,15 +88,16 @@ type auxiliaryStrategy struct{}
 func (auxiliaryStrategy) kind() policy.Kind { return policy.KindAuxiliary }
 
 func (auxiliaryStrategy) check(spec policy.Spec) error {
-	allowed := policy.Bases()
-	if value, ok := chargeTypeOf(spec.Type); ok {
-		allowed = value.bases
+	value, ok := chargeTypeOf(spec.Role)
+	if !ok {
+		return fmt.Errorf("AUXILIARY policies need a role %v", policy.Roles())
 	}
+	allowed := value.bases
 	switch {
 	case spec.Operator != "":
 		return errors.New("AUXILIARY policies take no operator")
 	case spec.Base != "" && !slices.Contains(allowed, spec.Base):
-		return fmt.Errorf("%s policies take base %v or none (flat)", spec.Type, allowed)
+		return fmt.Errorf("%s policies take base %v or none (flat)", spec.Role, allowed)
 	case spec.Window == policy.WindowNone && spec.Cap != nil:
 		return errors.New("a cap needs a window: it limits what is charged per window")
 	case spec.Window == policy.WindowNone && spec.Unit != "":
@@ -118,15 +111,12 @@ func (auxiliaryStrategy) check(spec policy.Spec) error {
 }
 
 func (auxiliaryStrategy) process(e *evaluation, policies []policy.Policy) error {
-	byType := make(map[string][]policy.Policy, len(chargeTypes))
+	byRole := make(map[policy.Role][]policy.Policy, len(chargeTypes))
 	for _, p := range policies {
-		if _, ok := chargeTypeOf(p.PolicyType); !ok {
-			continue
-		}
-		byType[p.PolicyType] = append(byType[p.PolicyType], p)
+		byRole[p.Role] = append(byRole[p.Role], p)
 	}
 	for _, value := range chargeTypes {
-		if err := charge(e, value, byType[value.code]); err != nil {
+		if err := charge(e, value, byRole[value.role]); err != nil {
 			return err
 		}
 	}
@@ -169,7 +159,7 @@ func charge(e *evaluation, value chargeType, policies []policy.Policy) error {
 		if value.credit {
 			total = total.Neg()
 		}
-		e.result.Charges = append(e.result.Charges, Charge{PolicyType: value.code, Amount: total.Round(moneyPlaces)})
+		e.result.Charges = append(e.result.Charges, Charge{Role: value.role, Amount: total.Round(moneyPlaces)})
 	}
 	return nil
 }
@@ -181,7 +171,7 @@ func price(e *evaluation, p policy.Policy) (decimal.Decimal, error) {
 	}
 	base, ok := e.bases[p.Base]
 	if !ok {
-		return decimal.Zero, errorf(p, "base %s is not computed before %s", p.Base, p.PolicyType)
+		return decimal.Zero, errorf(p, "base %s is not computed before %s", p.Base, p.Role)
 	}
 	return base.Mul(p.Value).Div(hundred), nil
 }

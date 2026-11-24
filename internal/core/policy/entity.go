@@ -10,14 +10,14 @@ import (
 
 const All = "ALL"
 
-// Kind says which strategy evaluates a policy. Policy types and units are
-// catalog rows; the kinds are the behaviours this service implements.
+// Kind says which strategy evaluates a policy. It is set on each policy
+// row; policy types and units are only labels.
 type Kind string
 
 const (
 	KindLimit     Kind = "LIMIT"     // blocks a transaction that breaks a bound
 	KindWaiver    Kind = "WAIVER"    // waives the fee while usage is under a bound
-	KindAuxiliary Kind = "AUXILIARY" // charges: fee, discount, tax, ... by type code
+	KindAuxiliary Kind = "AUXILIARY" // charges: fee, discount, tax, by role
 )
 
 var kinds = []Kind{KindLimit, KindWaiver, KindAuxiliary}
@@ -29,6 +29,27 @@ func (k Kind) Valid() bool {
 // Kinds returns every kind, in evaluation order.
 func Kinds() []Kind {
 	return slices.Clone(kinds)
+}
+
+// Role is how an AUXILIARY policy's charge applies. Charges run in role
+// order, so a role may only use a base computed before it.
+type Role string
+
+const (
+	RoleFee      Role = "FEE"      // paid; zero while a waiver applies; publishes base FEE
+	RoleDiscount Role = "DISCOUNT" // taken off; at most the fee (or the amount, for cashback); publishes NET_FEE
+	RoleTax      Role = "TAX"      // paid, on any base
+)
+
+var roles = []Role{RoleFee, RoleDiscount, RoleTax}
+
+func (r Role) Valid() bool {
+	return slices.Contains(roles, r)
+}
+
+// Roles returns every role, in the order charges are computed.
+func Roles() []Role {
+	return slices.Clone(roles)
 }
 
 // Unit codes the code has a measure for. Units are catalog rows (table
@@ -64,7 +85,7 @@ func Bases() []Base {
 // fields it takes and checks them (Rules).
 type Spec struct {
 	Kind     Kind
-	Type     string // policy type code
+	Role     Role   // AUXILIARY only
 	Unit     string // unit code; "" when the policy has none
 	Base     Base
 	Operator Operator
@@ -153,8 +174,6 @@ type PolicyType struct {
 	ID          int64
 	Code        string
 	Description *string
-	Kind        Kind
-	IsEnforced  bool
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
@@ -186,6 +205,7 @@ type Policy struct {
 	PolicyTypeID    int64
 	PolicyType      string
 	Kind            Kind
+	Role            Role
 	TransactionType string
 	Channel         string
 	Direction       Direction
@@ -196,8 +216,8 @@ type Policy struct {
 	Operator        Operator
 	Value           decimal.Decimal
 	Cap             *decimal.Decimal
-	// IsEnforced (from the type) is internal: false keeps the policy out of
-	// the engine; it is still returned as config.
+	// IsEnforced false keeps the policy out of the engine; it is still
+	// returned as config.
 	IsEnforced    bool
 	EffectiveFrom time.Time
 	EffectiveTo   *time.Time
@@ -223,6 +243,7 @@ type CustomPolicy struct {
 	PolicyTypeID    int64
 	PolicyType      string
 	Kind            Kind
+	Role            Role
 	TransactionType string
 	Channel         string
 	Direction       Direction
@@ -233,8 +254,8 @@ type CustomPolicy struct {
 	Operator        Operator
 	Value           decimal.Decimal
 	Cap             *decimal.Decimal
-	// IsEnforced (from the type) is internal: false keeps the policy out of
-	// the engine; it is still returned as config.
+	// IsEnforced false keeps the policy out of the engine; it is still
+	// returned as config.
 	IsEnforced    bool
 	EffectiveFrom time.Time
 	EffectiveTo   *time.Time
@@ -283,5 +304,5 @@ func unitID(value *int64) int64 {
 
 // Spec is how the policy reads its value.
 func (v Policy) Spec() Spec {
-	return Spec{Kind: v.Kind, Type: v.PolicyType, Unit: v.Unit, Base: v.Base, Operator: v.Operator, Window: v.WindowType, Value: v.Value, Cap: v.Cap}
+	return Spec{Kind: v.Kind, Role: v.Role, Unit: v.Unit, Base: v.Base, Operator: v.Operator, Window: v.WindowType, Value: v.Value, Cap: v.Cap}
 }

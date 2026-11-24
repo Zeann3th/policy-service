@@ -113,6 +113,7 @@ message PolicyRule {
   string base = 10;
   string kind = 11;
   optional string cap = 12;
+  string role = 13;
 }
 message GetPolicyConfigResponse {
   repeated PolicyRule rules = 1;
@@ -154,10 +155,12 @@ message PolicyType {
   bool active = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
-  string kind = 8;
+  reserved 8;
+  reserved "kind";
   reserved 9;
   reserved "window_type";
-  bool is_enforced = 11;
+  reserved 11;
+  reserved "is_enforced";
 }
 message PolicyTypePage {
   repeated PolicyType items = 1;
@@ -172,17 +175,20 @@ message CreatePolicyTypeRequest {
   reserved "unit_id", "base";
   optional bool active = 4;
   string updated_by = 5;
-  string kind = 6;
+  reserved 6;
+  reserved "kind";
   reserved 7;
   reserved "window_type";
-  optional bool is_enforced = 9;
+  reserved 9;
+  reserved "is_enforced";
 }
 message UpdatePolicyTypeRequest {
   uint64 id = 1;
   optional string description = 2;
   optional bool active = 3;
   string updated_by = 4;
-  optional bool is_enforced = 5;
+  reserved 5;
+  reserved "is_enforced";
 }
 
 message PolicyGroup {
@@ -225,6 +231,9 @@ message Policy {
   string base = 15;
   optional uint64 unit_id = 16;
   optional string cap = 17;
+  string kind = 18;
+  string role = 19;
+  bool is_enforced = 20;
 }
 message PolicyPage {
   repeated Policy items = 1;
@@ -249,6 +258,9 @@ message CreatePolicyRequest {
   string base = 13;
   optional uint64 unit_id = 14;
   optional string cap = 15;
+  string kind = 16;
+  string role = 17;
+  optional bool is_enforced = 18;
 }
 message UpdatePolicyRequest {
   uint64 group_id = 1;
@@ -260,6 +272,7 @@ message UpdatePolicyRequest {
   google.protobuf.Timestamp effective_to = 7;
   string base = 8;
   optional string cap = 9;
+  optional bool is_enforced = 10;
 }
 
 message CustomPolicy {
@@ -283,6 +296,9 @@ message CustomPolicy {
   string base = 17;
   optional uint64 unit_id = 18;
   optional string cap = 19;
+  string kind = 20;
+  string role = 21;
+  bool is_enforced = 22;
 }
 message CustomPolicyPage {
   repeated CustomPolicy items = 1;
@@ -308,6 +324,9 @@ message CreateCustomPolicyRequest {
   string base = 14;
   optional uint64 unit_id = 15;
   optional string cap = 16;
+  string kind = 17;
+  string role = 18;
+  optional bool is_enforced = 19;
 }
 message UpdateCustomPolicyRequest {
   string wallet_id = 1;
@@ -320,6 +339,7 @@ message UpdateCustomPolicyRequest {
   string updated_by = 8;
   string base = 9;
   optional string cap = 10;
+  optional bool is_enforced = 11;
 }
 
 message ReloadCacheRequest {
@@ -366,10 +386,11 @@ message AppliedPolicy {
   optional string cap = 17;
   reserved 18;
   reserved "is_enforced";
+  string role = 19;
 }
-// What one AUXILIARY policy type charges a side; a discount is negative.
+// What one AUXILIARY role charges a side; a discount is negative.
 message Charge {
-  string policy_type = 1;
+  string role = 1;
   string amount = 2;
 }
 message PartyResult {

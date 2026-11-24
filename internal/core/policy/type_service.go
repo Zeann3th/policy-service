@@ -2,7 +2,6 @@ package policy
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/zeann3th/policy-service/internal/core"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
@@ -30,8 +29,6 @@ func policyTypeResponse(value PolicyType) PolicyTypeResponse {
 		ID:          value.ID,
 		Code:        value.Code,
 		Description: value.Description,
-		Kind:        value.Kind,
-		IsEnforced:  value.IsEnforced,
 		Active:      value.Active,
 		CreatedAt:   value.CreatedAt,
 		UpdatedAt:   value.UpdatedAt,
@@ -43,21 +40,11 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 		active := true
 		request.Active = &active
 	}
-	if request.Kind == "" {
-		request.Kind = KindLimit
-	}
-	if !request.Kind.Valid() {
-		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage(fmt.Sprintf("kind must be one of %v", Kinds()))
-	}
 	code, ok := core.Code(request.Code)
 	if !ok {
 		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage("code must be letters, digits and underscores, starting with a letter")
 	}
 	request.Code = code
-	if request.IsEnforced == nil {
-		enforced := true
-		request.IsEnforced = &enforced
-	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {
 		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes)
@@ -85,13 +72,6 @@ func (s *typeService) List(ctx context.Context, request core.PageRequest) (core.
 func (s *typeService) Update(ctx context.Context, id int64, request UpdatePolicyTypeRequest) (PolicyTypeResponse, error) {
 	if request.Active == nil {
 		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage("active is required")
-	}
-	if request.IsEnforced == nil {
-		current, err := s.store.GetType(ctx, id)
-		if err != nil {
-			return PolicyTypeResponse{}, err
-		}
-		request.IsEnforced = &current.IsEnforced
 	}
 	value, err := s.store.UpdateType(ctx, id, request)
 	if err == nil {

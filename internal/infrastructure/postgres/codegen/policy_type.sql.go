@@ -21,34 +21,24 @@ func (q *Queries) CountPolicyTypes(ctx context.Context) (int64, error) {
 }
 
 const createPolicyType = `-- name: CreatePolicyType :one
-INSERT INTO policy_types (code, description, kind, is_enforced, active)
-VALUES (upper(CAST($1 AS text)), $2, $3, $4, $5)
-RETURNING id, code, description, kind, is_enforced, active, created_at, updated_at
+INSERT INTO policy_types (code, description, active)
+VALUES (upper(CAST($1 AS text)), $2, $3)
+RETURNING id, code, description, active, created_at, updated_at
 `
 
 type CreatePolicyTypeParams struct {
 	Code        string  `json:"code"`
 	Description *string `json:"description"`
-	Kind        string  `json:"kind"`
-	IsEnforced  bool    `json:"is_enforced"`
 	Active      bool    `json:"active"`
 }
 
 func (q *Queries) CreatePolicyType(ctx context.Context, arg CreatePolicyTypeParams) (PolicyType, error) {
-	row := q.db.QueryRow(ctx, createPolicyType,
-		arg.Code,
-		arg.Description,
-		arg.Kind,
-		arg.IsEnforced,
-		arg.Active,
-	)
+	row := q.db.QueryRow(ctx, createPolicyType, arg.Code, arg.Description, arg.Active)
 	var i PolicyType
 	err := row.Scan(
 		&i.ID,
 		&i.Code,
 		&i.Description,
-		&i.Kind,
-		&i.IsEnforced,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -57,7 +47,7 @@ func (q *Queries) CreatePolicyType(ctx context.Context, arg CreatePolicyTypePara
 }
 
 const deletePolicyType = `-- name: DeletePolicyType :one
-DELETE FROM policy_types WHERE id = $1 RETURNING id, code, description, kind, is_enforced, active, created_at, updated_at
+DELETE FROM policy_types WHERE id = $1 RETURNING id, code, description, active, created_at, updated_at
 `
 
 func (q *Queries) DeletePolicyType(ctx context.Context, id int64) (PolicyType, error) {
@@ -67,8 +57,6 @@ func (q *Queries) DeletePolicyType(ctx context.Context, id int64) (PolicyType, e
 		&i.ID,
 		&i.Code,
 		&i.Description,
-		&i.Kind,
-		&i.IsEnforced,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -77,7 +65,7 @@ func (q *Queries) DeletePolicyType(ctx context.Context, id int64) (PolicyType, e
 }
 
 const getPolicyTypeByID = `-- name: GetPolicyTypeByID :one
-SELECT id, code, description, kind, is_enforced, active, created_at, updated_at FROM policy_types WHERE id = $1
+SELECT id, code, description, active, created_at, updated_at FROM policy_types WHERE id = $1
 `
 
 func (q *Queries) GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, error) {
@@ -87,8 +75,6 @@ func (q *Queries) GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, 
 		&i.ID,
 		&i.Code,
 		&i.Description,
-		&i.Kind,
-		&i.IsEnforced,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -97,7 +83,7 @@ func (q *Queries) GetPolicyTypeByID(ctx context.Context, id int64) (PolicyType, 
 }
 
 const getPolicyTypeByIDForUpdate = `-- name: GetPolicyTypeByIDForUpdate :one
-SELECT id, code, description, kind, is_enforced, active, created_at, updated_at FROM policy_types WHERE id = $1 FOR UPDATE
+SELECT id, code, description, active, created_at, updated_at FROM policy_types WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (PolicyType, error) {
@@ -107,8 +93,6 @@ func (q *Queries) GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (Pol
 		&i.ID,
 		&i.Code,
 		&i.Description,
-		&i.Kind,
-		&i.IsEnforced,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -117,7 +101,7 @@ func (q *Queries) GetPolicyTypeByIDForUpdate(ctx context.Context, id int64) (Pol
 }
 
 const listPolicyTypes = `-- name: ListPolicyTypes :many
-SELECT id, code, description, kind, is_enforced, active, created_at, updated_at FROM policy_types ORDER BY id LIMIT $2 OFFSET $1
+SELECT id, code, description, active, created_at, updated_at FROM policy_types ORDER BY id LIMIT $2 OFFSET $1
 `
 
 type ListPolicyTypesParams struct {
@@ -138,8 +122,6 @@ func (q *Queries) ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams
 			&i.ID,
 			&i.Code,
 			&i.Description,
-			&i.Kind,
-			&i.IsEnforced,
 			&i.Active,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -156,31 +138,23 @@ func (q *Queries) ListPolicyTypes(ctx context.Context, arg ListPolicyTypesParams
 
 const updatePolicyType = `-- name: UpdatePolicyType :one
 UPDATE policy_types
-SET description = $1, is_enforced = $2, active = $3, updated_at = now()
-WHERE id = $4 RETURNING id, code, description, kind, is_enforced, active, created_at, updated_at
+SET description = $1, active = $2, updated_at = now()
+WHERE id = $3 RETURNING id, code, description, active, created_at, updated_at
 `
 
 type UpdatePolicyTypeParams struct {
 	Description *string `json:"description"`
-	IsEnforced  bool    `json:"is_enforced"`
 	Active      bool    `json:"active"`
 	ID          int64   `json:"id"`
 }
 
 func (q *Queries) UpdatePolicyType(ctx context.Context, arg UpdatePolicyTypeParams) (PolicyType, error) {
-	row := q.db.QueryRow(ctx, updatePolicyType,
-		arg.Description,
-		arg.IsEnforced,
-		arg.Active,
-		arg.ID,
-	)
+	row := q.db.QueryRow(ctx, updatePolicyType, arg.Description, arg.Active, arg.ID)
 	var i PolicyType
 	err := row.Scan(
 		&i.ID,
 		&i.Code,
 		&i.Description,
-		&i.Kind,
-		&i.IsEnforced,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,

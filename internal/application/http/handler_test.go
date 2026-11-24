@@ -95,7 +95,7 @@ func TestHandleErrorMapsStatusAndMessage(t *testing.T) {
 
 func TestCreateCustomPolicyAcceptsWindowType(t *testing.T) {
 	service := &policyServiceStub{}
-	response := performPolicyJSONRequest(service, http.MethodPost, "/v1/policies/custom/wallet-123", `{"policyTypeId":1,"windowType":"DAILY","operator":"LTE","value":"1000","updatedBy":"admin"}`)
+	response := performPolicyJSONRequest(service, http.MethodPost, "/v1/policies/custom/wallet-123", `{"policyTypeId":1,"kind":"LIMIT","unitId":1,"windowType":"DAILY","operator":"LTE","value":"1000","updatedBy":"admin"}`)
 
 	if response.Code != http.StatusCreated {
 		t.Fatalf("status/body = %d %s", response.Code, response.Body.String())

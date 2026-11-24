@@ -1854,6 +1854,7 @@ const docTemplate = `{
         "policy.CreateCustomPolicyRequest": {
             "type": "object",
             "required": [
+                "kind",
                 "policyTypeId",
                 "updatedBy",
                 "value"
@@ -1901,6 +1902,23 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
+                    "type": "boolean"
+                },
+                "kind": {
+                    "description": "Kind picks the strategy that evaluates the policy.",
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "AUXILIARY"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -1922,6 +1940,19 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "role": {
+                    "description": "Role is how an AUXILIARY charge applies; required for AUXILIARY.",
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -1978,6 +2009,7 @@ const docTemplate = `{
         "policy.CreatePolicyRequest": {
             "type": "object",
             "required": [
+                "kind",
                 "policyTypeId",
                 "updatedBy",
                 "value"
@@ -2025,6 +2057,23 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
+                    "type": "boolean"
+                },
+                "kind": {
+                    "description": "Kind picks the strategy that evaluates the policy.",
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "AUXILIARY"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -2043,6 +2092,19 @@ const docTemplate = `{
                 },
                 "policyTypeId": {
                     "type": "integer"
+                },
+                "role": {
+                    "description": "Role is how an AUXILIARY charge applies; required for AUXILIARY.",
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -2088,23 +2150,6 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
-                },
-                "isEnforced": {
-                    "description": "IsEnforced defaults to true; false stores and serves the type's\npolicies without evaluating them on reserve.",
-                    "type": "boolean"
-                },
-                "kind": {
-                    "description": "Kind defaults to LIMIT.",
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
                 },
                 "updatedBy": {
                     "type": "string"
@@ -2162,6 +2207,21 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "isEnforced": {
+                    "type": "boolean"
+                },
+                "kind": {
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "AUXILIARY"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
                 "operator": {
                     "enum": [
                         "EQ",
@@ -2182,6 +2242,18 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -2247,7 +2319,7 @@ const docTemplate = `{
                 "AUXILIARY"
             ],
             "x-enum-comments": {
-                "KindAuxiliary": "charges: fee, discount, tax, ... by type code",
+                "KindAuxiliary": "charges: fee, discount, tax, by role",
                 "KindLimit": "blocks a transaction that breaks a bound",
                 "KindWaiver": "waives the fee while usage is under a bound"
             },
@@ -2349,6 +2421,21 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "isEnforced": {
+                    "type": "boolean"
+                },
+                "kind": {
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "AUXILIARY"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
                 "operator": {
                     "enum": [
                         "EQ",
@@ -2369,6 +2456,18 @@ const docTemplate = `{
                 },
                 "policyTypeId": {
                     "type": "integer"
+                },
+                "role": {
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -2418,26 +2517,29 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "isEnforced": {
-                    "type": "boolean"
-                },
-                "kind": {
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
-                },
                 "updatedAt": {
                     "type": "string",
                     "format": "date-time"
                 }
             }
+        },
+        "policy.Role": {
+            "type": "string",
+            "enum": [
+                "FEE",
+                "DISCOUNT",
+                "TAX"
+            ],
+            "x-enum-comments": {
+                "RoleDiscount": "taken off; at most the fee (or the amount, for cashback); publishes NET_FEE",
+                "RoleFee": "paid; zero while a waiver applies; publishes base FEE",
+                "RoleTax": "paid, on any base"
+            },
+            "x-enum-varnames": [
+                "RoleFee",
+                "RoleDiscount",
+                "RoleTax"
+            ]
         },
         "policy.Rule": {
             "type": "object",
@@ -2501,6 +2603,18 @@ const docTemplate = `{
                 },
                 "policyType": {
                     "type": "string"
+                },
+                "role": {
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 },
                 "source": {
                     "enum": [
@@ -2584,6 +2698,10 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
+                    "type": "boolean"
+                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -2646,6 +2764,10 @@ const docTemplate = `{
                     "type": "string",
                     "format": "date-time"
                 },
+                "isEnforced": {
+                    "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
+                    "type": "boolean"
+                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -2683,10 +2805,6 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
-                },
-                "isEnforced": {
-                    "description": "IsEnforced keeps the current value when absent.",
-                    "type": "boolean"
                 },
                 "updatedBy": {
                     "type": "string"
@@ -2778,6 +2896,18 @@ const docTemplate = `{
                 "policyType": {
                     "type": "string"
                 },
+                "role": {
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
+                },
                 "source": {
                     "enum": [
                         "SYSTEM",
@@ -2832,9 +2962,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "1100"
                 },
-                "policyType": {
-                    "type": "string",
-                    "example": "TXN_FEE"
+                "role": {
+                    "enum": [
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Role"
+                        }
+                    ]
                 }
             }
         },
@@ -2870,7 +3008,7 @@ const docTemplate = `{
                     }
                 },
                 "charges": {
-                    "description": "Charges is what each AUXILIARY policy type charges this side, in type\norder; a discount is negative. The side pays their sum.",
+                    "description": "Charges is what each AUXILIARY role charges this side, in role order;\na discount is negative. The side pays their sum.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/reservation.Charge"

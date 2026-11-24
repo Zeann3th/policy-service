@@ -21,7 +21,7 @@ func (rules) Check(spec policy.Spec) error {
 	}
 	switch {
 	case spec.Value.IsNegative():
-		return errors.New("value cannot be negative: the policy type decides the sign")
+		return errors.New("value cannot be negative: the role decides the sign")
 	case spec.Cap != nil && spec.Cap.IsNegative():
 		return errors.New("cap cannot be negative")
 	case !spec.Window.Valid():
@@ -30,6 +30,8 @@ func (rules) Check(spec policy.Spec) error {
 		return fmt.Errorf("unknown operator %q", spec.Operator)
 	case spec.Base != "" && !spec.Base.Valid():
 		return fmt.Errorf("unknown base %q", spec.Base)
+	case spec.Kind != policy.KindAuxiliary && spec.Role != "":
+		return fmt.Errorf("%s policies take no role", spec.Kind)
 	}
 	return value.check(spec)
 }

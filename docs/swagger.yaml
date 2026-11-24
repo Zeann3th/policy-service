@@ -180,6 +180,20 @@ definitions:
       effectiveTo:
         format: date-time
         type: string
+      isEnforced:
+        description: |-
+          IsEnforced false keeps the policy out of the engine: it is only
+          returned as config (e.g. balance limits for accounting). Defaults to
+          true on create and keeps the current value on update.
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        description: Kind picks the strategy that evaluates the policy.
+        enum:
+        - LIMIT
+        - WAIVER
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -195,6 +209,14 @@ definitions:
         type: integer
       reason:
         type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        description: Role is how an AUXILIARY charge applies; required for AUXILIARY.
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       transactionType:
         type: string
       unitId:
@@ -216,6 +238,7 @@ definitions:
         - MONTHLY
         - LIFETIME
     required:
+    - kind
     - policyTypeId
     - updatedBy
     - value
@@ -269,6 +292,20 @@ definitions:
       effectiveTo:
         format: date-time
         type: string
+      isEnforced:
+        description: |-
+          IsEnforced false keeps the policy out of the engine: it is only
+          returned as config (e.g. balance limits for accounting). Defaults to
+          true on create and keeps the current value on update.
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        description: Kind picks the strategy that evaluates the policy.
+        enum:
+        - LIMIT
+        - WAIVER
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -282,6 +319,14 @@ definitions:
         - LTE
       policyTypeId:
         type: integer
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        description: Role is how an AUXILIARY charge applies; required for AUXILIARY.
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       transactionType:
         type: string
       unitId:
@@ -303,6 +348,7 @@ definitions:
         - MONTHLY
         - LIFETIME
     required:
+    - kind
     - policyTypeId
     - updatedBy
     - value
@@ -315,19 +361,6 @@ definitions:
         type: string
       description:
         type: string
-      isEnforced:
-        description: |-
-          IsEnforced defaults to true; false stores and serves the type's
-          policies without evaluating them on reserve.
-        type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        description: Kind defaults to LIMIT.
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       updatedBy:
         type: string
     required:
@@ -367,6 +400,15 @@ definitions:
         type: string
       id:
         type: integer
+      isEnforced:
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -381,6 +423,13 @@ definitions:
         type: integer
       reason:
         type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       transactionType:
         type: string
       unitId:
@@ -426,7 +475,7 @@ definitions:
     - AUXILIARY
     type: string
     x-enum-comments:
-      KindAuxiliary: 'charges: fee, discount, tax, ... by type code'
+      KindAuxiliary: 'charges: fee, discount, tax, by role'
       KindLimit: blocks a transaction that breaks a bound
       KindWaiver: waives the fee while usage is under a bound
     x-enum-varnames:
@@ -497,6 +546,15 @@ definitions:
         type: string
       id:
         type: integer
+      isEnforced:
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -511,6 +569,13 @@ definitions:
         type: integer
       policyTypeId:
         type: integer
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       transactionType:
         type: string
       unitId:
@@ -543,19 +608,25 @@ definitions:
         type: string
       id:
         type: integer
-      isEnforced:
-        type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       updatedAt:
         format: date-time
         type: string
     type: object
+  policy.Role:
+    enum:
+    - FEE
+    - DISCOUNT
+    - TAX
+    type: string
+    x-enum-comments:
+      RoleDiscount: taken off; at most the fee (or the amount, for cashback); publishes
+        NET_FEE
+      RoleFee: paid; zero while a waiver applies; publishes base FEE
+      RoleTax: paid, on any base
+    x-enum-varnames:
+    - RoleFee
+    - RoleDiscount
+    - RoleTax
   policy.Rule:
     properties:
       base:
@@ -595,6 +666,13 @@ definitions:
         - LTE
       policyType:
         type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       source:
         allOf:
         - $ref: '#/definitions/policy.Source'
@@ -650,6 +728,12 @@ definitions:
       effectiveTo:
         format: date-time
         type: string
+      isEnforced:
+        description: |-
+          IsEnforced false keeps the policy out of the engine: it is only
+          returned as config (e.g. balance limits for accounting). Defaults to
+          true on create and keeps the current value on update.
+        type: boolean
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -696,6 +780,12 @@ definitions:
       effectiveTo:
         format: date-time
         type: string
+      isEnforced:
+        description: |-
+          IsEnforced false keeps the policy out of the engine: it is only
+          returned as config (e.g. balance limits for accounting). Defaults to
+          true on create and keeps the current value on update.
+        type: boolean
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -722,9 +812,6 @@ definitions:
         type: boolean
       description:
         type: string
-      isEnforced:
-        description: IsEnforced keeps the current value when absent.
-        type: boolean
       updatedBy:
         type: string
     required:
@@ -790,6 +877,13 @@ definitions:
         type: integer
       policyType:
         type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
       source:
         allOf:
         - $ref: '#/definitions/policy.Source'
@@ -826,9 +920,13 @@ definitions:
       amount:
         example: "1100"
         type: string
-      policyType:
-        example: TXN_FEE
-        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/policy.Role'
+        enum:
+        - FEE
+        - DISCOUNT
+        - TAX
     type: object
   reservation.PartyRequest:
     properties:
@@ -854,8 +952,8 @@ definitions:
         type: array
       charges:
         description: |-
-          Charges is what each AUXILIARY policy type charges this side, in type
-          order; a discount is negative. The side pays their sum.
+          Charges is what each AUXILIARY role charges this side, in role order;
+          a discount is negative. The side pays their sum.
         items:
           $ref: '#/definitions/reservation.Charge'
         type: array

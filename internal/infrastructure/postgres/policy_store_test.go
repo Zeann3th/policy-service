@@ -294,7 +294,7 @@ func TestAuditFailureRollsBackMutation(t *testing.T) {
 	code := fmt.Sprintf("ROLLBACK_%d", time.Now().UnixNano())
 
 	err = transact(ctx, pool, func(q *codegen.Queries) error {
-		policyType, err := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: code, Kind: string(policy.KindLimit), Active: true})
+		policyType, err := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: code, Active: true})
 		if err != nil {
 			return err
 		}

@@ -9,11 +9,11 @@ import (
 )
 
 func TestPolicyMappingsExposeBusinessSelectors(t *testing.T) {
-	typeMessage := outPolicyType(policy.PolicyTypeResponse{Kind: policy.KindAuxiliary})
+	typeMessage := outPolicyType(policy.PolicyTypeResponse{Code: "TXN_FEE"})
 	policyMessage := outPolicy(policy.PolicyResponse{Direction: policy.DirectionOut, WindowType: policy.WindowMonthly})
 	customMessage := outCustomPolicy(policy.CustomPolicyResponse{Direction: policy.DirectionIn, WindowType: policy.WindowLifetime})
 
-	if typeMessage.Kind != "AUXILIARY" {
+	if typeMessage.Code != "TXN_FEE" {
 		t.Fatalf("policy type = %#v", typeMessage)
 	}
 	if policyMessage.Direction != "OUT" || policyMessage.WindowType != "MONTHLY" || customMessage.Direction != "IN" || customMessage.WindowType != "LIFETIME" {

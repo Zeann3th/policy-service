@@ -20,12 +20,12 @@ func NewTypeStore(db *pgxpool.Pool) *TypeStore {
 }
 
 func toPolicyType(v codegen.PolicyType) policy.PolicyType {
-	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, Kind: policy.Kind(v.Kind), IsEnforced: v.IsEnforced, Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
+	return policy.PolicyType{ID: v.ID, Code: v.Code, Description: v.Description, Active: v.Active, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt}
 }
 
 func (s *TypeStore) CreateType(ctx context.Context, c policy.CreatePolicyTypeRequest) (out policy.PolicyType, err error) {
 	err = transact(ctx, s.db, func(q *codegen.Queries) error {
-		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, Kind: string(c.Kind), IsEnforced: *c.IsEnforced, Active: *c.Active})
+		v, e := q.CreatePolicyType(ctx, codegen.CreatePolicyTypeParams{Code: c.Code, Description: c.Description, Active: *c.Active})
 		if e != nil {
 			return e
 		}
@@ -59,7 +59,7 @@ func (s *TypeStore) UpdateType(ctx context.Context, id int64, c policy.UpdatePol
 		if e != nil {
 			return e
 		}
-		v, e := q.UpdatePolicyType(ctx, codegen.UpdatePolicyTypeParams{ID: id, Description: c.Description, IsEnforced: *c.IsEnforced, Active: *c.Active})
+		v, e := q.UpdatePolicyType(ctx, codegen.UpdatePolicyTypeParams{ID: id, Description: c.Description, Active: *c.Active})
 		if e != nil {
 			return e
 		}

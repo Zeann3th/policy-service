@@ -7,6 +7,8 @@ import (
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -28,7 +30,7 @@ func (h *policyHandler) GetPolicyConfig(ctx context.Context, request *pb.GetPoli
 	}
 	result := &pb.GetPolicyConfigResponse{Rules: make([]*pb.PolicyRule, len(response.Rules))}
 	for i, value := range response.Rules {
-		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Kind: string(value.Kind), Unit: value.Unit, Base: string(value.Base), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), Source: string(value.Source)}
+		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Kind: string(value.Kind), Role: string(value.Role), Unit: value.Unit, Base: string(value.Base), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), Source: string(value.Source)}
 	}
 	return result, nil
 }
@@ -37,7 +39,7 @@ func (h *policyHandler) CreatePolicy(ctx context.Context, request *pb.CreatePoli
 	if err := mutation(request.UpdatedBy, request.GroupId); err != nil {
 		return nil, err
 	}
-	fields, err := inPolicyFields(request)
+	fields, err := inPolicyFields(request, request.IsEnforced)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +87,7 @@ func (h *policyHandler) UpdatePolicy(ctx context.Context, request *pb.UpdatePoli
 	if err := mutation(request.UpdatedBy, request.GroupId, request.Id); err != nil {
 		return nil, err
 	}
-	change, err := inPolicyChange(request)
+	change, err := inPolicyChange(request, request.IsEnforced)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +119,7 @@ func (h *policyHandler) CreateCustomPolicy(ctx context.Context, request *pb.Crea
 	if err := mutation(request.UpdatedBy); err != nil {
 		return nil, err
 	}
-	fields, err := inPolicyFields(request)
+	fields, err := inPolicyFields(request, request.IsEnforced)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +171,7 @@ func (h *policyHandler) UpdateCustomPolicy(ctx context.Context, request *pb.Upda
 	if err := mutation(request.UpdatedBy, request.Id); err != nil {
 		return nil, err
 	}
-	change, err := inPolicyChange(request)
+	change, err := inPolicyChange(request, request.IsEnforced)
 	if err != nil {
 		return nil, err
 	}
@@ -224,9 +226,13 @@ type policyFieldsMessage interface {
 	GetDirection() string
 	GetWindowType() string
 	GetUnitId() uint64
+	GetKind() string
+	GetRole() string
 }
 
-func inPolicyChange(message policyChangeMessage) (policy.PolicyChange, error) {
+// inPolicyChange parses a change; isEnforced is passed apart because an
+// interface cannot see whether an optional proto bool was set.
+func inPolicyChange(message policyChangeMessage, isEnforced *bool) (policy.PolicyChange, error) {
 	if err := operator(message.GetOperator()); err != nil {
 		return policy.PolicyChange{}, err
 	}
@@ -253,10 +259,19 @@ func inPolicyChange(message policyChangeMessage) (policy.PolicyChange, error) {
 	if err != nil {
 		return policy.PolicyChange{}, err
 	}
-	return policy.PolicyChange{Base: policy.Base(message.GetBase()), Operator: policy.Operator(message.GetOperator()), Value: &value, Cap: capValue, EffectiveFrom: from, EffectiveTo: to}, nil
+	return policy.PolicyChange{IsEnforced: isEnforced, Base: policy.Base(message.GetBase()), Operator: policy.Operator(message.GetOperator()), Value: &value, Cap: capValue, EffectiveFrom: from, EffectiveTo: to}, nil
 }
 
-func inPolicyFields(message policyFieldsMessage) (policy.PolicyFields, error) {
+func inPolicyFields(message policyFieldsMessage, isEnforced *bool) (policy.PolicyFields, error) {
+	if message.GetKind() == "" {
+		return policy.PolicyFields{}, status.Error(codes.InvalidArgument, "kind is required")
+	}
+	if err := kind(message.GetKind()); err != nil {
+		return policy.PolicyFields{}, err
+	}
+	if err := role(message.GetRole()); err != nil {
+		return policy.PolicyFields{}, err
+	}
 	typeID, err := intID(message.GetPolicyTypeId())
 	if err != nil {
 		return policy.PolicyFields{}, err
@@ -275,7 +290,7 @@ func inPolicyFields(message policyFieldsMessage) (policy.PolicyFields, error) {
 		}
 		unitID = &id
 	}
-	change, err := inPolicyChange(message)
+	change, err := inPolicyChange(message, isEnforced)
 	if err != nil {
 		return policy.PolicyFields{}, err
 	}
@@ -285,6 +300,8 @@ func inPolicyFields(message policyFieldsMessage) (policy.PolicyFields, error) {
 		Channel:         message.GetChannel(),
 		Direction:       policy.Direction(message.GetDirection()),
 		WindowType:      policy.WindowType(message.GetWindowType()),
+		Kind:            policy.Kind(message.GetKind()),
+		Role:            policy.Role(message.GetRole()),
 		UnitID:          unitID,
 		PolicyChange:    change,
 	}, nil

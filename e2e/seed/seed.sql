@@ -12,7 +12,10 @@
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 
 -- Uses only the baseline catalog (units AMOUNT / COUNT / BALANCE and the
--- seeded policy types). Each policy reads as one row:
+-- seeded policy types, which are labels). Each policy is one rule:
+--   kind      LIMIT | WAIVER | AUXILIARY: the strategy that evaluates it
+--   role      AUXILIARY only: FEE | DISCOUNT | TAX
+--   enforced  false: config only (balance limits for the accounting service)
 --   unit      what a LIMIT / WAIVER measures, or what an AUXILIARY cap counts
 --             (BALANCE limits are served for the accounting service, not
 --             enforced on reserve)
@@ -31,28 +34,28 @@ WITH g AS (
   SELECT id, wallet_type, tier,
          CASE tier WHEN 'T1' THEN 1 WHEN 'T2' THEN 5 ELSE 20 END AS factor
   FROM policy_groups WHERE currency = 'VND'
-), rules (code, transaction_type, direction, window_type, unit, base, operator, value, cap, only_tier, only_type) AS (
+), rules (code, kind, role, enforced, transaction_type, direction, window_type, unit, base, operator, value, cap, only_tier, only_type) AS (
   VALUES
-    -- code              txn type    side   window     unit       base       op     value                cap   tier  type
+    -- code              kind         role        enforced  txn type    side   window     unit       base       op     value                    cap            tier  type
     -- sender (OUT)
-    ('COIN_MIN',          'ALL',      'OUT', 'NONE',    'BALANCE', NULL,      'GTE', 0::numeric,          NULL::numeric, NULL, NULL),
-    ('TXN_MIN',           'ALL',      'OUT', 'NONE',    'AMOUNT',  NULL,      'GTE', 1000,                NULL, NULL, NULL),
-    ('TXN_MAX',           'ALL',      'OUT', 'NONE',    'AMOUNT',  NULL,      'LTE', 20000000,            NULL, NULL, NULL),
-    ('TOTAL_MAX',         'ALL',      'OUT', 'DAILY',   'AMOUNT',  NULL,      'LTE', 100000000,           NULL, NULL, NULL),
-    ('TOTAL_MAX',         'ALL',      'OUT', 'MONTHLY', 'AMOUNT',  NULL,      'LTE', 1000000000,          NULL, NULL, NULL),
-    ('TOTAL_MAX',         'ALL',      'OUT', 'DAILY',   'COUNT',   NULL,      'LTE', 2000,                NULL, NULL, NULL),
-    ('NO_FEE_TRANSACTION','TRANSFER', 'OUT', 'MONTHLY', 'COUNT',   NULL,      NULL,  5,                   NULL, NULL, NULL),
-    ('TXN_FEE',           'TRANSFER', 'OUT', 'NONE',    NULL,      NULL,      NULL,  1100,                NULL, NULL, NULL),
-    ('TXN_FEE',           'PAYMENT',  'OUT', 'NONE',    NULL,      'AMOUNT',  NULL,  0.5,                 NULL, NULL, NULL),
-    ('TXN_DISCOUNT',      'ALL',      'OUT', 'NONE',    NULL,      'FEE',     NULL,  10,                  NULL, 'T3', NULL),
-    ('TXN_TAX',           'ALL',      'OUT', 'NONE',    NULL,      'NET_FEE', NULL,  10,                  NULL, NULL, NULL),
+    ('COIN_MIN',          'LIMIT',     NULL,       false,    'ALL',      'OUT', 'NONE',    'BALANCE', NULL,      'GTE', 0::numeric,              NULL::numeric, NULL, NULL),
+    ('TXN_MIN',           'LIMIT',     NULL,       true,     'ALL',      'OUT', 'NONE',    'AMOUNT',  NULL,      'GTE', 1000,                    NULL,          NULL, NULL),
+    ('TXN_MAX',           'LIMIT',     NULL,       true,     'ALL',      'OUT', 'NONE',    'AMOUNT',  NULL,      'LTE', 20000000,                NULL,          NULL, NULL),
+    ('TOTAL_MAX',         'LIMIT',     NULL,       true,     'ALL',      'OUT', 'DAILY',   'AMOUNT',  NULL,      'LTE', 100000000,               NULL,          NULL, NULL),
+    ('TOTAL_MAX',         'LIMIT',     NULL,       true,     'ALL',      'OUT', 'MONTHLY', 'AMOUNT',  NULL,      'LTE', 1000000000,              NULL,          NULL, NULL),
+    ('TOTAL_MAX',         'LIMIT',     NULL,       true,     'ALL',      'OUT', 'DAILY',   'COUNT',   NULL,      'LTE', 2000,                    NULL,          NULL, NULL),
+    ('NO_FEE_TRANSACTION','WAIVER',    NULL,       true,     'TRANSFER', 'OUT', 'MONTHLY', 'COUNT',   NULL,      NULL,  5,                       NULL,          NULL, NULL),
+    ('TXN_FEE',           'AUXILIARY', 'FEE',      true,     'TRANSFER', 'OUT', 'NONE',    NULL,      NULL,      NULL,  1100,                    NULL,          NULL, NULL),
+    ('TXN_FEE',           'AUXILIARY', 'FEE',      true,     'PAYMENT',  'OUT', 'NONE',    NULL,      'AMOUNT',  NULL,  0.5,                     NULL,          NULL, NULL),
+    ('TXN_DISCOUNT',      'AUXILIARY', 'DISCOUNT', true,     'ALL',      'OUT', 'NONE',    NULL,      'FEE',     NULL,  10,                      NULL,          'T3', NULL),
+    ('TXN_TAX',           'AUXILIARY', 'TAX',      true,     'ALL',      'OUT', 'NONE',    NULL,      'NET_FEE', NULL,  10,                      NULL,          NULL, NULL),
     -- receiver (IN)
-    ('COIN_MAX',          'ALL',      'IN',  'NONE',    'BALANCE', NULL,      'LTE', 100000000000,        NULL, NULL, NULL),
-    ('TOTAL_MAX',         'ALL',      'IN',  'DAILY',   'AMOUNT',  NULL,      'LTE', 500000000,           NULL, NULL, NULL),
-    ('TXN_FEE',           'PAYMENT',  'IN',  'NONE',    NULL,      'AMOUNT',  NULL,  1,                   NULL, NULL, 'MERCHANT')
+    ('COIN_MAX',          'LIMIT',     NULL,       false,    'ALL',      'IN',  'NONE',    'BALANCE', NULL,      'LTE', 100000000000,            NULL,          NULL, NULL),
+    ('TOTAL_MAX',         'LIMIT',     NULL,       true,     'ALL',      'IN',  'DAILY',   'AMOUNT',  NULL,      'LTE', 500000000,               NULL,          NULL, NULL),
+    ('TXN_FEE',           'AUXILIARY', 'FEE',      true,     'PAYMENT',  'IN',  'NONE',    NULL,      'AMOUNT',  NULL,  1,                       NULL,          NULL, 'MERCHANT')
 )
-INSERT INTO policies (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, base, operator, value, cap)
-SELECT g.id, pt.id, r.transaction_type, 'ALL', r.direction, r.window_type, u.id, r.base, r.operator,
+INSERT INTO policies (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap)
+SELECT g.id, pt.id, r.transaction_type, 'ALL', r.direction, r.window_type, r.kind, r.role, r.enforced, u.id, r.base, r.operator,
        CASE
          WHEN r.code IN ('TXN_MAX', 'TOTAL_MAX')
            THEN r.value * g.factor * CASE WHEN r.direction = 'IN' AND g.wallet_type = 'MERCHANT' THEN 10 ELSE 1 END
@@ -78,21 +81,21 @@ ON CONFLICT (policy_group_id, policy_type_id, transaction_type, channel, directi
 WITH w AS (
   SELECT i, format('e2e-w-%s', lpad(i::text, 4, '0')) AS wallet_id
   FROM generate_series(1, 500) i
-), customs (profile, code, transaction_type, channel, direction, window_type, unit, base, operator, value, cap) AS (
+), customs (profile, code, kind, role, transaction_type, channel, direction, window_type, unit, base, operator, value, cap) AS (
   VALUES
-    -- profile code               txn type    channel side   window     unit      base      op     value               cap
-    (0, 'TOTAL_MAX',              'ALL',      'ALL',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 2000000::numeric,   NULL::numeric),
-    (1, 'TOTAL_MAX',              'ALL',      'ALL',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 10000000000,        NULL),
-    (1, 'TXN_MAX',                'ALL',      'ALL',  'OUT', 'NONE',    'AMOUNT', NULL,     'LTE', 500000000,          NULL),
-    (2, 'NO_FEE_TRANSACTION',     'TRANSFER', 'ALL',  'OUT', 'MONTHLY', 'COUNT',  NULL,     NULL,  1000000,            NULL),
-    (2, 'TXN_DISCOUNT',           'PAYMENT',  'ALL',  'OUT', 'MONTHLY', 'AMOUNT', 'AMOUNT', NULL,  1,                  50000),
-    (3, 'TXN_FEE',                'TRANSFER', 'ALL',  'OUT', 'NONE',    NULL,     NULL,     NULL,  2000,               NULL),
-    (3, 'TXN_DISCOUNT',           'ALL',      'ALL',  'OUT', 'NONE',    NULL,     'FEE',    NULL,  50,                 NULL),
-    (4, 'TOTAL_MAX',              'ALL',      'APP',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 5000000,            NULL),
-    (4, 'TOTAL_MAX',              'ALL',      'ALL',  'OUT', 'DAILY',   'COUNT',  NULL,     'LTE', 50,                 NULL)
+    -- profile code               kind         role        txn type    channel side   window     unit      base      op     value               cap
+    (0, 'TOTAL_MAX',              'LIMIT',     NULL,       'ALL',      'ALL',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 2000000::numeric,   NULL::numeric),
+    (1, 'TOTAL_MAX',              'LIMIT',     NULL,       'ALL',      'ALL',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 10000000000,        NULL),
+    (1, 'TXN_MAX',                'LIMIT',     NULL,       'ALL',      'ALL',  'OUT', 'NONE',    'AMOUNT', NULL,     'LTE', 500000000,          NULL),
+    (2, 'NO_FEE_TRANSACTION',     'WAIVER',    NULL,       'TRANSFER', 'ALL',  'OUT', 'MONTHLY', 'COUNT',  NULL,     NULL,  1000000,            NULL),
+    (2, 'TXN_DISCOUNT',           'AUXILIARY', 'DISCOUNT', 'PAYMENT',  'ALL',  'OUT', 'MONTHLY', 'AMOUNT', 'AMOUNT', NULL,  1,                  50000),
+    (3, 'TXN_FEE',                'AUXILIARY', 'FEE',      'TRANSFER', 'ALL',  'OUT', 'NONE',    NULL,     NULL,     NULL,  2000,               NULL),
+    (3, 'TXN_DISCOUNT',           'AUXILIARY', 'DISCOUNT', 'ALL',      'ALL',  'OUT', 'NONE',    NULL,     'FEE',    NULL,  50,                 NULL),
+    (4, 'TOTAL_MAX',              'LIMIT',     NULL,       'ALL',      'APP',  'OUT', 'DAILY',   'AMOUNT', NULL,     'LTE', 5000000,            NULL),
+    (4, 'TOTAL_MAX',              'LIMIT',     NULL,       'ALL',      'ALL',  'OUT', 'DAILY',   'COUNT',  NULL,     'LTE', 50,                 NULL)
 )
-INSERT INTO custom_policies (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, base, operator, value, cap, effective_from, reason, created_by)
-SELECT w.wallet_id, pt.id, c.transaction_type, c.channel, c.direction, c.window_type, u.id, c.base, c.operator, c.value, c.cap,
+INSERT INTO custom_policies (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, unit_id, base, operator, value, cap, effective_from, reason, created_by)
+SELECT w.wallet_id, pt.id, c.transaction_type, c.channel, c.direction, c.window_type, c.kind, c.role, u.id, c.base, c.operator, c.value, c.cap,
        now() - interval '1 day', format('e2e profile %s', c.profile), 'e2e-seed'
 FROM w
 JOIN customs c ON c.profile = w.i % 5
@@ -101,8 +104,8 @@ LEFT JOIN units u ON u.code = c.unit
 ON CONFLICT (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id) DO NOTHING;
 
 -- Expired: would block everything if it were applied.
-INSERT INTO custom_policies (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, unit_id, operator, value, effective_from, effective_to, reason, created_by)
-SELECT format('e2e-w-%s', lpad(i::text, 4, '0')), pt.id, 'ALL', 'ALL', 'OUT', 'NONE', u.id, 'LTE', 1,
+INSERT INTO custom_policies (wallet_id, policy_type_id, transaction_type, channel, direction, window_type, kind, unit_id, operator, value, effective_from, effective_to, reason, created_by)
+SELECT format('e2e-w-%s', lpad(i::text, 4, '0')), pt.id, 'ALL', 'ALL', 'OUT', 'NONE', 'LIMIT', u.id, 'LTE', 1,
        now() - interval '30 days', now() - interval '1 day', 'e2e expired', 'e2e-seed'
 FROM generate_series(50, 500, 50) i
 JOIN policy_types pt ON pt.code = 'TXN_MAX'

@@ -47,6 +47,9 @@ func policyResponse(value Policy) PolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
+		Kind:            value.Kind,
+		Role:            value.Role,
+		IsEnforced:      value.IsEnforced,
 		UnitID:          value.UnitID,
 		Base:            value.Base,
 		Operator:        value.Operator,
@@ -71,6 +74,9 @@ func customPolicyResponse(value CustomPolicy) CustomPolicyResponse {
 		Channel:         value.Channel,
 		Direction:       value.Direction,
 		WindowType:      value.WindowType,
+		Kind:            value.Kind,
+		Role:            value.Role,
+		IsEnforced:      value.IsEnforced,
 		UnitID:          value.UnitID,
 		Base:            value.Base,
 		Operator:        value.Operator,
@@ -102,6 +108,7 @@ func (s *service) GetConfig(ctx context.Context, request GetConfigRequest) (GetC
 		response.Rules[i] = Rule{
 			PolicyType:      value.PolicyType,
 			Kind:            value.Kind,
+			Role:            value.Role,
 			TransactionType: value.TransactionType,
 			Channel:         value.Channel,
 			Direction:       value.Direction,
@@ -205,6 +212,7 @@ func mergePolicies(systemPolicies []Policy, customPolicies []CustomPolicy) []Pol
 			PolicyTypeID:    customPolicy.PolicyTypeID,
 			PolicyType:      customPolicy.PolicyType,
 			Kind:            customPolicy.Kind,
+			Role:            customPolicy.Role,
 			TransactionType: customPolicy.TransactionType,
 			Channel:         customPolicy.Channel,
 			Direction:       customPolicy.Direction,
@@ -278,7 +286,7 @@ func (s *service) UpdatePolicy(ctx context.Context, groupID, id int64, request U
 	if err != nil {
 		return PolicyResponse{}, err
 	}
-	if err := s.checkChange(ctx, current.PolicyTypeID, current.UnitID, current.WindowType, request.PolicyChange); err != nil {
+	if err := s.checkChange(ctx, current.identity(), &request.PolicyChange); err != nil {
 		return PolicyResponse{}, err
 	}
 	value, err := s.store.UpdatePolicy(ctx, groupID, id, request)
@@ -310,12 +318,35 @@ func (s *service) prepareNew(ctx context.Context, fields *PolicyFields) error {
 	if fields.WindowType == "" {
 		fields.WindowType = WindowNone
 	}
-	return s.check(ctx, fields.PolicyTypeID, fields.UnitID, fields.spec(fields.WindowType))
+	if fields.IsEnforced == nil {
+		enforced := true
+		fields.IsEnforced = &enforced
+	}
+	return s.check(ctx, fields.PolicyTypeID, fields.UnitID, fields.spec(fields.Kind, fields.Role, fields.WindowType))
 }
 
-// checkChange validates a change to an existing policy, whose type, unit
-// and window stay as they are.
-func (s *service) checkChange(ctx context.Context, typeID int64, unitID *int64, window WindowType, change PolicyChange) error {
+// identity is what an existing policy keeps when it changes, plus its
+// current enforcement (kept unless the change sets it).
+type identity struct {
+	typeID     int64
+	unitID     *int64
+	window     WindowType
+	kind       Kind
+	role       Role
+	isEnforced bool
+}
+
+func (v Policy) identity() identity {
+	return identity{typeID: v.PolicyTypeID, unitID: v.UnitID, window: v.WindowType, kind: v.Kind, role: v.Role, isEnforced: v.IsEnforced}
+}
+
+func (v CustomPolicy) identity() identity {
+	return identity{typeID: v.PolicyTypeID, unitID: v.UnitID, window: v.WindowType, kind: v.Kind, role: v.Role, isEnforced: v.IsEnforced}
+}
+
+// checkChange validates a change to an existing policy, whose identity
+// stays as it is.
+func (s *service) checkChange(ctx context.Context, current identity, change *PolicyChange) error {
 	if change.Value == nil {
 		return core.ErrBadRequest.WithMessage("value is required")
 	}
@@ -325,22 +356,24 @@ func (s *service) checkChange(ctx context.Context, typeID int64, unitID *int64, 
 	if !validWindow(*change.EffectiveFrom, change.EffectiveTo) {
 		return core.ErrBadRequest.WithMessage("effectiveFrom must be before effectiveTo")
 	}
-	return s.check(ctx, typeID, unitID, change.spec(window))
+	if change.IsEnforced == nil {
+		change.IsEnforced = &current.isEnforced
+	}
+	return s.check(ctx, current.typeID, current.unitID, change.spec(current.kind, current.role, current.window))
 }
 
-// check validates a policy against the rules of its type's kind, with the
-// type and unit codes resolved from the catalog. A policy's type, unit and
-// window are immutable, so reading them before the write cannot race with
-// it.
+// check validates a policy against the rules of its kind, with the type
+// checked to exist and the unit code resolved from the catalog. A policy's
+// identity is immutable, so reading the catalog before the write cannot
+// race with it.
 func (s *service) check(ctx context.Context, typeID int64, unitID *int64, spec Spec) error {
-	policyType, err := s.store.GetType(ctx, typeID)
+	_, err := s.store.GetType(ctx, typeID)
 	if errors.Is(err, core.ErrNotFound) {
 		return core.ErrBadRequest.WithMessage(fmt.Sprintf("policy type %d not found", typeID))
 	}
 	if err != nil {
 		return err
 	}
-	spec.Kind, spec.Type = policyType.Kind, policyType.Code
 	if unitID != nil {
 		code, err := s.store.GetUnitCode(ctx, *unitID)
 		if errors.Is(err, core.ErrNotFound) {
@@ -406,7 +439,7 @@ func (s *service) UpdateCustomPolicy(ctx context.Context, walletID string, id in
 	if err != nil {
 		return CustomPolicyResponse{}, err
 	}
-	if err := s.checkChange(ctx, current.PolicyTypeID, current.UnitID, current.WindowType, request.PolicyChange); err != nil {
+	if err := s.checkChange(ctx, current.identity(), &request.PolicyChange); err != nil {
 		return CustomPolicyResponse{}, err
 	}
 	value, err := s.store.UpdateCustomPolicy(ctx, walletID, id, request)
@@ -424,7 +457,8 @@ func (s *service) DeleteCustomPolicy(ctx context.Context, walletID string, id in
 	return err
 }
 
-// spec is how the change reads its value, in a policy with window.
-func (c PolicyChange) spec(window WindowType) Spec {
-	return Spec{Base: c.Base, Operator: c.Operator, Window: window, Value: *c.Value, Cap: c.Cap}
+// spec is how the change reads its value, in a policy of kind and role
+// with window.
+func (c PolicyChange) spec(kind Kind, role Role, window WindowType) Spec {
+	return Spec{Kind: kind, Role: role, Base: c.Base, Operator: c.Operator, Window: window, Value: *c.Value, Cap: c.Cap}
 }

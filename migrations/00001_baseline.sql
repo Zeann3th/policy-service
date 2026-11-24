@@ -32,12 +32,13 @@ END
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
--- Catalog tables (units, policy_types) are the vocabulary; the code holds
--- the behaviour (unit measures, charge types). Every policy is returned as
--- config (GET /v1/policies). The engine (reserve) only evaluates
--- policies whose type is_enforced, and does nothing with a unit or type
--- code it has no behaviour for. is_enforced is internal and never
--- returned: COIN_MIN / COIN_MAX are config for the accounting service.
+-- Catalog tables (units, policy_types) are metadata: names the policies
+-- refer to. Everything the engine reads is on the policy row (kind, role,
+-- is_enforced, unit, base, operator, window, value, cap). Every policy is
+-- returned as config (GET /v1/policies); the engine (reserve) evaluates
+-- only rows with is_enforced, and does nothing with a unit it has no
+-- measure for. COIN_MIN / COIN_MAX rows are config for the accounting
+-- service (is_enforced false).
 CREATE TABLE units (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE,
@@ -52,33 +53,27 @@ INSERT INTO units (code, description) VALUES
   ('COUNT', 'Number of transactions'),
   ('BALANCE', 'Wallet balance; enforced by the accounting service, not on reserve');
 
--- A policy type is a name, a kind and whether it is enforced. How a value
--- is read (unit, base, operator, window, cap) lives on the policy rows.
--- kind: LIMIT | WAIVER | AUXILIARY (charges: fee, discount, tax, ...)
--- is_enforced: evaluated by the engine; false = config only. The engine
--- charges the AUXILIARY codes TXN_FEE, TXN_DISCOUNT and TXN_TAX.
+-- A policy type is a label: a code and a description. What a policy does is
+-- on the policy row, so a new type needs no code change.
 CREATE TABLE policy_types (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE,
   description text,
-  kind text NOT NULL,
-  is_enforced boolean NOT NULL DEFAULT true,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO policy_types (code, description, kind, is_enforced) VALUES
-  -- balance limits are served to the accounting service, not enforced here
-  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction', 'LIMIT', false),
-  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction', 'LIMIT', false),
-  ('TXN_MIN', 'Minimum of a single transaction', 'LIMIT', true),
-  ('TXN_MAX', 'Maximum of a single transaction', 'LIMIT', true),
-  ('TOTAL_MAX', 'Maximum total over a window', 'LIMIT', true),
-  ('NO_FEE_TRANSACTION', 'First N transactions per window are free', 'WAIVER', true),
-  ('TXN_FEE', 'Fee per transaction', 'AUXILIARY', true),
-  ('TXN_DISCOUNT', 'Discount off the fee or the amount', 'AUXILIARY', true),
-  ('TXN_TAX', 'Tax per transaction', 'AUXILIARY', true);
+INSERT INTO policy_types (code, description) VALUES
+  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction'),
+  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction'),
+  ('TXN_MIN', 'Minimum of a single transaction'),
+  ('TXN_MAX', 'Maximum of a single transaction'),
+  ('TOTAL_MAX', 'Maximum total over a window'),
+  ('NO_FEE_TRANSACTION', 'First N transactions per window are free'),
+  ('TXN_FEE', 'Fee per transaction'),
+  ('TXN_DISCOUNT', 'Discount off the fee or the amount'),
+  ('TXN_TAX', 'Tax per transaction');
 
 CREATE TABLE policy_groups (
   id bigserial PRIMARY KEY,
@@ -94,18 +89,22 @@ CREATE TABLE policy_groups (
 -- recorded in usage_ledger never collides across the two tables.
 CREATE SEQUENCE policy_id_seq;
 
--- A policy row says everything about how its value is read (checked by the
+-- A policy row is a rule: everything the engine reads (checked by the
 -- kind's strategy in the application):
+--   kind       LIMIT | WAIVER | AUXILIARY: the strategy that evaluates it
+--   role       AUXILIARY only: FEE | DISCOUNT | TAX, how the charge applies
+--   is_enforced  false: config only, the engine skips it
 --   LIMIT      unit, operator
 --   WAIVER     unit; free while window usage < value (always with NONE)
---   AUXILIARY  base NULL (flat value) or AMOUNT | FEE | NET_FEE (value is a
---              percentage of it); with a window, cap (in unit) limits what
---              is charged per window
+--   AUXILIARY  role; base NULL (flat value) or AMOUNT | FEE | NET_FEE (value
+--              is a percentage of it); with a window, cap (in unit) limits
+--              what is charged per window
 -- window_type: NONE = per transaction, nothing accumulates; DAILY / MONTHLY
 -- (UTC calendar); LIFETIME = accumulates and never resets.
--- value and cap are never negative: the type's behaviour decides the sign.
+-- value and cap are never negative: the role decides the sign.
 -- policy_type_id / transaction_type / channel / direction / window_type /
--- unit_id are the identity and are immutable: changing one means a new row.
+-- unit_id are the identity; they, kind and role are immutable: changing one
+-- means a new row.
 -- direction: ALL | OUT | IN; operator: EQ | NEQ | GT | GTE | LT | LTE
 CREATE TABLE policies (
   id bigint PRIMARY KEY DEFAULT nextval('policy_id_seq'),
@@ -115,6 +114,9 @@ CREATE TABLE policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
+  kind text NOT NULL,
+  role text, -- AUXILIARY only
+  is_enforced boolean NOT NULL DEFAULT true,
   unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
   base text, -- AUXILIARY only; NULL: flat
   operator text, -- LIMIT only
@@ -149,6 +151,9 @@ CREATE TABLE custom_policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'NONE',
+  kind text NOT NULL,
+  role text, -- AUXILIARY only
+  is_enforced boolean NOT NULL DEFAULT true,
   unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
   base text, -- AUXILIARY only; NULL: flat
   operator text, -- LIMIT only

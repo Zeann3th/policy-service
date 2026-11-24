@@ -116,6 +116,13 @@ func base(value string) error {
 	return nil
 }
 
+func role(value string) error {
+	if value != "" && !policy.Role(value).Valid() {
+		return status.Error(codes.InvalidArgument, "role is invalid")
+	}
+	return nil
+}
+
 func kind(value string) error {
 	if value != "" && !policy.Kind(value).Valid() {
 		return status.Error(codes.InvalidArgument, "kind is invalid")
@@ -164,7 +171,7 @@ func outUnit(value unit.Response) *pb.Unit {
 }
 
 func outPolicyType(value policy.PolicyTypeResponse) *pb.PolicyType {
-	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Kind: string(value.Kind), IsEnforced: value.IsEnforced, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
@@ -172,9 +179,9 @@ func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
 }
 
 func outPolicy(value policy.PolicyResponse) *pb.Policy {
-	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Kind: string(value.Kind), Role: string(value.Role), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outCustomPolicy(value policy.CustomPolicyResponse) *pb.CustomPolicy {
-	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Kind: string(value.Kind), Role: string(value.Role), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }

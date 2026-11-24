@@ -57,7 +57,7 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
 
   | Type | Selector | Window | Unit / base | Rule |
   |---|---|---|---|---|
-  | COIN_MIN | OUT | - | unit BALANCE | >= 0; config for accounting (type is_enforced false: not evaluated here) |
+  | COIN_MIN | OUT | - | unit BALANCE | >= 0; config for accounting (policy is_enforced false: not evaluated here) |
   | TXN_MIN | OUT | - | unit AMOUNT | >= 1,000 |
   | TXN_MAX | OUT | - | unit AMOUNT | <= 20M x tier |
   | TOTAL_MAX | OUT | DAILY | unit AMOUNT | <= 100M x tier |

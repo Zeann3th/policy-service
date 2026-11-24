@@ -161,6 +161,156 @@ WHERE
   effective_to IS NOT NULL;
 
 -- ---------------------------------------------------------------------
+-- read-only views per kind, for people: each shows only the columns its
+-- kind uses, with type and unit codes. The service reads the tables.
+-- ---------------------------------------------------------------------
+
+-- LIMIT: the measured unit, over the window, must satisfy operator value.
+CREATE VIEW limit_policies AS
+SELECT
+  p.id,
+  p.policy_group_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.window_type,
+  u.code AS unit,
+  p.operator,
+  p.value,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to
+FROM
+  policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'LIMIT';
+
+CREATE VIEW custom_limit_policies AS
+SELECT
+  p.id,
+  p.wallet_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.window_type,
+  u.code AS unit,
+  p.operator,
+  p.value,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to,
+  p.reason,
+  p.created_by
+FROM
+  custom_policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'LIMIT';
+
+-- WAIVER: the fee is waived while usage of unit in the window, before the
+-- transaction, is below value.
+CREATE VIEW waiver_policies AS
+SELECT
+  p.id,
+  p.policy_group_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.window_type,
+  u.code AS unit,
+  p.value,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to
+FROM
+  policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'WAIVER';
+
+CREATE VIEW custom_waiver_policies AS
+SELECT
+  p.id,
+  p.wallet_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.window_type,
+  u.code AS unit,
+  p.value,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to,
+  p.reason,
+  p.created_by
+FROM
+  custom_policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'WAIVER';
+
+-- AUXILIARY: role charges value, flat or as a percentage of base; when
+-- capped, window_type / unit / cap say how much is charged per window.
+CREATE VIEW auxiliary_policies AS
+SELECT
+  p.id,
+  p.policy_group_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.role,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to
+FROM
+  policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'AUXILIARY';
+
+CREATE VIEW custom_auxiliary_policies AS
+SELECT
+  p.id,
+  p.wallet_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.role,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to,
+  p.reason,
+  p.created_by
+FROM
+  custom_policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  p.kind = 'AUXILIARY';
+
+-- ---------------------------------------------------------------------
 -- audit logs: native range partitions by month via pg_partman
 -- partition key (updated_at) must be part of the primary key
 -- ---------------------------------------------------------------------

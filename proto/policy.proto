@@ -113,7 +113,8 @@ message PolicyRule {
   string base = 10;
   string kind = 11;
   optional string cap = 12;
-  string role = 13;
+  reserved 13;
+  reserved "role";
 }
 message GetPolicyConfigResponse {
   repeated PolicyRule rules = 1;
@@ -156,11 +157,13 @@ message PolicyType {
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
   reserved 8;
-  reserved "kind";
   reserved 9;
   reserved "window_type";
   reserved 11;
   reserved "is_enforced";
+  string kind = 12;
+  reserved 13;
+  reserved "role";
 }
 message PolicyTypePage {
   repeated PolicyType items = 1;
@@ -176,11 +179,13 @@ message CreatePolicyTypeRequest {
   optional bool active = 4;
   string updated_by = 5;
   reserved 6;
-  reserved "kind";
   reserved 7;
   reserved "window_type";
   reserved 9;
   reserved "is_enforced";
+  string kind = 10;
+  reserved 11;
+  reserved "role";
 }
 message UpdatePolicyTypeRequest {
   uint64 id = 1;
@@ -231,8 +236,8 @@ message Policy {
   string base = 15;
   optional uint64 unit_id = 16;
   optional string cap = 17;
-  string kind = 18;
-  string role = 19;
+  reserved 18, 19;
+  reserved "kind", "role";
   bool is_enforced = 20;
 }
 message PolicyPage {
@@ -258,8 +263,8 @@ message CreatePolicyRequest {
   string base = 13;
   optional uint64 unit_id = 14;
   optional string cap = 15;
-  string kind = 16;
-  string role = 17;
+  reserved 16, 17;
+  reserved "kind", "role";
   optional bool is_enforced = 18;
 }
 message UpdatePolicyRequest {
@@ -296,8 +301,8 @@ message CustomPolicy {
   string base = 17;
   optional uint64 unit_id = 18;
   optional string cap = 19;
-  string kind = 20;
-  string role = 21;
+  reserved 20, 21;
+  reserved "kind", "role";
   bool is_enforced = 22;
 }
 message CustomPolicyPage {
@@ -324,8 +329,8 @@ message CreateCustomPolicyRequest {
   string base = 14;
   optional uint64 unit_id = 15;
   optional string cap = 16;
-  string kind = 17;
-  string role = 18;
+  reserved 17, 18;
+  reserved "kind", "role";
   optional bool is_enforced = 19;
 }
 message UpdateCustomPolicyRequest {
@@ -386,11 +391,12 @@ message AppliedPolicy {
   optional string cap = 17;
   reserved 18;
   reserved "is_enforced";
-  string role = 19;
+  reserved 19;
+  reserved "role";
 }
-// What one AUXILIARY role charges a side; a discount is negative.
+// What one charge kind takes from a side; a discount is negative.
 message Charge {
-  string role = 1;
+  string kind = 1; // FEE, DISCOUNT or TAX
   string amount = 2;
 }
 message PartyResult {

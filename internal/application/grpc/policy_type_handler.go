@@ -14,10 +14,13 @@ type policyTypeHandler struct {
 }
 
 func (h *policyTypeHandler) CreatePolicyType(ctx context.Context, request *pb.CreatePolicyTypeRequest) (*pb.PolicyType, error) {
-	if err := require(map[string]string{"code": request.Code, "updatedBy": request.UpdatedBy}); err != nil {
+	if err := require(map[string]string{"code": request.Code, "kind": request.Kind, "updatedBy": request.UpdatedBy}); err != nil {
 		return nil, err
 	}
-	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, Active: request.Active, UpdatedBy: request.UpdatedBy})
+	if err := enum[policy.Kind]("kind", request.Kind); err != nil {
+		return nil, err
+	}
+	response, err := h.service.Create(ctx, policy.CreatePolicyTypeRequest{Code: request.Code, Description: request.Description, Kind: policy.Kind(request.Kind), Active: request.Active, UpdatedBy: request.UpdatedBy})
 	if err != nil {
 		return nil, grpcError(err)
 	}

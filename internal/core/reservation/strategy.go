@@ -37,12 +37,14 @@ func newRegistry(values ...strategy) registry {
 }
 
 // strategies is the processing order of a reservation side: limits and the
-// waiver first, then the charges. To add a kind: declare it in package
+// waiver first, then the charges (fee, discount, tax). To add a kind: declare it in package
 // policy, write its strategy, and register it here at the right place.
 var strategies = newRegistry(
 	limitStrategy{},
 	waiverStrategy{},
-	auxiliaryStrategy{},
+	feeStrategy,
+	discountStrategy,
+	taxStrategy,
 )
 
 // process evaluates each enforced policy with its kind's strategy. A

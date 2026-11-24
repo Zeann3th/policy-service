@@ -1,10 +1,10 @@
 -- name: CreatePolicy :one
 INSERT INTO policies
-  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator,
+  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator,
    value, cap, effective_from, effective_to)
 VALUES
   (sqlc.arg(policy_group_id), sqlc.arg(policy_type_id), sqlc.arg(transaction_type),
-   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type), sqlc.arg(kind), sqlc.narg(role), sqlc.arg(is_enforced), sqlc.narg(unit_id), sqlc.narg(base),
+   sqlc.arg(channel), sqlc.arg(direction), sqlc.arg(window_type), sqlc.arg(is_enforced), sqlc.narg(unit_id), sqlc.narg(base),
    sqlc.narg(operator), sqlc.arg(value), sqlc.narg(cap),
    COALESCE(CAST(sqlc.narg(effective_from) AS timestamptz), now()), sqlc.narg(effective_to))
 RETURNING *;

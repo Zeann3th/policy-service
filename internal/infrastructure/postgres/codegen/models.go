@@ -12,14 +12,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type AuxiliaryPolicy struct {
+type CustomDiscountPolicy struct {
 	ID              int64            `json:"id"`
-	PolicyGroupID   int64            `json:"policy_group_id"`
+	WalletID        string           `json:"wallet_id"`
 	PolicyType      string           `json:"policy_type"`
 	TransactionType string           `json:"transaction_type"`
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
-	Role            *string          `json:"role"`
 	Base            *string          `json:"base"`
 	Value           decimal.Decimal  `json:"value"`
 	WindowType      string           `json:"window_type"`
@@ -28,16 +27,17 @@ type AuxiliaryPolicy struct {
 	IsEnforced      bool             `json:"is_enforced"`
 	EffectiveFrom   time.Time        `json:"effective_from"`
 	EffectiveTo     *time.Time       `json:"effective_to"`
+	Reason          *string          `json:"reason"`
+	CreatedBy       string           `json:"created_by"`
 }
 
-type CustomAuxiliaryPolicy struct {
+type CustomFeePolicy struct {
 	ID              int64            `json:"id"`
 	WalletID        string           `json:"wallet_id"`
 	PolicyType      string           `json:"policy_type"`
 	TransactionType string           `json:"transaction_type"`
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
-	Role            *string          `json:"role"`
 	Base            *string          `json:"base"`
 	Value           decimal.Decimal  `json:"value"`
 	WindowType      string           `json:"window_type"`
@@ -76,8 +76,6 @@ type CustomPolicy struct {
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
 	WindowType      string           `json:"window_type"`
-	Kind            string           `json:"kind"`
-	Role            *string          `json:"role"`
 	IsEnforced      bool             `json:"is_enforced"`
 	UnitID          *int64           `json:"unit_id"`
 	Base            *string          `json:"base"`
@@ -90,6 +88,25 @@ type CustomPolicy struct {
 	CreatedBy       string           `json:"created_by"`
 	CreatedAt       time.Time        `json:"created_at"`
 	UpdatedAt       *time.Time       `json:"updated_at"`
+}
+
+type CustomTaxPolicy struct {
+	ID              int64            `json:"id"`
+	WalletID        string           `json:"wallet_id"`
+	PolicyType      string           `json:"policy_type"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	Base            *string          `json:"base"`
+	Value           decimal.Decimal  `json:"value"`
+	WindowType      string           `json:"window_type"`
+	Unit            *string          `json:"unit"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+	Reason          *string          `json:"reason"`
+	CreatedBy       string           `json:"created_by"`
 }
 
 type CustomWaiverPolicy struct {
@@ -107,6 +124,40 @@ type CustomWaiverPolicy struct {
 	EffectiveTo     *time.Time      `json:"effective_to"`
 	Reason          *string         `json:"reason"`
 	CreatedBy       string          `json:"created_by"`
+}
+
+type DiscountPolicy struct {
+	ID              int64            `json:"id"`
+	PolicyGroupID   int64            `json:"policy_group_id"`
+	PolicyType      string           `json:"policy_type"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	Base            *string          `json:"base"`
+	Value           decimal.Decimal  `json:"value"`
+	WindowType      string           `json:"window_type"`
+	Unit            *string          `json:"unit"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
+}
+
+type FeePolicy struct {
+	ID              int64            `json:"id"`
+	PolicyGroupID   int64            `json:"policy_group_id"`
+	PolicyType      string           `json:"policy_type"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	Base            *string          `json:"base"`
+	Value           decimal.Decimal  `json:"value"`
+	WindowType      string           `json:"window_type"`
+	Unit            *string          `json:"unit"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
 }
 
 type LimitPolicy struct {
@@ -142,8 +193,6 @@ type Policy struct {
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
 	WindowType      string           `json:"window_type"`
-	Kind            string           `json:"kind"`
-	Role            *string          `json:"role"`
 	IsEnforced      bool             `json:"is_enforced"`
 	UnitID          *int64           `json:"unit_id"`
 	Base            *string          `json:"base"`
@@ -180,6 +229,7 @@ type PolicyType struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description"`
+	Kind        string     `json:"kind"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
@@ -221,6 +271,23 @@ type ReservationsTemplate struct {
 	Result             []byte          `json:"result"`
 	CreatedAt          time.Time       `json:"created_at"`
 	UpdatedAt          *time.Time      `json:"updated_at"`
+}
+
+type TaxPolicy struct {
+	ID              int64            `json:"id"`
+	PolicyGroupID   int64            `json:"policy_group_id"`
+	PolicyType      string           `json:"policy_type"`
+	TransactionType string           `json:"transaction_type"`
+	Channel         string           `json:"channel"`
+	Direction       string           `json:"direction"`
+	Base            *string          `json:"base"`
+	Value           decimal.Decimal  `json:"value"`
+	WindowType      string           `json:"window_type"`
+	Unit            *string          `json:"unit"`
+	Cap             *decimal.Decimal `json:"cap"`
+	IsEnforced      bool             `json:"is_enforced"`
+	EffectiveFrom   time.Time        `json:"effective_from"`
+	EffectiveTo     *time.Time       `json:"effective_to"`
 }
 
 type Unit struct {

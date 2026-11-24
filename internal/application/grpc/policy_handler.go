@@ -7,8 +7,6 @@ import (
 	pb "github.com/zeann3th/policy-service/internal/application/grpc/codegen"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,7 +28,7 @@ func (h *policyHandler) GetPolicyConfig(ctx context.Context, request *pb.GetPoli
 	}
 	result := &pb.GetPolicyConfigResponse{Rules: make([]*pb.PolicyRule, len(response.Rules))}
 	for i, value := range response.Rules {
-		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Kind: string(value.Kind), Role: string(value.Role), Unit: value.Unit, Base: string(value.Base), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), Source: string(value.Source)}
+		result.Rules[i] = &pb.PolicyRule{PolicyType: value.PolicyType, Kind: string(value.Kind), Unit: value.Unit, Base: string(value.Base), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), Source: string(value.Source)}
 	}
 	return result, nil
 }
@@ -226,17 +224,15 @@ type policyFieldsMessage interface {
 	GetDirection() string
 	GetWindowType() string
 	GetUnitId() uint64
-	GetKind() string
-	GetRole() string
 }
 
 // inPolicyChange parses a change; isEnforced is passed apart because an
 // interface cannot see whether an optional proto bool was set.
 func inPolicyChange(message policyChangeMessage, isEnforced *bool) (policy.PolicyChange, error) {
-	if err := operator(message.GetOperator()); err != nil {
-		return policy.PolicyChange{}, err
-	}
-	if err := base(message.GetBase()); err != nil {
+	if err := firstError(
+		enum[policy.Operator]("operator", message.GetOperator()),
+		enum[policy.Base]("base", message.GetBase()),
+	); err != nil {
 		return policy.PolicyChange{}, err
 	}
 	value, err := dec(message.GetValue())
@@ -263,23 +259,14 @@ func inPolicyChange(message policyChangeMessage, isEnforced *bool) (policy.Polic
 }
 
 func inPolicyFields(message policyFieldsMessage, isEnforced *bool) (policy.PolicyFields, error) {
-	if message.GetKind() == "" {
-		return policy.PolicyFields{}, status.Error(codes.InvalidArgument, "kind is required")
-	}
-	if err := kind(message.GetKind()); err != nil {
-		return policy.PolicyFields{}, err
-	}
-	if err := role(message.GetRole()); err != nil {
+	if err := firstError(
+		enum[policy.Direction]("direction", message.GetDirection()),
+		enum[policy.WindowType]("windowType", message.GetWindowType()),
+	); err != nil {
 		return policy.PolicyFields{}, err
 	}
 	typeID, err := intID(message.GetPolicyTypeId())
 	if err != nil {
-		return policy.PolicyFields{}, err
-	}
-	if err := direction(message.GetDirection()); err != nil {
-		return policy.PolicyFields{}, err
-	}
-	if err := windowType(message.GetWindowType()); err != nil {
 		return policy.PolicyFields{}, err
 	}
 	var unitID *int64
@@ -300,8 +287,6 @@ func inPolicyFields(message policyFieldsMessage, isEnforced *bool) (policy.Polic
 		Channel:         message.GetChannel(),
 		Direction:       policy.Direction(message.GetDirection()),
 		WindowType:      policy.WindowType(message.GetWindowType()),
-		Kind:            policy.Kind(message.GetKind()),
-		Role:            policy.Role(message.GetRole()),
 		UnitID:          unitID,
 		PolicyChange:    change,
 	}, nil

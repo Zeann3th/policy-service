@@ -9,29 +9,17 @@ import (
 )
 
 var (
-	lifetimeStart = time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
-	one           = decimal.NewFromInt(1)
-	hundred       = decimal.NewFromInt(100)
+	one     = decimal.NewFromInt(1)
+	hundred = decimal.NewFromInt(100)
 )
 
 const moneyPlaces = 4
 
-func windowStart(window policy.WindowType, at time.Time) time.Time {
-	utc := at.UTC()
-	switch window {
-	case policy.WindowDaily:
-		return time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
-	case policy.WindowMonthly:
-		return time.Date(utc.Year(), utc.Month(), 1, 0, 0, 0, 0, time.UTC)
-	}
-	return lifetimeStart
-}
-
-// tracked reports whether a policy accumulates usage: it is enforced, has
-// a window and a unit this service measures.
+// tracked reports whether a policy accumulates usage: it is enforced, its
+// window adds up and its unit is one this service measures.
 func tracked(p policy.Policy) bool {
 	_, measured := measureOf(p.Unit)
-	return p.IsEnforced && p.WindowType != policy.WindowTransaction && p.UnitID != nil && measured
+	return p.IsEnforced && accumulates(p.WindowType) && p.UnitID != nil && measured
 }
 
 func usageKey(walletID string, p policy.Policy, at time.Time) UsageKey {
@@ -56,7 +44,6 @@ func appliedPolicy(p policy.Policy) AppliedPolicy {
 		PolicyID:        p.ID,
 		PolicyType:      p.PolicyType,
 		Kind:            p.Kind,
-		Role:            p.Role,
 		Unit:            p.Unit,
 		Base:            p.Base,
 		Source:          p.Source,
@@ -93,10 +80,24 @@ func (e *evaluation) apply(applied AppliedPolicy) int {
 	return len(e.result.AppliedPolicies) - 1
 }
 
+// used is a policy's usage before this transaction: its window total, or
+// zero when it keeps none (a TRANSACTION window looks at the transaction
+// alone).
+func (e *evaluation) used(p policy.Policy) decimal.Decimal {
+	if !tracked(p) {
+		return decimal.Zero
+	}
+	return e.usage[usageKey(e.walletID, p, e.at)]
+}
+
 // track adds delta to a tracked policy's window and records the RESERVE
 // entry; bound is the policy's limit (its value, or its cap for a charge).
-// It returns the usage before this transaction.
+// It returns the usage before this transaction. A policy that keeps no
+// usage records nothing, so every strategy can call it alike.
 func (e *evaluation) track(p policy.Policy, delta, bound decimal.Decimal, applied *AppliedPolicy) decimal.Decimal {
+	if !tracked(p) {
+		return decimal.Zero
+	}
 	key := usageKey(e.walletID, p, e.at)
 	current := e.usage[key]
 	total := current.Add(delta)

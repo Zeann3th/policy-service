@@ -81,3 +81,25 @@ func TestCacheTTLStopsAtNextEffectiveBoundary(t *testing.T) {
 		}
 	}
 }
+
+func TestOperatorSatisfied(t *testing.T) {
+	ten, five := decimal.NewFromInt(10), decimal.NewFromInt(5)
+	for operator, want := range map[Operator][2]bool{ // {10 vs 5, 5 vs 5}
+		OpEQ:  {false, true},
+		OpNEQ: {true, false},
+		OpGT:  {true, false},
+		OpGTE: {true, true},
+		OpLT:  {false, false},
+		OpLTE: {false, true},
+	} {
+		if got := [2]bool{operator.Satisfied(ten, five), operator.Satisfied(five, five)}; got != want {
+			t.Errorf("%s: got %v, want %v", operator, got, want)
+		}
+	}
+	if Operator("ABOUT").Satisfied(five, five) || Operator("ABOUT").Valid() {
+		t.Error("an unknown operator must be invalid and never satisfied")
+	}
+	if len(Operators()) != len(comparisons) {
+		t.Error("every operator needs a comparison")
+	}
+}

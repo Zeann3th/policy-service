@@ -15,10 +15,10 @@ export const options = {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-// charge returns what one role (FEE, DISCOUNT, TAX) charges a side ("0"
-// when it has no line); discounts are negative.
-function charge(response, side, role) {
-  const found = (response.json(`${side}.charges`) || []).find((each) => each.role === role);
+// charge returns what one charge kind (FEE, DISCOUNT, TAX) takes from a
+// side ("0" when it has no line); discounts are negative.
+function charge(response, side, kind) {
+  const found = (response.json(`${side}.charges`) || []).find((each) => each.kind === kind);
   return found ? found.amount : '0';
 }
 

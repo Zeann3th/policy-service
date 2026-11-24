@@ -79,9 +79,24 @@ func intID(id uint64) (int64, error) {
 	return int64(id), nil
 }
 
-func operator(value string) error {
-	if value != "" && !policy.Operator(value).Valid() {
-		return status.Error(codes.InvalidArgument, "operator is invalid")
+// enum checks an optional enum field: empty, or a value its type knows.
+func enum[T interface {
+	~string
+	Valid() bool
+}](name, value string) error {
+	if value != "" && !T(value).Valid() {
+		return status.Errorf(codes.InvalidArgument, "%s is invalid", name)
+	}
+	return nil
+}
+
+// firstError is the first non-nil error, for checks that cannot fail
+// halfway (the fields are already parsed).
+func firstError(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -107,41 +122,6 @@ func outOptionalDec(value *decimal.Decimal) *string {
 	}
 	text := value.String()
 	return &text
-}
-
-func base(value string) error {
-	if value != "" && !policy.Base(value).Valid() {
-		return status.Error(codes.InvalidArgument, "base is invalid")
-	}
-	return nil
-}
-
-func role(value string) error {
-	if value != "" && !policy.Role(value).Valid() {
-		return status.Error(codes.InvalidArgument, "role is invalid")
-	}
-	return nil
-}
-
-func kind(value string) error {
-	if value != "" && !policy.Kind(value).Valid() {
-		return status.Error(codes.InvalidArgument, "kind is invalid")
-	}
-	return nil
-}
-
-func windowType(value string) error {
-	if value != "" && !policy.WindowType(value).Valid() {
-		return status.Error(codes.InvalidArgument, "windowType is invalid")
-	}
-	return nil
-}
-
-func direction(value string) error {
-	if value != "" && !policy.Direction(value).Valid() {
-		return status.Error(codes.InvalidArgument, "direction is invalid")
-	}
-	return nil
 }
 
 func ts(value *timestamppb.Timestamp) (*time.Time, error) {
@@ -171,7 +151,7 @@ func outUnit(value unit.Response) *pb.Unit {
 }
 
 func outPolicyType(value policy.PolicyTypeResponse) *pb.PolicyType {
-	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.PolicyType{Id: uint64(value.ID), Code: value.Code, Description: value.Description, Kind: string(value.Kind), Active: value.Active, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
@@ -179,9 +159,9 @@ func outPolicyGroup(value policy.PolicyGroupResponse) *pb.PolicyGroup {
 }
 
 func outPolicy(value policy.PolicyResponse) *pb.Policy {
-	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Kind: string(value.Kind), Role: string(value.Role), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.Policy{Id: uint64(value.ID), PolicyGroupId: uint64(value.PolicyGroupID), PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }
 
 func outCustomPolicy(value policy.CustomPolicyResponse) *pb.CustomPolicy {
-	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), Kind: string(value.Kind), Role: string(value.Role), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
+	return &pb.CustomPolicy{Id: uint64(value.ID), WalletId: value.WalletID, PolicyTypeId: uint64(value.PolicyTypeID), TransactionType: value.TransactionType, Channel: value.Channel, Direction: string(value.Direction), WindowType: string(value.WindowType), IsEnforced: value.IsEnforced, UnitId: outOptionalID(value.UnitID), Base: string(value.Base), Operator: string(value.Operator), Value: value.Value.String(), Cap: outOptionalDec(value.Cap), EffectiveFrom: outTS(value.EffectiveFrom), EffectiveTo: outOptionalTS(value.EffectiveTo), Reason: value.Reason, CreatedBy: value.CreatedBy, CreatedAt: outTS(value.CreatedAt), UpdatedAt: outOptionalTS(value.UpdatedAt)}
 }

@@ -640,7 +640,6 @@ type PolicyRule struct {
 	Base            string                 `protobuf:"bytes,10,opt,name=base,proto3" json:"base,omitempty"`
 	Kind            string                 `protobuf:"bytes,11,opt,name=kind,proto3" json:"kind,omitempty"`
 	Cap             *string                `protobuf:"bytes,12,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Role            string                 `protobuf:"bytes,13,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -755,13 +754,6 @@ func (x *PolicyRule) GetKind() string {
 func (x *PolicyRule) GetCap() string {
 	if x != nil && x.Cap != nil {
 		return *x.Cap
-	}
-	return ""
-}
-
-func (x *PolicyRule) GetRole() string {
-	if x != nil {
-		return x.Role
 	}
 	return ""
 }
@@ -1106,6 +1098,7 @@ type PolicyType struct {
 	Active        bool                   `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Kind          string                 `protobuf:"bytes,12,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1182,6 +1175,13 @@ func (x *PolicyType) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *PolicyType) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
 type PolicyTypePage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*PolicyType          `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
@@ -1256,6 +1256,7 @@ type CreatePolicyTypeRequest struct {
 	Description   *string                `protobuf:"bytes,2,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	Active        *bool                  `protobuf:"varint,4,opt,name=active,proto3,oneof" json:"active,omitempty"`
 	UpdatedBy     string                 `protobuf:"bytes,5,opt,name=updated_by,json=updatedBy,proto3" json:"updated_by,omitempty"`
+	Kind          string                 `protobuf:"bytes,10,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1314,6 +1315,13 @@ func (x *CreatePolicyTypeRequest) GetActive() bool {
 func (x *CreatePolicyTypeRequest) GetUpdatedBy() string {
 	if x != nil {
 		return x.UpdatedBy
+	}
+	return ""
+}
+
+func (x *CreatePolicyTypeRequest) GetKind() string {
+	if x != nil {
+		return x.Kind
 	}
 	return ""
 }
@@ -1624,8 +1632,6 @@ type Policy struct {
 	Base            string                 `protobuf:"bytes,15,opt,name=base,proto3" json:"base,omitempty"`
 	UnitId          *uint64                `protobuf:"varint,16,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
 	Cap             *string                `protobuf:"bytes,17,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Kind            string                 `protobuf:"bytes,18,opt,name=kind,proto3" json:"kind,omitempty"`
-	Role            string                 `protobuf:"bytes,19,opt,name=role,proto3" json:"role,omitempty"`
 	IsEnforced      bool                   `protobuf:"varint,20,opt,name=is_enforced,json=isEnforced,proto3" json:"is_enforced,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -1773,20 +1779,6 @@ func (x *Policy) GetCap() string {
 	return ""
 }
 
-func (x *Policy) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *Policy) GetRole() string {
-	if x != nil {
-		return x.Role
-	}
-	return ""
-}
-
 func (x *Policy) GetIsEnforced() bool {
 	if x != nil {
 		return x.IsEnforced
@@ -1878,8 +1870,6 @@ type CreatePolicyRequest struct {
 	Base            string                 `protobuf:"bytes,13,opt,name=base,proto3" json:"base,omitempty"`
 	UnitId          *uint64                `protobuf:"varint,14,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
 	Cap             *string                `protobuf:"bytes,15,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Kind            string                 `protobuf:"bytes,16,opt,name=kind,proto3" json:"kind,omitempty"`
-	Role            string                 `protobuf:"bytes,17,opt,name=role,proto3" json:"role,omitempty"`
 	IsEnforced      *bool                  `protobuf:"varint,18,opt,name=is_enforced,json=isEnforced,proto3,oneof" json:"is_enforced,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -2009,20 +1999,6 @@ func (x *CreatePolicyRequest) GetUnitId() uint64 {
 func (x *CreatePolicyRequest) GetCap() string {
 	if x != nil && x.Cap != nil {
 		return *x.Cap
-	}
-	return ""
-}
-
-func (x *CreatePolicyRequest) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *CreatePolicyRequest) GetRole() string {
-	if x != nil {
-		return x.Role
 	}
 	return ""
 }
@@ -2170,8 +2146,6 @@ type CustomPolicy struct {
 	Base            string                 `protobuf:"bytes,17,opt,name=base,proto3" json:"base,omitempty"`
 	UnitId          *uint64                `protobuf:"varint,18,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
 	Cap             *string                `protobuf:"bytes,19,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Kind            string                 `protobuf:"bytes,20,opt,name=kind,proto3" json:"kind,omitempty"`
-	Role            string                 `protobuf:"bytes,21,opt,name=role,proto3" json:"role,omitempty"`
 	IsEnforced      bool                   `protobuf:"varint,22,opt,name=is_enforced,json=isEnforced,proto3" json:"is_enforced,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -2333,20 +2307,6 @@ func (x *CustomPolicy) GetCap() string {
 	return ""
 }
 
-func (x *CustomPolicy) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *CustomPolicy) GetRole() string {
-	if x != nil {
-		return x.Role
-	}
-	return ""
-}
-
 func (x *CustomPolicy) GetIsEnforced() bool {
 	if x != nil {
 		return x.IsEnforced
@@ -2439,8 +2399,6 @@ type CreateCustomPolicyRequest struct {
 	Base            string                 `protobuf:"bytes,14,opt,name=base,proto3" json:"base,omitempty"`
 	UnitId          *uint64                `protobuf:"varint,15,opt,name=unit_id,json=unitId,proto3,oneof" json:"unit_id,omitempty"`
 	Cap             *string                `protobuf:"bytes,16,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Kind            string                 `protobuf:"bytes,17,opt,name=kind,proto3" json:"kind,omitempty"`
-	Role            string                 `protobuf:"bytes,18,opt,name=role,proto3" json:"role,omitempty"`
 	IsEnforced      *bool                  `protobuf:"varint,19,opt,name=is_enforced,json=isEnforced,proto3,oneof" json:"is_enforced,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -2577,20 +2535,6 @@ func (x *CreateCustomPolicyRequest) GetUnitId() uint64 {
 func (x *CreateCustomPolicyRequest) GetCap() string {
 	if x != nil && x.Cap != nil {
 		return *x.Cap
-	}
-	return ""
-}
-
-func (x *CreateCustomPolicyRequest) GetKind() string {
-	if x != nil {
-		return x.Kind
-	}
-	return ""
-}
-
-func (x *CreateCustomPolicyRequest) GetRole() string {
-	if x != nil {
-		return x.Role
 	}
 	return ""
 }
@@ -3009,7 +2953,6 @@ type AppliedPolicy struct {
 	Base            string                 `protobuf:"bytes,15,opt,name=base,proto3" json:"base,omitempty"`
 	Charge          *string                `protobuf:"bytes,16,opt,name=charge,proto3,oneof" json:"charge,omitempty"`
 	Cap             *string                `protobuf:"bytes,17,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Role            string                 `protobuf:"bytes,19,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3163,17 +3106,10 @@ func (x *AppliedPolicy) GetCap() string {
 	return ""
 }
 
-func (x *AppliedPolicy) GetRole() string {
-	if x != nil {
-		return x.Role
-	}
-	return ""
-}
-
-// What one AUXILIARY role charges a side; a discount is negative.
+// What one charge kind takes from a side; a discount is negative.
 type Charge struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // FEE, DISCOUNT or TAX
 	Amount        string                 `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3209,9 +3145,9 @@ func (*Charge) Descriptor() ([]byte, []int) {
 	return file_proto_policy_proto_rawDescGZIP(), []int{37}
 }
 
-func (x *Charge) GetRole() string {
+func (x *Charge) GetKind() string {
 	if x != nil {
-		return x.Role
+		return x.Kind
 	}
 	return ""
 }
@@ -3532,7 +3468,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x12\n" +
 	"\x04tier\x18\x03 \x01(\tR\x04tier\x12\x1b\n" +
 	"\twallet_id\x18\x04 \x01(\tR\bwalletId\x12)\n" +
-	"\x10transaction_type\x18\x05 \x01(\tR\x0ftransactionType\"\xea\x02\n" +
+	"\x10transaction_type\x18\x05 \x01(\tR\x0ftransactionType\"\xe2\x02\n" +
 	"\n" +
 	"PolicyRule\x12\x1f\n" +
 	"\vpolicy_type\x18\x01 \x01(\tR\n" +
@@ -3549,9 +3485,8 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x04base\x18\n" +
 	" \x01(\tR\x04base\x12\x12\n" +
 	"\x04kind\x18\v \x01(\tR\x04kind\x12\x15\n" +
-	"\x03cap\x18\f \x01(\tH\x00R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04role\x18\r \x01(\tR\x04roleB\x06\n" +
-	"\x04_cap\"K\n" +
+	"\x03cap\x18\f \x01(\tH\x00R\x03cap\x88\x01\x01B\x06\n" +
+	"\x04_capJ\x04\b\r\x10\x0eR\x04role\"K\n" +
 	"\x17GetPolicyConfigResponse\x120\n" +
 	"\x05rules\x18\x01 \x03(\v2\x1a.policy.ui.grpc.PolicyRuleR\x05rules\"\xef\x01\n" +
 	"\x04Unit\x12\x0e\n" +
@@ -3584,7 +3519,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"updated_by\x18\x03 \x01(\tR\tupdatedBy\x12%\n" +
 	"\vdescription\x18\x04 \x01(\tH\x01R\vdescription\x88\x01\x01B\t\n" +
 	"\a_activeB\x0e\n" +
-	"\f_description\"\xc2\x02\n" +
+	"\f_description\"\xdc\x02\n" +
 	"\n" +
 	"PolicyType\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x12\n" +
@@ -3594,24 +3529,27 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\x0e\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x12\n" +
+	"\x04kind\x18\f \x01(\tR\x04kindB\x0e\n" +
 	"\f_descriptionJ\x04\b\x04\x10\x05J\x04\b\n" +
 	"\x10\vJ\x04\b\b\x10\tJ\x04\b\t\x10\n" +
-	"J\x04\b\v\x10\fR\aunit_idR\x04baseR\x04kindR\vwindow_typeR\vis_enforced\"\x82\x01\n" +
+	"J\x04\b\v\x10\fJ\x04\b\r\x10\x0eR\aunit_idR\x04baseR\vwindow_typeR\vis_enforcedR\x04role\"\x82\x01\n" +
 	"\x0ePolicyTypePage\x120\n" +
 	"\x05items\x18\x01 \x03(\v2\x1a.policy.ui.grpc.PolicyTypeR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\xf8\x01\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\x92\x02\n" +
 	"\x17CreatePolicyTypeRequest\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1b\n" +
 	"\x06active\x18\x04 \x01(\bH\x01R\x06active\x88\x01\x01\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x05 \x01(\tR\tupdatedByB\x0e\n" +
+	"updated_by\x18\x05 \x01(\tR\tupdatedBy\x12\x12\n" +
+	"\x04kind\x18\n" +
+	" \x01(\tR\x04kindB\x0e\n" +
 	"\f_descriptionB\t\n" +
 	"\a_activeJ\x04\b\x03\x10\x04J\x04\b\b\x10\tJ\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\t\x10\n" +
-	"R\aunit_idR\x04baseR\x04kindR\vwindow_typeR\vis_enforced\"\xba\x01\n" +
+	"J\x04\b\v\x10\fR\aunit_idR\x04baseR\vwindow_typeR\vis_enforcedR\x04role\"\xba\x01\n" +
 	"\x17UpdatePolicyTypeRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12%\n" +
 	"\vdescription\x18\x02 \x01(\tH\x00R\vdescription\x88\x01\x01\x12\x1b\n" +
@@ -3641,7 +3579,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x12\n" +
 	"\x04tier\x18\x03 \x01(\tR\x04tier\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x04 \x01(\tR\tupdatedBy\"\xc6\x05\n" +
+	"updated_by\x18\x04 \x01(\tR\tupdatedBy\"\xb6\x05\n" +
 	"\x06Policy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12&\n" +
 	"\x0fpolicy_group_id\x18\x02 \x01(\x04R\rpolicyGroupId\x12$\n" +
@@ -3662,20 +3600,18 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\feffective_to\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\veffectiveTo\x12\x12\n" +
 	"\x04base\x18\x0f \x01(\tR\x04base\x12\x1c\n" +
 	"\aunit_id\x18\x10 \x01(\x04H\x00R\x06unitId\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x11 \x01(\tH\x01R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04kind\x18\x12 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04role\x18\x13 \x01(\tR\x04role\x12\x1f\n" +
+	"\x03cap\x18\x11 \x01(\tH\x01R\x03cap\x88\x01\x01\x12\x1f\n" +
 	"\vis_enforced\x18\x14 \x01(\bR\n" +
 	"isEnforcedB\n" +
 	"\n" +
 	"\b_unit_idB\x06\n" +
-	"\x04_capJ\x04\b\x0e\x10\x0fR\x04unit\"z\n" +
+	"\x04_capJ\x04\b\x0e\x10\x0fJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14R\x04unitR\x04kindR\x04role\"z\n" +
 	"\n" +
 	"PolicyPage\x12,\n" +
 	"\x05items\x18\x01 \x03(\v2\x16.policy.ui.grpc.PolicyR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\xf4\x04\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\xe4\x04\n" +
 	"\x13CreatePolicyRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\x04R\agroupId\x12$\n" +
 	"\x0epolicy_type_id\x18\x02 \x01(\x04R\fpolicyTypeId\x12)\n" +
@@ -3693,15 +3629,13 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\feffective_to\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\veffectiveTo\x12\x12\n" +
 	"\x04base\x18\r \x01(\tR\x04base\x12\x1c\n" +
 	"\aunit_id\x18\x0e \x01(\x04H\x00R\x06unitId\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x0f \x01(\tH\x01R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04kind\x18\x10 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04role\x18\x11 \x01(\tR\x04role\x12$\n" +
+	"\x03cap\x18\x0f \x01(\tH\x01R\x03cap\x88\x01\x01\x12$\n" +
 	"\vis_enforced\x18\x12 \x01(\bH\x02R\n" +
 	"isEnforced\x88\x01\x01B\n" +
 	"\n" +
 	"\b_unit_idB\x06\n" +
 	"\x04_capB\x0e\n" +
-	"\f_is_enforcedJ\x04\b\f\x10\rR\x04unit\"\xfc\x02\n" +
+	"\f_is_enforcedJ\x04\b\f\x10\rJ\x04\b\x10\x10\x11J\x04\b\x11\x10\x12R\x04unitR\x04kindR\x04role\"\xfc\x02\n" +
 	"\x13UpdatePolicyRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\x04R\agroupId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x04R\x02id\x12\x1a\n" +
@@ -3717,7 +3651,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	" \x01(\bH\x01R\n" +
 	"isEnforced\x88\x01\x01B\x06\n" +
 	"\x04_capB\x0e\n" +
-	"\f_is_enforced\"\x88\x06\n" +
+	"\f_is_enforced\"\xf8\x05\n" +
 	"\fCustomPolicy\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1b\n" +
 	"\twallet_id\x18\x02 \x01(\tR\bwalletId\x12$\n" +
@@ -3741,20 +3675,18 @@ const file_proto_policy_proto_rawDesc = "" +
 	"windowType\x12\x12\n" +
 	"\x04base\x18\x11 \x01(\tR\x04base\x12\x1c\n" +
 	"\aunit_id\x18\x12 \x01(\x04H\x01R\x06unitId\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x13 \x01(\tH\x02R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04kind\x18\x14 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04role\x18\x15 \x01(\tR\x04role\x12\x1f\n" +
+	"\x03cap\x18\x13 \x01(\tH\x02R\x03cap\x88\x01\x01\x12\x1f\n" +
 	"\vis_enforced\x18\x16 \x01(\bR\n" +
 	"isEnforcedB\t\n" +
 	"\a_reasonB\n" +
 	"\n" +
 	"\b_unit_idB\x06\n" +
-	"\x04_capJ\x04\b\x10\x10\x11R\x04unit\"\x86\x01\n" +
+	"\x04_capJ\x04\b\x10\x10\x11J\x04\b\x14\x10\x15J\x04\b\x15\x10\x16R\x04unitR\x04kindR\x04role\"\x86\x01\n" +
 	"\x10CustomPolicyPage\x122\n" +
 	"\x05items\x18\x01 \x03(\v2\x1c.policy.ui.grpc.CustomPolicyR\x05items\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05total\x18\x04 \x01(\x03R\x05total\"\xa4\x05\n" +
+	"\x05total\x18\x04 \x01(\x03R\x05total\"\x94\x05\n" +
 	"\x19CreateCustomPolicyRequest\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12$\n" +
 	"\x0epolicy_type_id\x18\x02 \x01(\x04R\fpolicyTypeId\x12)\n" +
@@ -3773,16 +3705,14 @@ const file_proto_policy_proto_rawDesc = "" +
 	"windowType\x12\x12\n" +
 	"\x04base\x18\x0e \x01(\tR\x04base\x12\x1c\n" +
 	"\aunit_id\x18\x0f \x01(\x04H\x01R\x06unitId\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x10 \x01(\tH\x02R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04kind\x18\x11 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04role\x18\x12 \x01(\tR\x04role\x12$\n" +
+	"\x03cap\x18\x10 \x01(\tH\x02R\x03cap\x88\x01\x01\x12$\n" +
 	"\vis_enforced\x18\x13 \x01(\bH\x03R\n" +
 	"isEnforced\x88\x01\x01B\t\n" +
 	"\a_reasonB\n" +
 	"\n" +
 	"\b_unit_idB\x06\n" +
 	"\x04_capB\x0e\n" +
-	"\f_is_enforcedJ\x04\b\r\x10\x0eR\x04unit\"\xac\x03\n" +
+	"\f_is_enforcedJ\x04\b\r\x10\x0eJ\x04\b\x11\x10\x12J\x04\b\x12\x10\x13R\x04unitR\x04kindR\x04role\"\xac\x03\n" +
 	"\x19UpdateCustomPolicyRequest\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x04R\x02id\x12\x1a\n" +
@@ -3824,7 +3754,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amount\x128\n" +
 	"\x06sender\x18\x06 \x01(\v2 .policy.ui.grpc.ReservationPartyR\x06sender\x12<\n" +
-	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xa9\x04\n" +
+	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xa1\x04\n" +
 	"\rAppliedPolicy\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\x04R\bpolicyId\x12\x1f\n" +
 	"\vpolicy_type\x18\x02 \x01(\tR\n" +
@@ -3845,13 +3775,12 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bviolated\x18\x0e \x01(\bR\bviolated\x12\x12\n" +
 	"\x04base\x18\x0f \x01(\tR\x04base\x12\x1b\n" +
 	"\x06charge\x18\x10 \x01(\tH\x01R\x06charge\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x11 \x01(\tH\x02R\x03cap\x88\x01\x01\x12\x12\n" +
-	"\x04role\x18\x13 \x01(\tR\x04roleB\b\n" +
+	"\x03cap\x18\x11 \x01(\tH\x02R\x03cap\x88\x01\x01B\b\n" +
 	"\x06_usageB\t\n" +
 	"\a_chargeB\x06\n" +
-	"\x04_capJ\x04\b\x12\x10\x13R\vis_enforced\"4\n" +
+	"\x04_capJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14R\vis_enforcedR\x04role\"4\n" +
 	"\x06Charge\x12\x12\n" +
-	"\x04role\x18\x01 \x01(\tR\x04role\x12\x16\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x16\n" +
 	"\x06amount\x18\x02 \x01(\tR\x06amount\"\xed\x01\n" +
 	"\vPartyResult\x12\x1b\n" +
 	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x1f\n" +

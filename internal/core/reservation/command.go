@@ -43,24 +43,23 @@ type ReleaseResponse struct {
 type PartyResult struct {
 	WalletID   string `json:"walletId"`
 	IsViolated bool   `json:"isViolated"`
-	// Charges is what each AUXILIARY role charges this side, in role order;
-	// a discount is negative. The side pays their sum.
+	// Charges is what each charge kind takes from this side, in kind order
+	// (FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.
 	Charges         []Charge        `json:"charges"`
 	AppliedPolicies []AppliedPolicy `json:"appliedPolicies"`
 }
 
-// Charge is one role's total for a side: positive is paid, negative (a
-// discount) is taken off.
+// Charge is one charge kind's total for a side: positive is paid, negative
+// (a discount) is taken off.
 type Charge struct {
-	Role   policy.Role     `enums:"FEE,DISCOUNT,TAX" json:"role"`
+	Kind   policy.Kind     `enums:"FEE,DISCOUNT,TAX" json:"kind"`
 	Amount decimal.Decimal `example:"1100" json:"amount" swaggertype:"string"`
 }
 
 type AppliedPolicy struct {
 	PolicyID        int64             `json:"policyId"`
 	PolicyType      string            `json:"policyType"`
-	Kind            policy.Kind       `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
-	Role            policy.Role       `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
+	Kind            policy.Kind       `enums:"LIMIT,WAIVER,FEE,DISCOUNT,TAX" json:"kind"`
 	Unit            string            `example:"AMOUNT" json:"unit,omitempty"`
 	Base            policy.Base       `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
 	Source          policy.Source     `enums:"SYSTEM,USER" json:"source"`
@@ -74,7 +73,7 @@ type AppliedPolicy struct {
 	Cap             *decimal.Decimal  `json:"cap,omitempty" swaggertype:"string"`
 	// Usage is the window total including this request (not stored when rejected).
 	Usage *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
-	// Charge is what this AUXILIARY line charges, signed like Charges, after
+	// Charge is what this charge line takes, signed like Charges, after
 	// its window cap and before the type's own caps (a discount at most the
 	// fee) are applied to the totals.
 	Charge   *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`

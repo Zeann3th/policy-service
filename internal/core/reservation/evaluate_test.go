@@ -26,17 +26,19 @@ func p(id int64, kind policy.Kind, unit string, window policy.WindowType, operat
 	return value_
 }
 
-// c is an AUXILIARY policy of type code: flat without a base, otherwise a
-// percentage of it.
+// the charge kinds, in the order they are computed
 const (
-	TypeFee      = policy.RoleFee
-	TypeDiscount = policy.RoleDiscount
-	TypeTax      = policy.RoleTax
+	TypeFee      = policy.KindFee
+	TypeDiscount = policy.KindDiscount
+	TypeTax      = policy.KindTax
 )
 
-func c(id int64, role policy.Role, base policy.Base, value string) policy.Policy {
-	charge := p(id, policy.KindAuxiliary, "", policy.WindowTransaction, "", value)
-	charge.PolicyType, charge.Role, charge.Base = "TXN_"+string(role), role, base
+var chargeKinds = []policy.Kind{TypeFee, TypeDiscount, TypeTax}
+
+// c is a charge of kind: flat without a base, otherwise a percentage of it.
+func c(id int64, kind policy.Kind, base policy.Base, value string) policy.Policy {
+	charge := p(id, kind, "", policy.WindowTransaction, "", value)
+	charge.PolicyType, charge.Base = "TXN_"+string(kind), base
 	return charge
 }
 
@@ -47,10 +49,10 @@ func windowCapped(value policy.Policy, window policy.WindowType, unit, cap strin
 	return value
 }
 
-func charges(result PartyResult) map[policy.Role]string {
-	totals := map[policy.Role]string{}
+func charges(result PartyResult) map[policy.Kind]string {
+	totals := map[policy.Kind]string{}
 	for _, charge := range result.Charges {
-		totals[charge.Role] = charge.Amount.String()
+		totals[charge.Kind] = charge.Amount.String()
 	}
 	return totals
 }
@@ -105,7 +107,7 @@ func TestEngineSkipsConfigOnlyAndUnknownPolicies(t *testing.T) {
 	if len(result.AppliedPolicies) != 1 || result.AppliedPolicies[0].PolicyID != 5 || len(entries) != 0 || result.IsViolated {
 		t.Fatalf("only the fee may reach the engine: %#v", result.AppliedPolicies)
 	}
-	if want := map[policy.Role]string{TypeFee: "1100"}; !equalMaps(charges(result), want) {
+	if want := map[policy.Kind]string{TypeFee: "1100"}; !equalMaps(charges(result), want) {
 		t.Fatalf("charges = %v, want %v", charges(result), want)
 	}
 }
@@ -168,11 +170,11 @@ func TestEvaluateWaiverFeeDiscountTax(t *testing.T) {
 		t.Fatal(err)
 	}
 	// fee 1000 + 1% of 100000 = 2000; discount 10% = 200; tax 10% of 1800 = 180
-	want := map[policy.Role]string{TypeFee: "2000", TypeDiscount: "-200", TypeTax: "180"}
+	want := map[policy.Kind]string{TypeFee: "2000", TypeDiscount: "-200", TypeTax: "180"}
 	if got := charges(result); !equalMaps(got, want) {
 		t.Fatalf("charges = %v, want %v", got, want)
 	}
-	if order := []policy.Role{result.Charges[0].Role, result.Charges[1].Role, result.Charges[2].Role}; !slices.Equal(order, policy.Roles()) {
+	if order := []policy.Kind{result.Charges[0].Kind, result.Charges[1].Kind, result.Charges[2].Kind}; !slices.Equal(order, chargeKinds) {
 		t.Fatalf("charges order = %v", order)
 	}
 	if len(entries) != 1 || !entries[0].Delta.Equal(d("1")) || entries[0].Operator != nil {
@@ -184,7 +186,7 @@ func TestEvaluateWaiverFeeDiscountTax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := map[policy.Role]string{TypeFee: "0", TypeDiscount: "0", TypeTax: "0"}; !equalMaps(charges(result), want) {
+	if want := map[policy.Kind]string{TypeFee: "0", TypeDiscount: "0", TypeTax: "0"}; !equalMaps(charges(result), want) {
 		t.Fatalf("waived charges = %v", charges(result))
 	}
 }
@@ -207,7 +209,7 @@ func TestEvaluateChargesUseTheirBase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := map[policy.Role]string{TypeFee: "1000", TypeDiscount: "-2500", TypeTax: test.want}; !equalMaps(charges(result), want) {
+		if want := map[policy.Kind]string{TypeFee: "1000", TypeDiscount: "-2500", TypeTax: test.want}; !equalMaps(charges(result), want) {
 			t.Errorf("%s: charges = %v, want %v", name, charges(result), want)
 		}
 	}
@@ -264,6 +266,44 @@ func TestEvaluateCapsChargesPerWindow(t *testing.T) {
 	}
 }
 
+func TestEvaluateCapsChargesPerTransaction(t *testing.T) {
+	// 1% fee, at most 50,000 per transaction; 10% off the fee, at most 3,000
+	fee := c(1, TypeFee, policy.BaseAmount, "1")
+	feeCap, discountCap := d("50000"), d("3000")
+	fee.Cap = &feeCap
+	discount := c(2, TypeDiscount, policy.BaseFee, "10")
+	discount.Cap = &discountCap
+	for amount, want := range map[string]map[policy.Kind]string{
+		"1000000":  {TypeFee: "10000", TypeDiscount: "-1000"}, // under both caps
+		"10000000": {TypeFee: "50000", TypeDiscount: "-3000"}, // 100,000 fee capped; 5,000 discount capped
+	} {
+		result, entries, err := evaluate("w", d(amount), []policy.Policy{fee, discount}, nil, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := charges(result); !equalMaps(got, want) {
+			t.Errorf("amount %s: charges = %v, want %v", amount, got, want)
+		}
+		if len(entries) != 0 {
+			t.Errorf("amount %s: a per-transaction cap keeps no usage, got %#v", amount, entries)
+		}
+		if result.AppliedPolicies[0].Usage != nil {
+			t.Errorf("amount %s: usage = %v, want none", amount, result.AppliedPolicies[0].Usage)
+		}
+	}
+}
+
+func TestEvaluateTransactionWaiverAlwaysWaives(t *testing.T) {
+	waiver := p(1, policy.KindWaiver, policy.UnitCount, policy.WindowTransaction, "", "1")
+	result, entries, err := evaluate("w", d("100000"), []policy.Policy{waiver, c(2, TypeFee, "", "1100")}, nil, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := charges(result)[TypeFee]; got != "0" || len(entries) != 0 {
+		t.Fatalf("fee = %s, entries = %#v; want waived and nothing recorded", got, entries)
+	}
+}
+
 func TestEvaluateRejectsBaseNotYetComputed(t *testing.T) {
 	for name, value := range map[string]policy.Policy{
 		"fee on fee":       c(1, TypeFee, policy.BaseFee, "1"),
@@ -278,8 +318,8 @@ func TestEvaluateRejectsBaseNotYetComputed(t *testing.T) {
 func TestRulesCheckWhatEachKindTakes(t *testing.T) {
 	cap := d("50000")
 	negative := d("-10")
-	spec := func(kind policy.Kind, role policy.Role, unit string, base policy.Base, operator policy.Operator, window policy.WindowType) policy.Spec {
-		return policy.Spec{Kind: kind, Role: role, Unit: unit, Base: base, Operator: operator, Window: window, Value: d("1")}
+	spec := func(kind policy.Kind, unit string, base policy.Base, operator policy.Operator, window policy.WindowType) policy.Spec {
+		return policy.Spec{Kind: kind, Unit: unit, Base: base, Operator: operator, Window: window, Value: d("1")}
 	}
 	withCap := func(value policy.Spec, amount *decimal.Decimal) policy.Spec { value.Cap = amount; return value }
 	withValue := func(value policy.Spec, amount decimal.Decimal) policy.Spec { value.Value = amount; return value }
@@ -287,28 +327,34 @@ func TestRulesCheckWhatEachKindTakes(t *testing.T) {
 		spec policy.Spec
 		ok   bool
 	}{
-		"daily amount limit":     {spec(policy.KindLimit, "", policy.UnitAmount, "", policy.OpLTE, policy.WindowDaily), true},
-		"balance limit":          {spec(policy.KindLimit, "", "BALANCE", "", policy.OpGTE, policy.WindowTransaction), true},
-		"limit without unit":     {spec(policy.KindLimit, "", "", "", policy.OpLTE, policy.WindowTransaction), false},
-		"limit without operator": {spec(policy.KindLimit, "", policy.UnitAmount, "", "", policy.WindowTransaction), false},
-		"limit with base":        {spec(policy.KindLimit, "", policy.UnitAmount, policy.BaseAmount, policy.OpLTE, policy.WindowTransaction), false},
-		"monthly count waiver":   {spec(policy.KindWaiver, "", policy.UnitCount, "", "", policy.WindowMonthly), true},
-		"waiver with operator":   {spec(policy.KindWaiver, "", policy.UnitCount, "", policy.OpLT, policy.WindowMonthly), false},
-		"flat fee":               {spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowTransaction), true},
-		"fee on the amount":      {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseAmount, "", policy.WindowTransaction), true},
-		"fee on the fee":         {spec(policy.KindAuxiliary, TypeFee, "", policy.BaseFee, "", policy.WindowTransaction), false},
-		"tax on net fee":         {spec(policy.KindAuxiliary, TypeTax, "", policy.BaseNetFee, "", policy.WindowTransaction), true},
-		"auxiliary without role": {spec(policy.KindAuxiliary, "", "", "", "", policy.WindowTransaction), false},
-		"unknown role":           {spec(policy.KindAuxiliary, "COMMISSION", "", "", "", policy.WindowTransaction), false},
-		"limit with a role":      {spec(policy.KindLimit, TypeFee, policy.UnitAmount, "", policy.OpLTE, policy.WindowTransaction), false},
-		"charge with operator":   {spec(policy.KindAuxiliary, TypeFee, "", "", policy.OpEQ, policy.WindowTransaction), false},
-		"daily capped fee":       {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, policy.BaseAmount, "", policy.WindowDaily), &cap), true},
-		"window without cap":     {spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), false},
-		"cap without window":     {withCap(spec(policy.KindAuxiliary, TypeFee, "", "", "", policy.WindowTransaction), &cap), false},
-		"negative discount":      {withValue(spec(policy.KindAuxiliary, TypeDiscount, "", policy.BaseAmount, "", policy.WindowTransaction), negative), false},
-		"negative cap":           {withCap(spec(policy.KindAuxiliary, TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), &negative), false},
-		"unknown kind":           {spec("REVENUE_SHARE", "X", "", "", "", policy.WindowTransaction), false},
-		"unknown window":         {spec(policy.KindLimit, "", policy.UnitAmount, "", policy.OpLTE, "WEEKLY"), false},
+		"daily amount limit":     {spec(policy.KindLimit, policy.UnitAmount, "", policy.OpLTE, policy.WindowDaily), true},
+		"balance limit":          {spec(policy.KindLimit, "BALANCE", "", policy.OpGTE, policy.WindowTransaction), true},
+		"limit without unit":     {spec(policy.KindLimit, "", "", policy.OpLTE, policy.WindowTransaction), false},
+		"limit without operator": {spec(policy.KindLimit, policy.UnitAmount, "", "", policy.WindowTransaction), false},
+		"limit with base":        {spec(policy.KindLimit, policy.UnitAmount, policy.BaseAmount, policy.OpLTE, policy.WindowTransaction), false},
+		"monthly count waiver":   {spec(policy.KindWaiver, policy.UnitCount, "", "", policy.WindowMonthly), true},
+		"waiver with operator":   {spec(policy.KindWaiver, policy.UnitCount, "", policy.OpLT, policy.WindowMonthly), false},
+		"flat fee":               {spec(TypeFee, "", "", "", policy.WindowTransaction), true},
+		"fee on the amount":      {spec(TypeFee, "", policy.BaseAmount, "", policy.WindowTransaction), true},
+		"fee on the fee":         {spec(TypeFee, "", policy.BaseFee, "", policy.WindowTransaction), false},
+		"tax on net fee":         {spec(TypeTax, "", policy.BaseNetFee, "", policy.WindowTransaction), true},
+		"charge with operator":   {spec(TypeFee, "", "", policy.OpEQ, policy.WindowTransaction), false},
+		"daily capped fee":       {withCap(spec(TypeFee, policy.UnitAmount, policy.BaseAmount, "", policy.WindowDaily), &cap), true},
+		"window without cap":     {spec(TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), false},
+		"per-transaction cap":    {withCap(spec(TypeFee, "", policy.BaseAmount, "", policy.WindowTransaction), &cap), true},
+		"per-transaction unit":   {withCap(spec(TypeFee, policy.UnitAmount, policy.BaseAmount, "", policy.WindowTransaction), &cap), false},
+		"window cap on balance":  {withCap(spec(TypeFee, "BALANCE", "", "", policy.WindowDaily), &cap), false},
+		"window without unit":    {withCap(spec(TypeFee, "", "", "", policy.WindowDaily), &cap), false},
+		"waiver with cap":        {withCap(spec(policy.KindWaiver, policy.UnitCount, "", "", policy.WindowMonthly), &cap), false},
+		"limit with cap":         {withCap(spec(policy.KindLimit, policy.UnitAmount, "", policy.OpLTE, policy.WindowDaily), &cap), false},
+		"unknown operator":       {spec(policy.KindLimit, policy.UnitAmount, "", "ABOUT", policy.WindowDaily), false},
+		"negative discount":      {withValue(spec(TypeDiscount, "", policy.BaseAmount, "", policy.WindowTransaction), negative), false},
+		"negative cap":           {withCap(spec(TypeFee, policy.UnitAmount, "", "", policy.WindowDaily), &negative), false},
+		"discount on the fee":    {spec(TypeDiscount, "", policy.BaseFee, "", policy.WindowTransaction), true},
+		"discount on net fee":    {spec(TypeDiscount, "", policy.BaseNetFee, "", policy.WindowTransaction), false},
+		"auxiliary is gone":      {spec("AUXILIARY", "", "", "", policy.WindowTransaction), false},
+		"unknown kind":           {spec("REVENUE_SHARE", "", "", "", policy.WindowTransaction), false},
+		"unknown window":         {spec(policy.KindLimit, policy.UnitAmount, "", policy.OpLTE, "WEEKLY"), false},
 	} {
 		if err := NewRules().Check(test.spec); (err == nil) != test.ok {
 			t.Errorf("%s: err = %v, want ok %v", name, err, test.ok)
@@ -316,7 +362,7 @@ func TestRulesCheckWhatEachKindTakes(t *testing.T) {
 	}
 }
 
-func equalMaps(got, want map[policy.Role]string) bool {
+func equalMaps(got, want map[policy.Kind]string) bool {
 	if len(got) != len(want) {
 		return false
 	}

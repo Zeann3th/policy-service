@@ -10,6 +10,7 @@ type PolicyTypeResponse struct {
 	ID          int64      `json:"id"`
 	Code        string     `json:"code"`
 	Description *string    `json:"description,omitempty"`
+	Kind        Kind       `enums:"LIMIT,WAIVER,FEE,DISCOUNT,TAX" json:"kind"`
 	Active      bool       `json:"active"`
 	CreatedAt   time.Time  `format:"date-time" json:"createdAt"`
 	UpdatedAt   *time.Time `format:"date-time" json:"updatedAt,omitempty"`
@@ -18,8 +19,11 @@ type PolicyTypeResponse struct {
 type CreatePolicyTypeRequest struct {
 	Code        string  `binding:"required" json:"code"`
 	Description *string `json:"description"`
-	Active      *bool   `json:"active"`
-	UpdatedBy   string  `binding:"required" json:"updatedBy"`
+	// Kind picks the strategy that evaluates the type's policies; fixed
+	// once created.
+	Kind      Kind   `binding:"required,oneof=LIMIT WAIVER FEE DISCOUNT TAX" enums:"LIMIT,WAIVER,FEE,DISCOUNT,TAX" json:"kind"`
+	Active    *bool  `json:"active"`
+	UpdatedBy string `binding:"required" json:"updatedBy"`
 }
 
 type UpdatePolicyTypeRequest struct {
@@ -52,8 +56,6 @@ type PolicyResponse struct {
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType       `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Kind            Kind             `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
-	Role            Role             `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
 	IsEnforced      bool             `json:"isEnforced"`
 	UnitID          *int64           `json:"unitId,omitempty"`
 	Base            Base             `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
@@ -73,12 +75,10 @@ type PolicyFields struct {
 	Channel         string     `json:"channel"`
 	Direction       Direction  `binding:"omitempty,oneof=ALL OUT IN" enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType `binding:"omitempty,oneof=TRANSACTION DAILY MONTHLY LIFETIME" enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	// Kind picks the strategy that evaluates the policy.
-	Kind Kind `binding:"required,oneof=LIMIT WAIVER AUXILIARY" enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
-	// Role is how an AUXILIARY charge applies; required for AUXILIARY.
-	Role Role `binding:"omitempty,oneof=FEE DISCOUNT TAX" enums:"FEE,DISCOUNT,TAX" json:"role"`
 	// UnitID (units table) is what a LIMIT or WAIVER measures, or what an
-	// AUXILIARY cap counts; required for LIMIT and WAIVER.
+	// charge's window cap counts; required for LIMIT and WAIVER, and for a
+	// charge over DAILY / MONTHLY / LIFETIME; absent for a charge per
+	// TRANSACTION.
 	UnitID *int64 `json:"unitId"`
 	PolicyChange
 }
@@ -90,13 +90,14 @@ type PolicyChange struct {
 	// returned as config (e.g. balance limits for accounting). Defaults to
 	// true on create and keeps the current value on update.
 	IsEnforced *bool `json:"isEnforced"`
-	// Base makes an AUXILIARY value a percentage of it; absent: flat amount.
+	// Base makes a charge a percentage of it; absent: flat amount.
 	Base Base `binding:"omitempty,oneof=AMOUNT FEE NET_FEE" enums:"AMOUNT,FEE,NET_FEE" json:"base"`
 	// Operator compares a LIMIT; required for LIMIT, absent otherwise.
 	Operator Operator         `binding:"omitempty,oneof=EQ NEQ GT GTE LT LTE" enums:"EQ,NEQ,GT,GTE,LT,LTE" json:"operator"`
 	Value    *decimal.Decimal `binding:"required" example:"10000" json:"value" swaggertype:"string"`
-	// Cap is the most an AUXILIARY policy charges per window, in its unit;
-	// required with a window, absent otherwise.
+	// Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with
+	// window TRANSACTION (optional), or per window in its unit (required
+	// with DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.
 	Cap *decimal.Decimal `example:"50000" json:"cap" swaggertype:"string"`
 	// EffectiveFrom defaults to now on create and is required on update.
 	EffectiveFrom *time.Time `format:"date-time" json:"effectiveFrom"`
@@ -121,8 +122,6 @@ type CustomPolicyResponse struct {
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`
 	WindowType      WindowType       `enums:"TRANSACTION,DAILY,MONTHLY,LIFETIME" json:"windowType"`
-	Kind            Kind             `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
-	Role            Role             `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
 	IsEnforced      bool             `json:"isEnforced"`
 	UnitID          *int64           `json:"unitId,omitempty"`
 	Base            Base             `enums:"AMOUNT,FEE,NET_FEE" json:"base,omitempty"`
@@ -173,8 +172,7 @@ type GetConfigResponse struct {
 
 type Rule struct {
 	PolicyType      string           `json:"policyType"`
-	Kind            Kind             `enums:"LIMIT,WAIVER,AUXILIARY" json:"kind"`
-	Role            Role             `enums:"FEE,DISCOUNT,TAX" json:"role,omitempty"`
+	Kind            Kind             `enums:"LIMIT,WAIVER,FEE,DISCOUNT,TAX" json:"kind"`
 	TransactionType string           `json:"transactionType"`
 	Channel         string           `json:"channel"`
 	Direction       Direction        `enums:"ALL,OUT,IN" json:"direction"`

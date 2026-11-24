@@ -1854,14 +1854,13 @@ const docTemplate = `{
         "policy.CreateCustomPolicyRequest": {
             "type": "object",
             "required": [
-                "kind",
                 "policyTypeId",
                 "updatedBy",
                 "value"
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
+                    "description": "Base makes a charge a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -1874,7 +1873,7 @@ const docTemplate = `{
                     ]
                 },
                 "cap": {
-                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "description": "Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with\nwindow TRANSACTION (optional), or per window in its unit (required\nwith DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.",
                     "type": "string",
                     "example": "50000"
                 },
@@ -1906,19 +1905,6 @@ const docTemplate = `{
                     "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
                     "type": "boolean"
                 },
-                "kind": {
-                    "description": "Kind picks the strategy that evaluates the policy.",
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
-                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -1941,24 +1927,11 @@ const docTemplate = `{
                 "reason": {
                     "type": "string"
                 },
-                "role": {
-                    "description": "Role is how an AUXILIARY charge applies; required for AUXILIARY.",
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
-                },
                 "transactionType": {
                     "type": "string"
                 },
                 "unitId": {
-                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\nAUXILIARY cap counts; required for LIMIT and WAIVER.",
+                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\ncharge's window cap counts; required for LIMIT and WAIVER, and for a\ncharge over DAILY / MONTHLY / LIFETIME; absent for a charge per\nTRANSACTION.",
                     "type": "integer"
                 },
                 "updatedBy": {
@@ -2009,14 +1982,13 @@ const docTemplate = `{
         "policy.CreatePolicyRequest": {
             "type": "object",
             "required": [
-                "kind",
                 "policyTypeId",
                 "updatedBy",
                 "value"
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
+                    "description": "Base makes a charge a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -2029,7 +2001,7 @@ const docTemplate = `{
                     ]
                 },
                 "cap": {
-                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "description": "Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with\nwindow TRANSACTION (optional), or per window in its unit (required\nwith DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.",
                     "type": "string",
                     "example": "50000"
                 },
@@ -2061,19 +2033,6 @@ const docTemplate = `{
                     "description": "IsEnforced false keeps the policy out of the engine: it is only\nreturned as config (e.g. balance limits for accounting). Defaults to\ntrue on create and keeps the current value on update.",
                     "type": "boolean"
                 },
-                "kind": {
-                    "description": "Kind picks the strategy that evaluates the policy.",
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
-                },
                 "operator": {
                     "description": "Operator compares a LIMIT; required for LIMIT, absent otherwise.",
                     "enum": [
@@ -2093,24 +2052,11 @@ const docTemplate = `{
                 "policyTypeId": {
                     "type": "integer"
                 },
-                "role": {
-                    "description": "Role is how an AUXILIARY charge applies; required for AUXILIARY.",
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
-                },
                 "transactionType": {
                     "type": "string"
                 },
                 "unitId": {
-                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\nAUXILIARY cap counts; required for LIMIT and WAIVER.",
+                    "description": "UnitID (units table) is what a LIMIT or WAIVER measures, or what an\ncharge's window cap counts; required for LIMIT and WAIVER, and for a\ncharge over DAILY / MONTHLY / LIFETIME; absent for a charge per\nTRANSACTION.",
                     "type": "integer"
                 },
                 "updatedBy": {
@@ -2139,6 +2085,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "code",
+                "kind",
                 "updatedBy"
             ],
             "properties": {
@@ -2150,6 +2097,21 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "kind": {
+                    "description": "Kind picks the strategy that evaluates the type's policies; fixed\nonce created.",
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
                 },
                 "updatedBy": {
                     "type": "string"
@@ -2210,18 +2172,6 @@ const docTemplate = `{
                 "isEnforced": {
                     "type": "boolean"
                 },
-                "kind": {
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
-                },
                 "operator": {
                     "enum": [
                         "EQ",
@@ -2242,18 +2192,6 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
-                },
-                "role": {
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -2316,17 +2254,23 @@ const docTemplate = `{
             "enum": [
                 "LIMIT",
                 "WAIVER",
-                "AUXILIARY"
+                "FEE",
+                "DISCOUNT",
+                "TAX"
             ],
             "x-enum-comments": {
-                "KindAuxiliary": "charges: fee, discount, tax, by role",
+                "KindDiscount": "taken off; at most the fee (or the amount, for cashback); publishes NET_FEE",
+                "KindFee": "paid; zero while a waiver applies; publishes base FEE",
                 "KindLimit": "blocks a transaction that breaks a bound",
+                "KindTax": "paid, on any base",
                 "KindWaiver": "waives the fee while usage is under a bound"
             },
             "x-enum-varnames": [
                 "KindLimit",
                 "KindWaiver",
-                "KindAuxiliary"
+                "KindFee",
+                "KindDiscount",
+                "KindTax"
             ]
         },
         "policy.Operator": {
@@ -2424,18 +2368,6 @@ const docTemplate = `{
                 "isEnforced": {
                     "type": "boolean"
                 },
-                "kind": {
-                    "enum": [
-                        "LIMIT",
-                        "WAIVER",
-                        "AUXILIARY"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Kind"
-                        }
-                    ]
-                },
                 "operator": {
                     "enum": [
                         "EQ",
@@ -2456,18 +2388,6 @@ const docTemplate = `{
                 },
                 "policyTypeId": {
                     "type": "integer"
-                },
-                "role": {
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
                 },
                 "transactionType": {
                     "type": "string"
@@ -2517,29 +2437,25 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "kind": {
+                    "enum": [
+                        "LIMIT",
+                        "WAIVER",
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/policy.Kind"
+                        }
+                    ]
+                },
                 "updatedAt": {
                     "type": "string",
                     "format": "date-time"
                 }
             }
-        },
-        "policy.Role": {
-            "type": "string",
-            "enum": [
-                "FEE",
-                "DISCOUNT",
-                "TAX"
-            ],
-            "x-enum-comments": {
-                "RoleDiscount": "taken off; at most the fee (or the amount, for cashback); publishes NET_FEE",
-                "RoleFee": "paid; zero while a waiver applies; publishes base FEE",
-                "RoleTax": "paid, on any base"
-            },
-            "x-enum-varnames": [
-                "RoleFee",
-                "RoleDiscount",
-                "RoleTax"
-            ]
         },
         "policy.Rule": {
             "type": "object",
@@ -2578,7 +2494,9 @@ const docTemplate = `{
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "AUXILIARY"
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
                     ],
                     "allOf": [
                         {
@@ -2603,18 +2521,6 @@ const docTemplate = `{
                 },
                 "policyType": {
                     "type": "string"
-                },
-                "role": {
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
                 },
                 "source": {
                     "enum": [
@@ -2672,7 +2578,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
+                    "description": "Base makes a charge a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -2685,7 +2591,7 @@ const docTemplate = `{
                     ]
                 },
                 "cap": {
-                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "description": "Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with\nwindow TRANSACTION (optional), or per window in its unit (required\nwith DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.",
                     "type": "string",
                     "example": "50000"
                 },
@@ -2738,7 +2644,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "base": {
-                    "description": "Base makes an AUXILIARY value a percentage of it; absent: flat amount.",
+                    "description": "Base makes a charge a percentage of it; absent: flat amount.",
                     "enum": [
                         "AMOUNT",
                         "FEE",
@@ -2751,7 +2657,7 @@ const docTemplate = `{
                     ]
                 },
                 "cap": {
-                    "description": "Cap is the most an AUXILIARY policy charges per window, in its unit;\nrequired with a window, absent otherwise.",
+                    "description": "Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with\nwindow TRANSACTION (optional), or per window in its unit (required\nwith DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.",
                     "type": "string",
                     "example": "50000"
                 },
@@ -2851,7 +2757,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "charge": {
-                    "description": "Charge is what this AUXILIARY line charges, signed like Charges, after\nits window cap and before the type's own caps (a discount at most the\nfee) are applied to the totals.",
+                    "description": "Charge is what this charge line takes, signed like Charges, after\nits window cap and before the type's own caps (a discount at most the\nfee) are applied to the totals.",
                     "type": "string"
                 },
                 "direction": {
@@ -2870,7 +2776,9 @@ const docTemplate = `{
                     "enum": [
                         "LIMIT",
                         "WAIVER",
-                        "AUXILIARY"
+                        "FEE",
+                        "DISCOUNT",
+                        "TAX"
                     ],
                     "allOf": [
                         {
@@ -2898,18 +2806,6 @@ const docTemplate = `{
                 },
                 "policyType": {
                     "type": "string"
-                },
-                "role": {
-                    "enum": [
-                        "FEE",
-                        "DISCOUNT",
-                        "TAX"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/policy.Role"
-                        }
-                    ]
                 },
                 "source": {
                     "enum": [
@@ -2965,7 +2861,7 @@ const docTemplate = `{
                     "type": "string",
                     "example": "1100"
                 },
-                "role": {
+                "kind": {
                     "enum": [
                         "FEE",
                         "DISCOUNT",
@@ -2973,7 +2869,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/policy.Role"
+                            "$ref": "#/definitions/policy.Kind"
                         }
                     ]
                 }
@@ -3011,7 +2907,7 @@ const docTemplate = `{
                     }
                 },
                 "charges": {
-                    "description": "Charges is what each AUXILIARY role charges this side, in role order;\na discount is negative. The side pays their sum.",
+                    "description": "Charges is what each charge kind takes from this side, in kind order\n(FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/reservation.Charge"

@@ -152,16 +152,16 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
-          amount.'
+        description: 'Base makes a charge a percentage of it; absent: flat amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
       cap:
         description: |-
-          Cap is the most an AUXILIARY policy charges per window, in its unit;
-          required with a window, absent otherwise.
+          Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with
+          window TRANSACTION (optional), or per window in its unit (required
+          with DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.
         example: "50000"
         type: string
       channel:
@@ -186,14 +186,6 @@ definitions:
           returned as config (e.g. balance limits for accounting). Defaults to
           true on create and keeps the current value on update.
         type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        description: Kind picks the strategy that evaluates the policy.
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -209,20 +201,14 @@ definitions:
         type: integer
       reason:
         type: string
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        description: Role is how an AUXILIARY charge applies; required for AUXILIARY.
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       transactionType:
         type: string
       unitId:
         description: |-
           UnitID (units table) is what a LIMIT or WAIVER measures, or what an
-          AUXILIARY cap counts; required for LIMIT and WAIVER.
+          charge's window cap counts; required for LIMIT and WAIVER, and for a
+          charge over DAILY / MONTHLY / LIFETIME; absent for a charge per
+          TRANSACTION.
         type: integer
       updatedBy:
         type: string
@@ -238,7 +224,6 @@ definitions:
         - MONTHLY
         - LIFETIME
     required:
-    - kind
     - policyTypeId
     - updatedBy
     - value
@@ -264,16 +249,16 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
-          amount.'
+        description: 'Base makes a charge a percentage of it; absent: flat amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
       cap:
         description: |-
-          Cap is the most an AUXILIARY policy charges per window, in its unit;
-          required with a window, absent otherwise.
+          Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with
+          window TRANSACTION (optional), or per window in its unit (required
+          with DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.
         example: "50000"
         type: string
       channel:
@@ -298,14 +283,6 @@ definitions:
           returned as config (e.g. balance limits for accounting). Defaults to
           true on create and keeps the current value on update.
         type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        description: Kind picks the strategy that evaluates the policy.
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -319,20 +296,14 @@ definitions:
         - LTE
       policyTypeId:
         type: integer
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        description: Role is how an AUXILIARY charge applies; required for AUXILIARY.
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       transactionType:
         type: string
       unitId:
         description: |-
           UnitID (units table) is what a LIMIT or WAIVER measures, or what an
-          AUXILIARY cap counts; required for LIMIT and WAIVER.
+          charge's window cap counts; required for LIMIT and WAIVER, and for a
+          charge over DAILY / MONTHLY / LIFETIME; absent for a charge per
+          TRANSACTION.
         type: integer
       updatedBy:
         type: string
@@ -348,7 +319,6 @@ definitions:
         - MONTHLY
         - LIFETIME
     required:
-    - kind
     - policyTypeId
     - updatedBy
     - value
@@ -361,10 +331,23 @@ definitions:
         type: string
       description:
         type: string
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        description: |-
+          Kind picks the strategy that evaluates the type's policies; fixed
+          once created.
+        enum:
+        - LIMIT
+        - WAIVER
+        - FEE
+        - DISCOUNT
+        - TAX
       updatedBy:
         type: string
     required:
     - code
+    - kind
     - updatedBy
     type: object
   policy.CustomPolicyResponse:
@@ -402,13 +385,6 @@ definitions:
         type: integer
       isEnforced:
         type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -423,13 +399,6 @@ definitions:
         type: integer
       reason:
         type: string
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       transactionType:
         type: string
       unitId:
@@ -472,16 +441,23 @@ definitions:
     enum:
     - LIMIT
     - WAIVER
-    - AUXILIARY
+    - FEE
+    - DISCOUNT
+    - TAX
     type: string
     x-enum-comments:
-      KindAuxiliary: 'charges: fee, discount, tax, by role'
+      KindDiscount: taken off; at most the fee (or the amount, for cashback); publishes
+        NET_FEE
+      KindFee: paid; zero while a waiver applies; publishes base FEE
       KindLimit: blocks a transaction that breaks a bound
+      KindTax: paid, on any base
       KindWaiver: waives the fee while usage is under a bound
     x-enum-varnames:
     - KindLimit
     - KindWaiver
-    - KindAuxiliary
+    - KindFee
+    - KindDiscount
+    - KindTax
   policy.Operator:
     enum:
     - EQ
@@ -548,13 +524,6 @@ definitions:
         type: integer
       isEnforced:
         type: boolean
-      kind:
-        allOf:
-        - $ref: '#/definitions/policy.Kind'
-        enum:
-        - LIMIT
-        - WAIVER
-        - AUXILIARY
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -569,13 +538,6 @@ definitions:
         type: integer
       policyTypeId:
         type: integer
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       transactionType:
         type: string
       unitId:
@@ -608,25 +570,19 @@ definitions:
         type: string
       id:
         type: integer
+      kind:
+        allOf:
+        - $ref: '#/definitions/policy.Kind'
+        enum:
+        - LIMIT
+        - WAIVER
+        - FEE
+        - DISCOUNT
+        - TAX
       updatedAt:
         format: date-time
         type: string
     type: object
-  policy.Role:
-    enum:
-    - FEE
-    - DISCOUNT
-    - TAX
-    type: string
-    x-enum-comments:
-      RoleDiscount: taken off; at most the fee (or the amount, for cashback); publishes
-        NET_FEE
-      RoleFee: paid; zero while a waiver applies; publishes base FEE
-      RoleTax: paid, on any base
-    x-enum-varnames:
-    - RoleFee
-    - RoleDiscount
-    - RoleTax
   policy.Rule:
     properties:
       base:
@@ -653,7 +609,9 @@ definitions:
         enum:
         - LIMIT
         - WAIVER
-        - AUXILIARY
+        - FEE
+        - DISCOUNT
+        - TAX
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -666,13 +624,6 @@ definitions:
         - LTE
       policyType:
         type: string
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       source:
         allOf:
         - $ref: '#/definitions/policy.Source'
@@ -709,16 +660,16 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
-          amount.'
+        description: 'Base makes a charge a percentage of it; absent: flat amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
       cap:
         description: |-
-          Cap is the most an AUXILIARY policy charges per window, in its unit;
-          required with a window, absent otherwise.
+          Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with
+          window TRANSACTION (optional), or per window in its unit (required
+          with DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.
         example: "50000"
         type: string
       effectiveFrom:
@@ -761,16 +712,16 @@ definitions:
       base:
         allOf:
         - $ref: '#/definitions/policy.Base'
-        description: 'Base makes an AUXILIARY value a percentage of it; absent: flat
-          amount.'
+        description: 'Base makes a charge a percentage of it; absent: flat amount.'
         enum:
         - AMOUNT
         - FEE
         - NET_FEE
       cap:
         description: |-
-          Cap is the most an AUXILIARY policy charges per window, in its unit;
-          required with a window, absent otherwise.
+          Cap is the most a charge (FEE, DISCOUNT, TAX) takes: per transaction with
+          window TRANSACTION (optional), or per window in its unit (required
+          with DAILY / MONTHLY / LIFETIME). Absent for LIMIT and WAIVER.
         example: "50000"
         type: string
       effectiveFrom:
@@ -847,7 +798,7 @@ definitions:
         type: string
       charge:
         description: |-
-          Charge is what this AUXILIARY line charges, signed like Charges, after
+          Charge is what this charge line takes, signed like Charges, after
           its window cap and before the type's own caps (a discount at most the
           fee) are applied to the totals.
         type: string
@@ -864,7 +815,9 @@ definitions:
         enum:
         - LIMIT
         - WAIVER
-        - AUXILIARY
+        - FEE
+        - DISCOUNT
+        - TAX
       operator:
         allOf:
         - $ref: '#/definitions/policy.Operator'
@@ -879,13 +832,6 @@ definitions:
         type: integer
       policyType:
         type: string
-      role:
-        allOf:
-        - $ref: '#/definitions/policy.Role'
-        enum:
-        - FEE
-        - DISCOUNT
-        - TAX
       source:
         allOf:
         - $ref: '#/definitions/policy.Source'
@@ -922,9 +868,9 @@ definitions:
       amount:
         example: "1100"
         type: string
-      role:
+      kind:
         allOf:
-        - $ref: '#/definitions/policy.Role'
+        - $ref: '#/definitions/policy.Kind'
         enum:
         - FEE
         - DISCOUNT
@@ -954,8 +900,8 @@ definitions:
         type: array
       charges:
         description: |-
-          Charges is what each AUXILIARY role charges this side, in role order;
-          a discount is negative. The side pays their sum.
+          Charges is what each charge kind takes from this side, in kind order
+          (FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.
         items:
           $ref: '#/definitions/reservation.Charge'
         type: array

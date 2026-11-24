@@ -49,11 +49,11 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
   tier (T1 1x, T2 5x, T3 20x).
 * System policies per group. Units and policy types come from the
   baseline catalog. A policy's kind (from its type) picks the strategy:
-  LIMIT, WAIVER or AUXILIARY (charges: TXN_FEE, TXN_DISCOUNT, TXN_TAX). The
+  LIMIT, WAIVER, FEE, DISCOUNT or TAX (TXN_FEE, TXN_DISCOUNT, TXN_TAX). The
   row says how its value is read: `unit` (what a LIMIT / WAIVER measures, or
-  what an AUXILIARY cap counts), `base` (what a charge percentage is of;
+  what a charge cap counts), `base` (what a charge percentage is of;
   empty = flat), `operator` (LIMIT only), `cap` (most a charge takes per
-  window). Responses list each side's `charges` by type, discounts negative.
+  transaction with window TRANSACTION, or per window in its unit). Responses list each side's `charges` by type, discounts negative.
 
   | Type | Selector | Window | Unit / base | Rule |
   |---|---|---|---|---|

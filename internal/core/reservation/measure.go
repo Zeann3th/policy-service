@@ -1,6 +1,9 @@
 package reservation
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/shopspring/decimal"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 )
@@ -19,6 +22,11 @@ type measure interface {
 var measures = map[string]measure{
 	policy.UnitAmount: amountMeasure{},
 	policy.UnitCount:  countMeasure{},
+}
+
+// measured is every unit code with a measure, sorted.
+func measured() []string {
+	return slices.Sorted(maps.Keys(measures))
 }
 
 func measureOf(unit string) (measure, bool) {

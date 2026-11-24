@@ -32,9 +32,9 @@ END
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
--- Catalog tables (units, policy_types) are metadata: names the policies
--- refer to. Everything the engine reads is on the policy row (kind, role,
--- is_enforced, unit, base, operator, window, value, cap). Every policy is
+-- A policy type says what its policies do (kind);
+-- a policy row holds the numbers (is_enforced, unit, base, operator,
+-- window, value, cap). Units are labels. Every policy is
 -- returned as config (GET /v1/policies); the engine (reserve) evaluates
 -- only rows with is_enforced, and does nothing with a unit it has no
 -- measure for. COIN_MIN / COIN_MAX rows are config for the accounting
@@ -53,27 +53,30 @@ INSERT INTO units (code, description) VALUES
   ('COUNT', 'Number of transactions'),
   ('BALANCE', 'Wallet balance; enforced by the accounting service, not on reserve');
 
--- A policy type is a label: a code and a description. What a policy does is
--- on the policy row, so a new type needs no code change.
+-- A policy type says what its policies do: kind picks the strategy that
+-- evaluates them, LIMIT | WAIVER | FEE | DISCOUNT | TAX. It is fixed once
+-- created: every policy of the type relies on it. A new type of a known
+-- kind needs no code change.
 CREATE TABLE policy_types (
   id bigserial PRIMARY KEY,
   code text NOT NULL UNIQUE,
   description text,
+  kind text NOT NULL,
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz
 );
 
-INSERT INTO policy_types (code, description) VALUES
-  ('COIN_MIN', 'Minimum balance a wallet must keep after a transaction'),
-  ('COIN_MAX', 'Maximum balance a wallet may hold after a transaction'),
-  ('TXN_MIN', 'Minimum of a single transaction'),
-  ('TXN_MAX', 'Maximum of a single transaction'),
-  ('TOTAL_MAX', 'Maximum total over a window'),
-  ('NO_FEE_TRANSACTION', 'First N transactions per window are free'),
-  ('TXN_FEE', 'Fee per transaction'),
-  ('TXN_DISCOUNT', 'Discount off the fee or the amount'),
-  ('TXN_TAX', 'Tax per transaction');
+INSERT INTO policy_types (code, description, kind) VALUES
+  ('COIN_MIN',           'Minimum balance a wallet must keep after a transaction', 'LIMIT'),
+  ('COIN_MAX',           'Maximum balance a wallet may hold after a transaction',  'LIMIT'),
+  ('TXN_MIN',            'Minimum of a single transaction',                        'LIMIT'),
+  ('TXN_MAX',            'Maximum of a single transaction',                        'LIMIT'),
+  ('TOTAL_MAX',          'Maximum total over a window',                            'LIMIT'),
+  ('NO_FEE_TRANSACTION', 'First N transactions per window are free',               'WAIVER'),
+  ('TXN_FEE',            'Fee per transaction',                                    'FEE'),
+  ('TXN_DISCOUNT',       'Discount off the fee or the amount',                     'DISCOUNT'),
+  ('TXN_TAX',            'Tax per transaction',                                    'TAX');
 
 CREATE TABLE policy_groups (
   id bigserial PRIMARY KEY,
@@ -89,21 +92,21 @@ CREATE TABLE policy_groups (
 -- recorded in usage_ledger never collides across the two tables.
 CREATE SEQUENCE policy_id_seq;
 
--- A policy row is a rule: everything the engine reads (checked by the
--- kind's strategy in the application):
---   kind       LIMIT | WAIVER | AUXILIARY: the strategy that evaluates it
---   role       AUXILIARY only: FEE | DISCOUNT | TAX, how the charge applies
+-- A policy row is a rule of its type's kind (checked by the kind's
+-- strategy in the application):
 --   is_enforced  false: config only, the engine skips it
 --   LIMIT      unit, operator
---   WAIVER     unit; free while window usage < value (always with TRANSACTION)
---   AUXILIARY  role; base NULL (flat value) or AMOUNT | FEE | NET_FEE (value
---              is a percentage of it); with a window, cap (in unit) limits
---              what is charged per window
+--   WAIVER     unit; free while usage before the transaction < value
+--   FEE / DISCOUNT / TAX  base NULL (flat value) or AMOUNT | FEE | NET_FEE (value
+--              is a percentage of it); optional cap: with TRANSACTION the
+--              most one transaction is charged (no unit), with DAILY /
+--              MONTHLY / LIFETIME the most charged per window (unit required:
+--              what the cap counts)
 -- window_type: TRANSACTION = this transaction alone, nothing accumulates; DAILY / MONTHLY
 -- (UTC calendar); LIFETIME = accumulates and never resets.
--- value and cap are never negative: the role decides the sign.
+-- value and cap are never negative: the kind decides the sign.
 -- policy_type_id / transaction_type / channel / direction / window_type /
--- unit_id are the identity; they, kind and role are immutable: changing one
+-- unit_id are the identity and immutable: changing one
 -- means a new row.
 -- direction: ALL | OUT | IN; operator: EQ | NEQ | GT | GTE | LT | LTE
 CREATE TABLE policies (
@@ -114,14 +117,12 @@ CREATE TABLE policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'TRANSACTION',
-  kind text NOT NULL,
-  role text, -- AUXILIARY only
   is_enforced boolean NOT NULL DEFAULT true,
   unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
-  base text, -- AUXILIARY only; NULL: flat
+  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
   operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
-  cap numeric(24, 4), -- AUXILIARY with a window: most charged per window, in unit
+  cap numeric(24, 4), -- FEE / DISCOUNT / TAX: most charged per transaction, or per window (in unit)
   effective_from timestamptz NOT NULL DEFAULT now(),
   effective_to timestamptz, -- NULL: effective with no end
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -151,14 +152,12 @@ CREATE TABLE custom_policies (
   channel text NOT NULL DEFAULT 'ALL',
   direction text NOT NULL DEFAULT 'ALL',
   window_type text NOT NULL DEFAULT 'TRANSACTION',
-  kind text NOT NULL,
-  role text, -- AUXILIARY only
   is_enforced boolean NOT NULL DEFAULT true,
   unit_id bigint REFERENCES units (id) ON DELETE RESTRICT,
-  base text, -- AUXILIARY only; NULL: flat
+  base text, -- FEE / DISCOUNT / TAX only; NULL: flat
   operator text, -- LIMIT only
   value numeric(24, 4) NOT NULL,
-  cap numeric(24, 4), -- AUXILIARY with a window: most charged per window, in unit
+  cap numeric(24, 4), -- FEE / DISCOUNT / TAX: most charged per transaction, or per window (in unit)
   effective_from timestamptz NOT NULL DEFAULT now(),
   effective_to timestamptz,
   reason text,
@@ -212,7 +211,7 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'LIMIT';
+  pt.kind = 'LIMIT';
 
 CREATE VIEW custom_limit_policies AS
 SELECT
@@ -236,7 +235,7 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'LIMIT';
+  pt.kind = 'LIMIT';
 
 -- WAIVER: the fee is waived while usage of unit in the window, before the
 -- transaction, is below value.
@@ -259,7 +258,7 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'WAIVER';
+  pt.kind = 'WAIVER';
 
 CREATE VIEW custom_waiver_policies AS
 SELECT
@@ -282,11 +281,12 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'WAIVER';
+  pt.kind = 'WAIVER';
 
--- AUXILIARY: role charges value, flat or as a percentage of base; when
--- capped, window_type / unit / cap say how much is charged per window.
-CREATE VIEW auxiliary_policies AS
+-- FEE / DISCOUNT / TAX: value flat or as a percentage of base; cap is the
+-- most charged per transaction (TRANSACTION) or per window, in unit.
+
+CREATE VIEW fee_policies AS
 SELECT
   p.id,
   p.policy_group_id,
@@ -294,7 +294,6 @@ SELECT
   p.transaction_type,
   p.channel,
   p.direction,
-  p.role,
   p.base,
   p.value,
   p.window_type,
@@ -308,9 +307,9 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'AUXILIARY';
+  pt.kind = 'FEE';
 
-CREATE VIEW custom_auxiliary_policies AS
+CREATE VIEW custom_fee_policies AS
 SELECT
   p.id,
   p.wallet_id,
@@ -318,7 +317,6 @@ SELECT
   p.transaction_type,
   p.channel,
   p.direction,
-  p.role,
   p.base,
   p.value,
   p.window_type,
@@ -334,7 +332,103 @@ FROM
   JOIN policy_types pt ON pt.id = p.policy_type_id
   LEFT JOIN units u ON u.id = p.unit_id
 WHERE
-  p.kind = 'AUXILIARY';
+  pt.kind = 'FEE';
+
+CREATE VIEW discount_policies AS
+SELECT
+  p.id,
+  p.policy_group_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to
+FROM
+  policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  pt.kind = 'DISCOUNT';
+
+CREATE VIEW custom_discount_policies AS
+SELECT
+  p.id,
+  p.wallet_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to,
+  p.reason,
+  p.created_by
+FROM
+  custom_policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  pt.kind = 'DISCOUNT';
+
+CREATE VIEW tax_policies AS
+SELECT
+  p.id,
+  p.policy_group_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to
+FROM
+  policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  pt.kind = 'TAX';
+
+CREATE VIEW custom_tax_policies AS
+SELECT
+  p.id,
+  p.wallet_id,
+  pt.code AS policy_type,
+  p.transaction_type,
+  p.channel,
+  p.direction,
+  p.base,
+  p.value,
+  p.window_type,
+  u.code AS unit,
+  p.cap,
+  p.is_enforced,
+  p.effective_from,
+  p.effective_to,
+  p.reason,
+  p.created_by
+FROM
+  custom_policies p
+  JOIN policy_types pt ON pt.id = p.policy_type_id
+  LEFT JOIN units u ON u.id = p.unit_id
+WHERE
+  pt.kind = 'TAX';
 
 -- ---------------------------------------------------------------------
 -- audit logs: native range partitions by month via pg_partman
@@ -372,7 +466,7 @@ SELECT
 -- window_start: the day (DAILY), the first day of the month (MONTHLY) or
 -- 1970-01-01 (LIFETIME), in UTC.
 -- unit COUNT adds 1 to value, unit AMOUNT adds the money measured (the
--- transaction amount for LIMIT / WAIVER, the amount charged for AUXILIARY).
+-- transaction amount for LIMIT / WAIVER, the amount charged for FEE / DISCOUNT / TAX).
 -- List partitions reject any window_type other than the three below.
 -- ---------------------------------------------------------------------
 CREATE TABLE usages (
@@ -593,13 +687,21 @@ DROP VIEW IF EXISTS custom_waiver_policies;
 
 DROP VIEW IF EXISTS waiver_policies;
 
-DROP VIEW IF EXISTS custom_auxiliary_policies;
+DROP VIEW IF EXISTS custom_fee_policies;
 
-DROP VIEW IF EXISTS auxiliary_policies;
+DROP VIEW IF EXISTS fee_policies;
 
-DROP TABLE IF EXISTS custom_policies;
+DROP VIEW IF EXISTS custom_discount_policies;
 
-DROP TABLE IF EXISTS policies;
+DROP VIEW IF EXISTS discount_policies;
+
+DROP VIEW IF EXISTS custom_tax_policies;
+
+DROP VIEW IF EXISTS tax_policies;
+
+DROP TABLE IF EXISTS custom_policies CASCADE;
+
+DROP TABLE IF EXISTS policies CASCADE;
 
 DROP SEQUENCE IF EXISTS policy_id_seq;
 

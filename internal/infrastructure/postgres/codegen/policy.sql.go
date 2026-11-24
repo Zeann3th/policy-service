@@ -25,14 +25,14 @@ func (q *Queries) CountPolicies(ctx context.Context, policyGroupID int64) (int64
 
 const createPolicy = `-- name: CreatePolicy :one
 INSERT INTO policies
-  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator,
+  (policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator,
    value, cap, effective_from, effective_to)
 VALUES
   ($1, $2, $3,
-   $4, $5, $6, $7, $8, $9, $10, $11,
-   $12, $13, $14,
-   COALESCE(CAST($15 AS timestamptz), now()), $16)
-RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
+   $4, $5, $6, $7, $8, $9,
+   $10, $11, $12,
+   COALESCE(CAST($13 AS timestamptz), now()), $14)
+RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
 `
 
 type CreatePolicyParams struct {
@@ -42,8 +42,6 @@ type CreatePolicyParams struct {
 	Channel         string           `json:"channel"`
 	Direction       string           `json:"direction"`
 	WindowType      string           `json:"window_type"`
-	Kind            string           `json:"kind"`
-	Role            *string          `json:"role"`
 	IsEnforced      bool             `json:"is_enforced"`
 	UnitID          *int64           `json:"unit_id"`
 	Base            *string          `json:"base"`
@@ -62,8 +60,6 @@ func (q *Queries) CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Pol
 		arg.Channel,
 		arg.Direction,
 		arg.WindowType,
-		arg.Kind,
-		arg.Role,
 		arg.IsEnforced,
 		arg.UnitID,
 		arg.Base,
@@ -82,8 +78,6 @@ func (q *Queries) CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Pol
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
-		&i.Kind,
-		&i.Role,
 		&i.IsEnforced,
 		&i.UnitID,
 		&i.Base,
@@ -99,7 +93,7 @@ func (q *Queries) CreatePolicy(ctx context.Context, arg CreatePolicyParams) (Pol
 }
 
 const deletePolicy = `-- name: DeletePolicy :one
-DELETE FROM policies WHERE policy_group_id = $1 AND id = $2 RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
+DELETE FROM policies WHERE policy_group_id = $1 AND id = $2 RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
 `
 
 type DeletePolicyParams struct {
@@ -118,8 +112,6 @@ func (q *Queries) DeletePolicy(ctx context.Context, arg DeletePolicyParams) (Pol
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
-		&i.Kind,
-		&i.Role,
 		&i.IsEnforced,
 		&i.UnitID,
 		&i.Base,
@@ -135,7 +127,7 @@ func (q *Queries) DeletePolicy(ctx context.Context, arg DeletePolicyParams) (Pol
 }
 
 const getPolicyByID = `-- name: GetPolicyByID :one
-SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies WHERE policy_group_id = $1 AND id = $2
+SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies WHERE policy_group_id = $1 AND id = $2
 `
 
 type GetPolicyByIDParams struct {
@@ -154,8 +146,6 @@ func (q *Queries) GetPolicyByID(ctx context.Context, arg GetPolicyByIDParams) (P
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
-		&i.Kind,
-		&i.Role,
 		&i.IsEnforced,
 		&i.UnitID,
 		&i.Base,
@@ -171,7 +161,7 @@ func (q *Queries) GetPolicyByID(ctx context.Context, arg GetPolicyByIDParams) (P
 }
 
 const getPolicyByIDForUpdate = `-- name: GetPolicyByIDForUpdate :one
-SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies WHERE policy_group_id = $1 AND id = $2 FOR UPDATE
+SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies WHERE policy_group_id = $1 AND id = $2 FOR UPDATE
 `
 
 type GetPolicyByIDForUpdateParams struct {
@@ -190,8 +180,6 @@ func (q *Queries) GetPolicyByIDForUpdate(ctx context.Context, arg GetPolicyByIDF
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
-		&i.Kind,
-		&i.Role,
 		&i.IsEnforced,
 		&i.UnitID,
 		&i.Base,
@@ -207,7 +195,7 @@ func (q *Queries) GetPolicyByIDForUpdate(ctx context.Context, arg GetPolicyByIDF
 }
 
 const listPolicies = `-- name: ListPolicies :many
-SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies
+SELECT id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at FROM policies
 WHERE policy_group_id = $1
 ORDER BY id LIMIT $3 OFFSET $2
 `
@@ -235,8 +223,6 @@ func (q *Queries) ListPolicies(ctx context.Context, arg ListPoliciesParams) ([]P
 			&i.Channel,
 			&i.Direction,
 			&i.WindowType,
-			&i.Kind,
-			&i.Role,
 			&i.IsEnforced,
 			&i.UnitID,
 			&i.Base,
@@ -263,7 +249,7 @@ UPDATE policies
 SET is_enforced = $1, base = $2, operator = $3, value = $4, cap = $5,
     effective_from = $6, effective_to = $7, updated_at = now()
 WHERE policy_group_id = $8 AND id = $9
-RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, kind, role, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
+RETURNING id, policy_group_id, policy_type_id, transaction_type, channel, direction, window_type, is_enforced, unit_id, base, operator, value, cap, effective_from, effective_to, created_at, updated_at
 `
 
 type UpdatePolicyParams struct {
@@ -299,8 +285,6 @@ func (q *Queries) UpdatePolicy(ctx context.Context, arg UpdatePolicyParams) (Pol
 		&i.Channel,
 		&i.Direction,
 		&i.WindowType,
-		&i.Kind,
-		&i.Role,
 		&i.IsEnforced,
 		&i.UnitID,
 		&i.Base,

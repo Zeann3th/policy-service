@@ -10,17 +10,21 @@ import (
 
 const All = "ALL"
 
-// Kind says which strategy evaluates a policy. It is set on each policy
-// row; policy types and units are only labels.
+// Kind says which strategy evaluates a policy. It is set on the policy
+// type, so every policy of a type behaves alike; units are labels. The
+// charge kinds (FEE, DISCOUNT, TAX) run in this order, so a charge may only
+// use a base computed before it.
 type Kind string
 
 const (
-	KindLimit     Kind = "LIMIT"     // blocks a transaction that breaks a bound
-	KindWaiver    Kind = "WAIVER"    // waives the fee while usage is under a bound
-	KindAuxiliary Kind = "AUXILIARY" // charges: fee, discount, tax, by role
+	KindLimit    Kind = "LIMIT"    // blocks a transaction that breaks a bound
+	KindWaiver   Kind = "WAIVER"   // waives the fee while usage is under a bound
+	KindFee      Kind = "FEE"      // paid; zero while a waiver applies; publishes base FEE
+	KindDiscount Kind = "DISCOUNT" // taken off; at most the fee (or the amount, for cashback); publishes NET_FEE
+	KindTax      Kind = "TAX"      // paid, on any base
 )
 
-var kinds = []Kind{KindLimit, KindWaiver, KindAuxiliary}
+var kinds = []Kind{KindLimit, KindWaiver, KindFee, KindDiscount, KindTax}
 
 func (k Kind) Valid() bool {
 	return slices.Contains(kinds, k)
@@ -31,27 +35,6 @@ func Kinds() []Kind {
 	return slices.Clone(kinds)
 }
 
-// Role is how an AUXILIARY policy's charge applies. Charges run in role
-// order, so a role may only use a base computed before it.
-type Role string
-
-const (
-	RoleFee      Role = "FEE"      // paid; zero while a waiver applies; publishes base FEE
-	RoleDiscount Role = "DISCOUNT" // taken off; at most the fee (or the amount, for cashback); publishes NET_FEE
-	RoleTax      Role = "TAX"      // paid, on any base
-)
-
-var roles = []Role{RoleFee, RoleDiscount, RoleTax}
-
-func (r Role) Valid() bool {
-	return slices.Contains(roles, r)
-}
-
-// Roles returns every role, in the order charges are computed.
-func Roles() []Role {
-	return slices.Clone(roles)
-}
-
 // Unit codes the code has a measure for. Units are catalog rows (table
 // units); the engine does nothing with a policy in another unit.
 const (
@@ -59,7 +42,7 @@ const (
 	UnitCount  = "COUNT"  // number of transactions
 )
 
-// Base is what an AUXILIARY value is a percentage of; no base means the
+// Base is what a charge (FEE, DISCOUNT, TAX) is a percentage of; no base means the
 // value is a flat amount. Charges are computed in type order (fee,
 // discount, tax), so a type may only use a base computed before it.
 type Base string
@@ -85,7 +68,6 @@ func Bases() []Base {
 // fields it takes and checks them (Rules).
 type Spec struct {
 	Kind     Kind
-	Role     Role   // AUXILIARY only
 	Unit     string // unit code; "" when the policy has none
 	Base     Base
 	Operator Operator
@@ -109,12 +91,15 @@ const (
 	WindowLifetime    WindowType = "LIFETIME"
 )
 
+var windows = []WindowType{WindowTransaction, WindowDaily, WindowMonthly, WindowLifetime}
+
 func (w WindowType) Valid() bool {
-	switch w {
-	case WindowTransaction, WindowDaily, WindowMonthly, WindowLifetime:
-		return true
-	}
-	return false
+	return slices.Contains(windows, w)
+}
+
+// Windows returns every window, shortest first.
+func Windows() []WindowType {
+	return slices.Clone(windows)
 }
 
 type Direction string
@@ -125,12 +110,10 @@ const (
 	DirectionIn  Direction = "IN"
 )
 
+var directions = []Direction{DirectionAll, DirectionOut, DirectionIn}
+
 func (d Direction) Valid() bool {
-	switch d {
-	case DirectionAll, DirectionOut, DirectionIn:
-		return true
-	}
-	return false
+	return slices.Contains(directions, d)
 }
 
 type Operator string
@@ -144,36 +127,40 @@ const (
 	OpLTE Operator = "LTE"
 )
 
-func (o Operator) Valid() bool {
-	switch o {
-	case OpEQ, OpNEQ, OpGT, OpGTE, OpLT, OpLTE:
-		return true
-	}
-	return false
+var operators = []Operator{OpEQ, OpNEQ, OpGT, OpGTE, OpLT, OpLTE}
+
+// comparisons is how each operator compares the actual value to the bound.
+var comparisons = map[Operator]func(actual, bound decimal.Decimal) bool{
+	OpEQ:  decimal.Decimal.Equal,
+	OpNEQ: func(actual, bound decimal.Decimal) bool { return !actual.Equal(bound) },
+	OpGT:  decimal.Decimal.GreaterThan,
+	OpGTE: decimal.Decimal.GreaterThanOrEqual,
+	OpLT:  decimal.Decimal.LessThan,
+	OpLTE: decimal.Decimal.LessThanOrEqual,
 }
 
+func (o Operator) Valid() bool {
+	_, ok := comparisons[o]
+	return ok
+}
+
+// Operators returns every operator.
+func Operators() []Operator {
+	return slices.Clone(operators)
+}
+
+// Satisfied reports whether actual compares to bound as the operator says;
+// an unknown operator is never satisfied.
 func (o Operator) Satisfied(actual, bound decimal.Decimal) bool {
-	switch o {
-	case OpEQ:
-		return actual.Equal(bound)
-	case OpNEQ:
-		return !actual.Equal(bound)
-	case OpGT:
-		return actual.GreaterThan(bound)
-	case OpGTE:
-		return actual.GreaterThanOrEqual(bound)
-	case OpLT:
-		return actual.LessThan(bound)
-	case OpLTE:
-		return actual.LessThanOrEqual(bound)
-	}
-	return false
+	compare, ok := comparisons[o]
+	return ok && compare(actual, bound)
 }
 
 type PolicyType struct {
 	ID          int64
 	Code        string
 	Description *string
+	Kind        Kind
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
@@ -204,8 +191,7 @@ type Policy struct {
 	PolicyGroupID   int64
 	PolicyTypeID    int64
 	PolicyType      string
-	Kind            Kind
-	Role            Role
+	Kind            Kind // from the type
 	TransactionType string
 	Channel         string
 	Direction       Direction
@@ -242,8 +228,7 @@ type CustomPolicy struct {
 	WalletID        string
 	PolicyTypeID    int64
 	PolicyType      string
-	Kind            Kind
-	Role            Role
+	Kind            Kind // from the type
 	TransactionType string
 	Channel         string
 	Direction       Direction
@@ -304,5 +289,5 @@ func unitID(value *int64) int64 {
 
 // Spec is how the policy reads its value.
 func (v Policy) Spec() Spec {
-	return Spec{Kind: v.Kind, Role: v.Role, Unit: v.Unit, Base: v.Base, Operator: v.Operator, Window: v.WindowType, Value: v.Value, Cap: v.Cap}
+	return Spec{Kind: v.Kind, Unit: v.Unit, Base: v.Base, Operator: v.Operator, Window: v.WindowType, Value: v.Value, Cap: v.Cap}
 }

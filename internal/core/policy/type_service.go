@@ -2,6 +2,7 @@ package policy
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/zeann3th/policy-service/internal/core"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
@@ -29,6 +30,7 @@ func policyTypeResponse(value PolicyType) PolicyTypeResponse {
 		ID:          value.ID,
 		Code:        value.Code,
 		Description: value.Description,
+		Kind:        value.Kind,
 		Active:      value.Active,
 		CreatedAt:   value.CreatedAt,
 		UpdatedAt:   value.UpdatedAt,
@@ -45,6 +47,9 @@ func (s *typeService) Create(ctx context.Context, request CreatePolicyTypeReques
 		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage("code must be letters, digits and underscores, starting with a letter")
 	}
 	request.Code = code
+	if !request.Kind.Valid() {
+		return PolicyTypeResponse{}, core.ErrBadRequest.WithMessage(fmt.Sprintf("kind must be one of %v", Kinds()))
+	}
 	value, err := s.store.CreateType(ctx, request)
 	if err == nil {
 		s.cache.Invalidate(ctx, cachecore.NamespacePolicyTypes)

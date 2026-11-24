@@ -83,6 +83,9 @@ type AppliedPolicy struct {
 	// Charge is what this charge line comes to (never negative), after
 	// its window cap and before the type's own caps (a discount at most the
 	// fee) are applied to the totals.
-	Charge   *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`
-	Violated bool             `json:"violated"`
+	Charge *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`
+	// Waived (WAIVER only) is whether the waiver still had room for this
+	// transaction; the fee is waived only when every waiver had room.
+	Waived   *bool `json:"waived,omitempty"`
+	Violated bool  `json:"violated"`
 }

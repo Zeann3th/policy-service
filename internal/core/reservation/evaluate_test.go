@@ -191,6 +191,39 @@ func TestEvaluateWaiverFeeDiscountTax(t *testing.T) {
 	}
 }
 
+func TestEveryWaiverMustHaveRoom(t *testing.T) {
+	// 5 free a day for everything, 3 of them for TI0001 (transaction type ALL here)
+	all := p(1, policy.KindWaiver, policy.UnitCount, policy.WindowDaily, "", "5")
+	ti := p(2, policy.KindWaiver, policy.UnitCount, policy.WindowDaily, "", "3")
+	ti.PolicyTypeID = 3 // a different usage key from all
+	fee := c(4, TypeFee, "", "1100")
+	for name, test := range map[string]struct {
+		used   map[*policy.Policy]string
+		waived [2]bool
+		fee    string
+	}{
+		"both have room": {used: map[*policy.Policy]string{&all: "2", &ti: "2"}, waived: [2]bool{true, true}, fee: "0"},
+		"TI0001 used up": {used: map[*policy.Policy]string{&all: "3", &ti: "3"}, waived: [2]bool{true, false}, fee: "1100"},
+		"daily used up":  {used: map[*policy.Policy]string{&all: "5", &ti: "1"}, waived: [2]bool{false, true}, fee: "1100"},
+	} {
+		usage := map[UsageKey]decimal.Decimal{}
+		for value, used := range test.used {
+			usage[usageKey("w", *value, at)] = d(used)
+		}
+		result, _, err := evaluate("w", d("100000"), []policy.Policy{all, ti, fee}, usage, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := [2]bool{*result.AppliedPolicies[0].Waived, *result.AppliedPolicies[1].Waived}
+		if got != test.waived || charges(result)[TypeFee] != test.fee || result.Violated() {
+			t.Errorf("%s: waived = %v, fee = %s, violated = %v; want %v, %s, false", name, got, charges(result)[TypeFee], result.Violated(), test.waived, test.fee)
+		}
+		if result.AppliedPolicies[2].Waived != nil {
+			t.Errorf("%s: a fee has no waived flag", name)
+		}
+	}
+}
+
 func TestEvaluateChargesUseTheirBase(t *testing.T) {
 	fee := c(1, TypeFee, policy.BaseAmount, "1")
 	feeDiscount := c(2, TypeDiscount, policy.BaseFee, "50")

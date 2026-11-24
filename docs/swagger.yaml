@@ -851,6 +851,11 @@ definitions:
         type: string
       violated:
         type: boolean
+      waived:
+        description: |-
+          Waived (WAIVER only) is whether the waiver still had room for this
+          transaction; the fee is waived only when every waiver had room.
+        type: boolean
       windowStart:
         example: "2026-11-23"
         type: string

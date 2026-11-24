@@ -2953,8 +2953,10 @@ type AppliedPolicy struct {
 	Base            string                 `protobuf:"bytes,15,opt,name=base,proto3" json:"base,omitempty"`
 	Charge          *string                `protobuf:"bytes,16,opt,name=charge,proto3,oneof" json:"charge,omitempty"`
 	Cap             *string                `protobuf:"bytes,17,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// WAIVER only: whether the waiver still had room for this transaction
+	Waived        *bool `protobuf:"varint,20,opt,name=waived,proto3,oneof" json:"waived,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AppliedPolicy) Reset() {
@@ -3104,6 +3106,13 @@ func (x *AppliedPolicy) GetCap() string {
 		return *x.Cap
 	}
 	return ""
+}
+
+func (x *AppliedPolicy) GetWaived() bool {
+	if x != nil && x.Waived != nil {
+		return *x.Waived
+	}
+	return false
 }
 
 // One charge kind's total for a side, never negative: FEE and TAX are
@@ -3747,7 +3756,7 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\tR\x06amount\x128\n" +
 	"\x06sender\x18\x06 \x01(\v2 .policy.ui.grpc.ReservationPartyR\x06sender\x12<\n" +
-	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xa1\x04\n" +
+	"\breceiver\x18\a \x01(\v2 .policy.ui.grpc.ReservationPartyR\breceiver\"\xc9\x04\n" +
 	"\rAppliedPolicy\x12\x1b\n" +
 	"\tpolicy_id\x18\x01 \x01(\x04R\bpolicyId\x12\x1f\n" +
 	"\vpolicy_type\x18\x02 \x01(\tR\n" +
@@ -3768,10 +3777,12 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\bviolated\x18\x0e \x01(\bR\bviolated\x12\x12\n" +
 	"\x04base\x18\x0f \x01(\tR\x04base\x12\x1b\n" +
 	"\x06charge\x18\x10 \x01(\tH\x01R\x06charge\x88\x01\x01\x12\x15\n" +
-	"\x03cap\x18\x11 \x01(\tH\x02R\x03cap\x88\x01\x01B\b\n" +
+	"\x03cap\x18\x11 \x01(\tH\x02R\x03cap\x88\x01\x01\x12\x1b\n" +
+	"\x06waived\x18\x14 \x01(\bH\x03R\x06waived\x88\x01\x01B\b\n" +
 	"\x06_usageB\t\n" +
 	"\a_chargeB\x06\n" +
-	"\x04_capJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14R\vis_enforcedR\x04role\"4\n" +
+	"\x04_capB\t\n" +
+	"\a_waivedJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14R\vis_enforcedR\x04role\"4\n" +
 	"\x06Charge\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x16\n" +
 	"\x06amount\x18\x02 \x01(\tR\x06amount\"\xdf\x01\n" +

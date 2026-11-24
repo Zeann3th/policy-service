@@ -96,7 +96,8 @@ CREATE SEQUENCE policy_id_seq;
 -- strategy in the application):
 --   is_enforced  false: config only, the engine skips it
 --   LIMIT      unit, operator
---   WAIVER     unit; free while usage before the transaction < value
+--   WAIVER     unit; free while usage before the transaction < value, for
+--              every waiver covering it (the strictest wins)
 --   FEE / DISCOUNT / TAX  base NULL (flat value) or AMOUNT | FEE | NET_FEE (value
 --              is a percentage of it); optional cap: with TRANSACTION the
 --              most one transaction is charged (no unit), with DAILY /

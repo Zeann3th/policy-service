@@ -85,7 +85,7 @@ func outPartyResult(value reservation.PartyResult) *pb.PartyResult {
 func outAppliedPolicies(values []reservation.AppliedPolicy) []*pb.AppliedPolicy {
 	result := make([]*pb.AppliedPolicy, len(values))
 	for i, applied := range values {
-		result[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: applied.Unit, Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: outOptionalDec(applied.Usage), Charge: outOptionalDec(applied.Charge), Cap: outOptionalDec(applied.Cap), Violated: applied.Violated}
+		result[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: applied.Unit, Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: outOptionalDec(applied.Usage), Charge: outOptionalDec(applied.Charge), Cap: outOptionalDec(applied.Cap), Waived: applied.Waived, Violated: applied.Violated}
 	}
 	return result
 }

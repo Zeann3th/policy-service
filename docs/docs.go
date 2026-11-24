@@ -2835,6 +2835,10 @@ const docTemplate = `{
                 "violated": {
                     "type": "boolean"
                 },
+                "waived": {
+                    "description": "Waived (WAIVER only) is whether the waiver still had room for this\ntransaction; the fee is waived only when every waiver had room.",
+                    "type": "boolean"
+                },
                 "windowStart": {
                     "type": "string",
                     "example": "2026-11-23"

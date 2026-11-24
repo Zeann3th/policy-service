@@ -393,6 +393,8 @@ message AppliedPolicy {
   reserved "is_enforced";
   reserved 19;
   reserved "role";
+  // WAIVER only: whether the waiver still had room for this transaction
+  optional bool waived = 20;
 }
 // One charge kind's total for a side, never negative: FEE and TAX are
 // paid, DISCOUNT is taken off.

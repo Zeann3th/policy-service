@@ -15,7 +15,7 @@ func NewRules() policy.Rules { return rules{} }
 
 // commonRules hold for every kind; each strategy adds its own.
 var commonRules = []specRule{
-	{broken: func(s policy.Spec) bool { return s.Value.IsNegative() }, message: "value cannot be negative: the kind decides the sign"},
+	{broken: func(s policy.Spec) bool { return s.Value.IsNegative() }, message: "value cannot be negative: the kind decides whether it is paid or taken off"},
 	{broken: func(s policy.Spec) bool { return s.Cap != nil && s.Cap.IsNegative() }, message: "cap cannot be negative"},
 	{broken: func(s policy.Spec) bool { return !s.Window.Valid() }, message: fmt.Sprintf("window must be one of %v", policy.Windows())},
 	{broken: func(s policy.Spec) bool { return s.Operator != "" && !s.Operator.Valid() }, message: fmt.Sprintf("operator must be one of %v", policy.Operators())},

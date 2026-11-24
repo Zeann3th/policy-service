@@ -3106,7 +3106,8 @@ func (x *AppliedPolicy) GetCap() string {
 	return ""
 }
 
-// What one charge kind takes from a side; a discount is negative.
+// One charge kind's total for a side, never negative: FEE and TAX are
+// paid, DISCOUNT is taken off.
 type Charge struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // FEE, DISCOUNT or TAX
@@ -3162,7 +3163,6 @@ func (x *Charge) GetAmount() string {
 type PartyResult struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	WalletId        string                 `protobuf:"bytes,1,opt,name=wallet_id,json=walletId,proto3" json:"wallet_id,omitempty"`
-	IsViolated      bool                   `protobuf:"varint,2,opt,name=is_violated,json=isViolated,proto3" json:"is_violated,omitempty"`
 	AppliedPolicies []*AppliedPolicy       `protobuf:"bytes,6,rep,name=applied_policies,json=appliedPolicies,proto3" json:"applied_policies,omitempty"`
 	Charges         []*Charge              `protobuf:"bytes,7,rep,name=charges,proto3" json:"charges,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -3204,13 +3204,6 @@ func (x *PartyResult) GetWalletId() string {
 		return x.WalletId
 	}
 	return ""
-}
-
-func (x *PartyResult) GetIsViolated() bool {
-	if x != nil {
-		return x.IsViolated
-	}
-	return false
 }
 
 func (x *PartyResult) GetAppliedPolicies() []*AppliedPolicy {
@@ -3781,13 +3774,11 @@ const file_proto_policy_proto_rawDesc = "" +
 	"\x04_capJ\x04\b\x12\x10\x13J\x04\b\x13\x10\x14R\vis_enforcedR\x04role\"4\n" +
 	"\x06Charge\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x16\n" +
-	"\x06amount\x18\x02 \x01(\tR\x06amount\"\xed\x01\n" +
+	"\x06amount\x18\x02 \x01(\tR\x06amount\"\xdf\x01\n" +
 	"\vPartyResult\x12\x1b\n" +
-	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12\x1f\n" +
-	"\vis_violated\x18\x02 \x01(\bR\n" +
-	"isViolated\x12H\n" +
+	"\twallet_id\x18\x01 \x01(\tR\bwalletId\x12H\n" +
 	"\x10applied_policies\x18\x06 \x03(\v2\x1d.policy.ui.grpc.AppliedPolicyR\x0fappliedPolicies\x120\n" +
-	"\acharges\x18\a \x03(\v2\x16.policy.ui.grpc.ChargeR\achargesJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x03feeR\bdiscountR\x03tax\"\x9e\x02\n" +
+	"\acharges\x18\a \x03(\v2\x16.policy.ui.grpc.ChargeR\achargesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\vis_violatedR\x03feeR\bdiscountR\x03tax\"\x9e\x02\n" +
 	"\x0fReserveResponse\x12%\n" +
 	"\x0ereservation_id\x18\x01 \x01(\tR\rreservationId\x12\x1d\n" +
 	"\n" +

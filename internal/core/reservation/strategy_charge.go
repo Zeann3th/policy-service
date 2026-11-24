@@ -16,9 +16,8 @@ import (
 // charge kind is one value of it, registered in strategies in the order
 // they are computed, so a kind may only use bases published before it.
 type chargeStrategy struct {
-	of     policy.Kind
-	bases  []policy.Base // what its policies may be a percentage of
-	credit bool          // taken off what the wallet pays (a discount)
+	of    policy.Kind
+	bases []policy.Base // what its policies may be a percentage of
 	// adjust changes a priced line before the cap; default: unchanged.
 	adjust func(e *evaluation, amount decimal.Decimal) decimal.Decimal
 	// settle is the kind's total from its capped lines; default: their sum.
@@ -45,13 +44,12 @@ var (
 		},
 		publish: func(e *evaluation, total decimal.Decimal) { e.bases[policy.BaseFee] = total },
 	}
-	// discountStrategy: taken off. Flat and fee-based discounts come off
+	// discountStrategy: taken off what the wallet pays. Flat and fee-based discounts come off
 	// the fee (at most the fee) and publish NET_FEE; amount-based ones
 	// (cashback) are at most the amount.
 	discountStrategy = chargeStrategy{
-		of:     policy.KindDiscount,
-		bases:  []policy.Base{policy.BaseAmount, policy.BaseFee},
-		credit: true,
+		of:    policy.KindDiscount,
+		bases: []policy.Base{policy.BaseAmount, policy.BaseFee},
 		settle: func(e *evaluation, lines []chargeLine) decimal.Decimal {
 			onFee, onAmount := decimal.Zero, decimal.Zero
 			for _, line := range lines {
@@ -107,11 +105,8 @@ func (c chargeStrategy) process(e *evaluation, policies []policy.Policy) error {
 		}
 		applied := appliedPolicy(p)
 		amount = capped(e, p, amount, &applied)
-		signed := amount.Round(moneyPlaces)
-		if c.credit {
-			signed = signed.Neg()
-		}
-		applied.Charge = &signed
+		rounded := amount.Round(moneyPlaces)
+		applied.Charge = &rounded
 		e.apply(applied)
 		lines = append(lines, chargeLine{policy: p, amount: amount})
 	}
@@ -127,9 +122,6 @@ func (c chargeStrategy) process(e *evaluation, policies []policy.Policy) error {
 		c.publish(e, total)
 	}
 	if len(lines) > 0 {
-		if c.credit {
-			total = total.Neg()
-		}
 		e.result.Charges = append(e.result.Charges, Charge{Kind: c.of, Amount: total.Round(moneyPlaces)})
 	}
 	return nil

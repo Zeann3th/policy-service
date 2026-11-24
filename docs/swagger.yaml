@@ -798,7 +798,7 @@ definitions:
         type: string
       charge:
         description: |-
-          Charge is what this charge line takes, signed like Charges, after
+          Charge is what this charge line comes to (never negative), after
           its window cap and before the type's own caps (a discount at most the
           fee) are applied to the totals.
         type: string
@@ -900,13 +900,12 @@ definitions:
         type: array
       charges:
         description: |-
-          Charges is what each charge kind takes from this side, in kind order
-          (FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.
+          Charges is each charge kind's total for this side, in kind order (FEE,
+          DISCOUNT, TAX). Amounts are never negative; the kind says the
+          direction: the side pays FEE + TAX - DISCOUNT.
         items:
           $ref: '#/definitions/reservation.Charge'
         type: array
-      isViolated:
-        type: boolean
       walletId:
         type: string
     type: object

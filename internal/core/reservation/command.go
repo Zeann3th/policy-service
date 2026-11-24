@@ -1,6 +1,7 @@
 package reservation
 
 import (
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -41,16 +42,22 @@ type ReleaseResponse struct {
 }
 
 type PartyResult struct {
-	WalletID   string `json:"walletId"`
-	IsViolated bool   `json:"isViolated"`
-	// Charges is what each charge kind takes from this side, in kind order
-	// (FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.
+	WalletID string `json:"walletId"`
+	// Charges is each charge kind's total for this side, in kind order (FEE,
+	// DISCOUNT, TAX). Amounts are never negative; the kind says the
+	// direction: the side pays FEE + TAX - DISCOUNT.
 	Charges         []Charge        `json:"charges"`
 	AppliedPolicies []AppliedPolicy `json:"appliedPolicies"`
 }
 
-// Charge is one charge kind's total for a side: positive is paid, negative
-// (a discount) is taken off.
+// Violated reports whether the transaction breaks any of the side's
+// policies (each says so in its Violated).
+func (r PartyResult) Violated() bool {
+	return slices.ContainsFunc(r.AppliedPolicies, func(applied AppliedPolicy) bool { return applied.Violated })
+}
+
+// Charge is one charge kind's total for a side, never negative: FEE and TAX
+// are paid, DISCOUNT is taken off.
 type Charge struct {
 	Kind   policy.Kind     `enums:"FEE,DISCOUNT,TAX" json:"kind"`
 	Amount decimal.Decimal `example:"1100" json:"amount" swaggertype:"string"`
@@ -73,7 +80,7 @@ type AppliedPolicy struct {
 	Cap             *decimal.Decimal  `json:"cap,omitempty" swaggertype:"string"`
 	// Usage is the window total including this request (not stored when rejected).
 	Usage *decimal.Decimal `json:"usage,omitempty" swaggertype:"string"`
-	// Charge is what this charge line takes, signed like Charges, after
+	// Charge is what this charge line comes to (never negative), after
 	// its window cap and before the type's own caps (a discount at most the
 	// fee) are applied to the totals.
 	Charge   *decimal.Decimal `json:"charge,omitempty" swaggertype:"string"`

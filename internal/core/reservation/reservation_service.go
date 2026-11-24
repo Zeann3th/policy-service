@@ -221,7 +221,7 @@ func (s *service) reserve(ctx context.Context, value Reservation, senderPolicies
 		}
 
 		response = ReserveResponse{ReservationID: value.ID, RequestID: value.RequestID, Status: StatusReserved, Sender: sender, Receiver: receiver}
-		if sender.IsViolated || receiver.IsViolated {
+		if sender.Violated() || receiver.Violated() {
 			response.Status = StatusRejected
 		} else {
 			for _, entry := range append(senderEntries, receiverEntries...) {

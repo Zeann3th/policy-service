@@ -104,7 +104,7 @@ func TestEngineSkipsConfigOnlyAndUnknownPolicies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.AppliedPolicies) != 1 || result.AppliedPolicies[0].PolicyID != 5 || len(entries) != 0 || result.IsViolated {
+	if len(result.AppliedPolicies) != 1 || result.AppliedPolicies[0].PolicyID != 5 || len(entries) != 0 || result.Violated() {
 		t.Fatalf("only the fee may reach the engine: %#v", result.AppliedPolicies)
 	}
 	if want := map[policy.Kind]string{TypeFee: "1100"}; !equalMaps(charges(result), want) {
@@ -124,7 +124,7 @@ func TestEvaluateLimits(t *testing.T) {
 	if got := result.AppliedPolicies[0].Usage; got == nil || !got.Equal(d("1100")) {
 		t.Fatalf("projected usage = %v", got)
 	}
-	if !result.IsViolated || !result.AppliedPolicies[0].Violated || result.AppliedPolicies[1].Violated {
+	if !result.Violated() || !result.AppliedPolicies[0].Violated || result.AppliedPolicies[1].Violated {
 		t.Fatal("700 + 400 must violate only the daily 1000 limit")
 	}
 	if len(entries) != 1 || !entries[0].Delta.Equal(d("400")) || entries[0].EntryType != EntryReserve || *entries[0].PolicyID != 1 || entries[0].UnitID != unitIDs[policy.UnitAmount] {
@@ -132,7 +132,7 @@ func TestEvaluateLimits(t *testing.T) {
 	}
 
 	result, _, err = evaluate("w", d("600"), []policy.Policy{single}, nil, at)
-	if err != nil || !result.IsViolated {
+	if err != nil || !result.Violated() {
 		t.Fatalf("600 must violate the single 500 limit: %#v, %v", result, err)
 	}
 }
@@ -169,8 +169,8 @@ func TestEvaluateWaiverFeeDiscountTax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// fee 1000 + 1% of 100000 = 2000; discount 10% = 200; tax 10% of 1800 = 180
-	want := map[policy.Kind]string{TypeFee: "2000", TypeDiscount: "-200", TypeTax: "180"}
+	// fee 1000 + 1% of 100000 = 2000; discount 10% = 200 off; tax 10% of 1800 = 180
+	want := map[policy.Kind]string{TypeFee: "2000", TypeDiscount: "200", TypeTax: "180"}
 	if got := charges(result); !equalMaps(got, want) {
 		t.Fatalf("charges = %v, want %v", got, want)
 	}
@@ -209,7 +209,7 @@ func TestEvaluateChargesUseTheirBase(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if want := map[policy.Kind]string{TypeFee: "1000", TypeDiscount: "-2500", TypeTax: test.want}; !equalMaps(charges(result), want) {
+		if want := map[policy.Kind]string{TypeFee: "1000", TypeDiscount: "2500", TypeTax: test.want}; !equalMaps(charges(result), want) {
 			t.Errorf("%s: charges = %v, want %v", name, charges(result), want)
 		}
 	}
@@ -225,11 +225,11 @@ func TestEvaluateCapsDiscountsByTheirBase(t *testing.T) {
 		t.Fatal(err)
 	}
 	// flat and fee discounts at most the fee (100), cashback at most the amount (1000)
-	if got := charges(result)[TypeDiscount]; got != "-1100" {
+	if got := charges(result)[TypeDiscount]; got != "1100" {
 		t.Fatalf("discount = %s, want -1100", got)
 	}
 	// each line reports its own signed charge
-	if got := result.AppliedPolicies[1].Charge; got == nil || got.String() != "-300" {
+	if got := result.AppliedPolicies[1].Charge; got == nil || got.String() != "300" {
 		t.Fatalf("fee discount line = %v, want -300", got)
 	}
 }
@@ -251,7 +251,7 @@ func TestEvaluateCapsChargesPerWindow(t *testing.T) {
 
 	// cashback on the first 2 payments a month only (cap counted in COUNT)
 	cashback := windowCapped(c(2, TypeDiscount, policy.BaseAmount, "1"), policy.WindowMonthly, policy.UnitCount, "2")
-	for used, want := range map[string]string{"1": "-1000", "2": "0"} {
+	for used, want := range map[string]string{"1": "1000", "2": "0"} {
 		usage := map[UsageKey]decimal.Decimal{usageKey("w", cashback, at): d(used)}
 		result, entries, err := evaluate("w", d("100000"), []policy.Policy{cashback}, usage, at)
 		if err != nil {
@@ -274,8 +274,8 @@ func TestEvaluateCapsChargesPerTransaction(t *testing.T) {
 	discount := c(2, TypeDiscount, policy.BaseFee, "10")
 	discount.Cap = &discountCap
 	for amount, want := range map[string]map[policy.Kind]string{
-		"1000000":  {TypeFee: "10000", TypeDiscount: "-1000"}, // under both caps
-		"10000000": {TypeFee: "50000", TypeDiscount: "-3000"}, // 100,000 fee capped; 5,000 discount capped
+		"1000000":  {TypeFee: "10000", TypeDiscount: "1000"}, // under both caps
+		"10000000": {TypeFee: "50000", TypeDiscount: "3000"}, // 100,000 fee capped; 5,000 discount capped
 	} {
 		result, entries, err := evaluate("w", d(amount), []policy.Policy{fee, discount}, nil, at)
 		if err != nil {
@@ -301,6 +301,39 @@ func TestEvaluateTransactionWaiverAlwaysWaives(t *testing.T) {
 	}
 	if got := charges(result)[TypeFee]; got != "0" || len(entries) != 0 {
 		t.Fatalf("fee = %s, entries = %#v; want waived and nothing recorded", got, entries)
+	}
+}
+
+func TestChargesAreNeverNegative(t *testing.T) {
+	all := []policy.Policy{c(1, TypeFee, "", "1000"), c(2, TypeDiscount, policy.BaseFee, "10"), c(3, TypeDiscount, policy.BaseAmount, "1"), c(4, TypeTax, policy.BaseNetFee, "10")}
+	result, _, err := evaluate("w", d("100000"), all, nil, at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, charge := range result.Charges {
+		if charge.Amount.IsNegative() {
+			t.Errorf("%s total = %s, want >= 0", charge.Kind, charge.Amount)
+		}
+	}
+	for _, applied := range result.AppliedPolicies {
+		if applied.Charge != nil && applied.Charge.IsNegative() {
+			t.Errorf("policy %d line = %s, want >= 0", applied.PolicyID, applied.Charge)
+		}
+	}
+}
+
+func TestEachAppliedPolicySaysWhetherItIsViolated(t *testing.T) {
+	min := p(1, policy.KindLimit, policy.UnitAmount, policy.WindowTransaction, policy.OpGTE, "10000")
+	max := p(2, policy.KindLimit, policy.UnitAmount, policy.WindowTransaction, policy.OpLTE, "50000000")
+	for amount, want := range map[string][2]bool{"100": {true, false}, "20000": {false, false}} {
+		result, _, err := evaluate("w", d(amount), []policy.Policy{min, max}, nil, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := [2]bool{result.AppliedPolicies[0].Violated, result.AppliedPolicies[1].Violated}
+		if got != want || result.Violated() != (want[0] || want[1]) {
+			t.Errorf("amount %s: violated = %v (side %v), want %v", amount, got, result.Violated(), want)
+		}
 	}
 }
 

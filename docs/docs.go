@@ -2757,7 +2757,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "charge": {
-                    "description": "Charge is what this charge line takes, signed like Charges, after\nits window cap and before the type's own caps (a discount at most the\nfee) are applied to the totals.",
+                    "description": "Charge is what this charge line comes to (never negative), after\nits window cap and before the type's own caps (a discount at most the\nfee) are applied to the totals.",
                     "type": "string"
                 },
                 "direction": {
@@ -2907,14 +2907,11 @@ const docTemplate = `{
                     }
                 },
                 "charges": {
-                    "description": "Charges is what each charge kind takes from this side, in kind order\n(FEE, DISCOUNT, TAX); a discount is negative. The side pays their sum.",
+                    "description": "Charges is each charge kind's total for this side, in kind order (FEE,\nDISCOUNT, TAX). Amounts are never negative; the kind says the\ndirection: the side pays FEE + TAX - DISCOUNT.",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/reservation.Charge"
                     }
-                },
-                "isViolated": {
-                    "type": "boolean"
                 },
                 "walletId": {
                     "type": "string"

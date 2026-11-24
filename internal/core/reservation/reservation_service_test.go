@@ -132,7 +132,7 @@ func TestReserveRejectsWithoutAddingUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Status != StatusRejected || store.status != StatusRejected || len(store.applied) != 0 || !response.Sender.IsViolated {
+	if response.Status != StatusRejected || store.status != StatusRejected || len(store.applied) != 0 || !response.Sender.Violated() {
 		t.Fatalf("response = %#v, applied = %d", response, len(store.applied))
 	}
 }

@@ -7,8 +7,8 @@ the start of the month.
 
 ## Cases
 
-Amounts are each side's `charges` by policy type: TXN_FEE (fee), TXN_DISCOUNT
-(discount, negative in the response) and TXN_TAX (tax).
+Amounts are each side's `charges` by kind, all positive: FEE, DISCOUNT
+(taken off) and TAX; the side pays FEE + TAX - DISCOUNT.
 
 | Group | Wallets | Expectation |
 |---|---|---|
@@ -17,7 +17,7 @@ Amounts are each side's `charges` by policy type: TXN_FEE (fee), TXN_DISCOUNT
 | T3 discount | 9 (PERSONAL T3) -> 11, PAYMENT 200,000 | Fee 1,000, discount 100, tax 90 |
 | PROMO custom | 3 (T3, profile 3), 6th transfer | Fee 2,000 (custom overrides 1,100), discount 1,000 (custom 50% overrides 10%), tax 100 |
 | Cashback | 7 (T1, profile 2) -> 8, PAYMENT 200,000 | Fee 1,000. Discount 2,000 (1% of the amount, base AMOUNT). Tax 100 (10% of NET_FEE, so cashback is not subtracted) |
-| TIGHT custom | 15 (profile 0) | 2.5M is REJECTED with `isViolated`. 2.0M then fits, so the rejection consumed nothing |
+| TIGHT custom | 15 (profile 0) | 2.5M is REJECTED, its TOTAL_MAX applied policy `violated`. 2.0M then fits, so the rejection consumed nothing |
 | Expired custom | 50 | Expired `TXN_MAX <= 1` is ignored, so the request is RESERVED |
 | Release | 601 -> 602 | RESERVED, then DELETE gives RELEASED, a second DELETE returns the identical response (idempotent), an unknown id gives 404 |
 | Validation | 701 -> 702 | Amount 0, more than 4 decimals, same wallet, no policy: 400. Duplicate requestId: 409 |

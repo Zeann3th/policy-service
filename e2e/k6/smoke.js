@@ -16,7 +16,7 @@ export const options = {
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 // charge returns what one charge kind (FEE, DISCOUNT, TAX) takes from a
-// side ("0" when it has no line); discounts are negative.
+// side ("0" when it has no line); amounts are never negative.
 function charge(response, side, kind) {
   const found = (response.json(`${side}.charges`) || []).find((each) => each.kind === kind);
   return found ? found.amount : '0';
@@ -58,7 +58,7 @@ export default function () {
     const t3 = reserve(reserveBody({ sender: wallet(9), receiver: wallet(11), amount: 200000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(t3, {
       'T3 fee 0.5%': (x) => charge(x, 'sender', 'FEE') === '1000',
-      'T3 system discount 10% of fee': (x) => charge(x, 'sender', 'DISCOUNT') === '-100',
+      'T3 system discount 10% of fee': (x) => charge(x, 'sender', 'DISCOUNT') === '100',
       'T3 tax 10% of fee after discount': (x) => charge(x, 'sender', 'TAX') === '90',
     });
     // wallet 3: PERSONAL T3, profile 3 (PROMO: flat 2000 fee, 50% discount)
@@ -68,7 +68,7 @@ export default function () {
     const promo = reserve(reserveBody({ sender: wallet(3), receiver: wallet(4), amount: 100000, transactionType: 'TRANSFER', channel: 'WEB' }));
     check(promo, {
       'custom fee 2000 overrides 1100': (x) => charge(x, 'sender', 'FEE') === '2000',
-      'custom 50% discount': (x) => charge(x, 'sender', 'DISCOUNT') === '-1000',
+      'custom 50% discount': (x) => charge(x, 'sender', 'DISCOUNT') === '1000',
       'tax on fee after discount': (x) => charge(x, 'sender', 'TAX') === '100',
     });
   });
@@ -78,7 +78,7 @@ export default function () {
     const r = reserve(reserveBody({ sender: wallet(7), receiver: wallet(8), amount: 200000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(r, {
       'fee 0.5% of amount': (x) => charge(x, 'sender', 'FEE') === '1000',
-      'cashback 1% of amount counts as discount': (x) => charge(x, 'sender', 'DISCOUNT') === '-2000',
+      'cashback 1% of amount counts as discount': (x) => charge(x, 'sender', 'DISCOUNT') === '2000',
       'tax on NET_FEE ignores cashback': (x) => charge(x, 'sender', 'TAX') === '100',
     });
   });
@@ -88,7 +88,7 @@ export default function () {
     const big = reserve(reserveBody({ sender, receiver: wallet(16), amount: 2500000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(big, {
       'over custom daily cap is REJECTED': (x) => x.json('status') === 'REJECTED',
-      'sender isViolated': (x) => x.json('sender.isViolated') === true,
+      'sender daily total is the violated policy': (x) => (x.json('sender.appliedPolicies') || []).some((each) => each.violated && each.policyType === 'TOTAL_MAX'),
     });
     const fits = reserve(reserveBody({ sender, receiver: wallet(16), amount: 2000000, transactionType: 'PAYMENT', channel: 'WEB' }));
     check(fits, { 'rejection consumed nothing: 2,000,000 still fits': (x) => x.json('status') === 'RESERVED' });

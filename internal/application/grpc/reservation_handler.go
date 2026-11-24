@@ -75,21 +75,17 @@ func inParty(value *pb.ReservationParty) reservation.PartyRequest {
 }
 
 func outPartyResult(value reservation.PartyResult) *pb.PartyResult {
-	result := &pb.PartyResult{WalletId: value.WalletID, IsViolated: value.IsViolated, Charges: make([]*pb.Charge, len(value.Charges)), AppliedPolicies: make([]*pb.AppliedPolicy, len(value.AppliedPolicies))}
+	result := &pb.PartyResult{WalletId: value.WalletID, Charges: make([]*pb.Charge, len(value.Charges)), AppliedPolicies: outAppliedPolicies(value.AppliedPolicies)}
 	for i, charge := range value.Charges {
 		result.Charges[i] = &pb.Charge{Kind: string(charge.Kind), Amount: charge.Amount.String()}
 	}
-	for i, applied := range value.AppliedPolicies {
-		var usage, charge *string
-		if applied.Usage != nil {
-			value := applied.Usage.String()
-			usage = &value
-		}
-		if applied.Charge != nil {
-			value := applied.Charge.String()
-			charge = &value
-		}
-		result.AppliedPolicies[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: applied.Unit, Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: usage, Charge: charge, Cap: outOptionalDec(applied.Cap), Violated: applied.Violated}
+	return result
+}
+
+func outAppliedPolicies(values []reservation.AppliedPolicy) []*pb.AppliedPolicy {
+	result := make([]*pb.AppliedPolicy, len(values))
+	for i, applied := range values {
+		result[i] = &pb.AppliedPolicy{PolicyId: uint64(applied.PolicyID), PolicyType: applied.PolicyType, Kind: string(applied.Kind), Unit: applied.Unit, Base: string(applied.Base), Source: string(applied.Source), TransactionType: applied.TransactionType, Channel: applied.Channel, Direction: string(applied.Direction), WindowType: string(applied.WindowType), WindowStart: applied.WindowStart, Operator: string(applied.Operator), Value: applied.Value.String(), Usage: outOptionalDec(applied.Usage), Charge: outOptionalDec(applied.Charge), Cap: outOptionalDec(applied.Cap), Violated: applied.Violated}
 	}
 	return result
 }

@@ -53,7 +53,7 @@ Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
   row says how its value is read: `unit` (what a LIMIT / WAIVER measures, or
   what a charge cap counts), `base` (what a charge percentage is of;
   empty = flat), `operator` (LIMIT only), `cap` (most a charge takes per
-  transaction with window TRANSACTION, or per window in its unit). Responses list each side's `charges` by type, discounts negative.
+  transaction with window TRANSACTION, or per window in its unit). Responses list each side's `charges` by kind, all positive: the side pays FEE + TAX - DISCOUNT.
 
   | Type | Selector | Window | Unit / base | Rule |
   |---|---|---|---|---|

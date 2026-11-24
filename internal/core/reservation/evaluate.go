@@ -74,10 +74,9 @@ type evaluation struct {
 	entries []LedgerEntry
 }
 
-func (e *evaluation) apply(applied AppliedPolicy) int {
-	e.result.IsViolated = e.result.IsViolated || applied.Violated
+// apply records a policy's result once it is final.
+func (e *evaluation) apply(applied AppliedPolicy) {
 	e.result.AppliedPolicies = append(e.result.AppliedPolicies, applied)
-	return len(e.result.AppliedPolicies) - 1
 }
 
 // used is a policy's usage before this transaction: its window total, or

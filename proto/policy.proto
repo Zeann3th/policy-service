@@ -394,16 +394,18 @@ message AppliedPolicy {
   reserved 19;
   reserved "role";
 }
-// What one charge kind takes from a side; a discount is negative.
+// One charge kind's total for a side, never negative: FEE and TAX are
+// paid, DISCOUNT is taken off.
 message Charge {
   string kind = 1; // FEE, DISCOUNT or TAX
   string amount = 2;
 }
 message PartyResult {
   string wallet_id = 1;
-  bool is_violated = 2;
-  reserved 3, 4, 5;
-  reserved "fee", "discount", "tax";
+  // each applied policy says whether it is violated; the status says
+  // whether the reservation went through
+  reserved 2, 3, 4, 5;
+  reserved "is_violated", "fee", "discount", "tax";
   repeated AppliedPolicy applied_policies = 6;
   repeated Charge charges = 7;
 }

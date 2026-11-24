@@ -9,6 +9,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/policy-service ./c
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates
+WORKDIR /app
 COPY --from=build /out/policy-service /usr/local/bin/policy-service
 COPY --from=build /go/bin/goose /usr/local/bin/goose
 COPY migrations /migrations

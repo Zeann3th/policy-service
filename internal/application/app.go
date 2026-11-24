@@ -12,6 +12,7 @@ import (
 
 	grpcserver "github.com/zeann3th/policy-service/internal/application/grpc"
 	httpserver "github.com/zeann3th/policy-service/internal/application/http"
+	"github.com/zeann3th/policy-service/internal/application/rabbitmq"
 	cachecore "github.com/zeann3th/policy-service/internal/core/cache"
 	"github.com/zeann3th/policy-service/internal/core/policy"
 	"github.com/zeann3th/policy-service/internal/core/reservation"
@@ -65,10 +66,18 @@ func Run() error {
 		return fmt.Errorf("create gRPC server: %w", err)
 	}
 
+	messageBrokerClient, err := rabbitmq.New(cfg, logger)
+	if err != nil {
+		return fmt.Errorf("create message broker connection: %w", err)
+	}
+	if err := messageBrokerClient.RegisterHandler(rabbitmq.UsageReleasesQueue, rabbitmq.UsageReleaseHandler(reservationService)); err != nil {
+		return errors.Join(fmt.Errorf("register usage release consumer: %w", err), messageBrokerClient.Shutdown(context.Background()))
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	return run(ctx, httpServer, grpcServer)
+	return run(ctx, httpServer, grpcServer, messageBrokerClient)
 }
 
 func run(ctx context.Context, servers ...server) error {

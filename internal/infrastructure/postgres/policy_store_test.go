@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/shopspring/decimal"
 	"github.com/zeann3th/policy-service/internal/core"
 	"github.com/zeann3th/policy-service/internal/core/policy"
@@ -280,10 +279,9 @@ func TestMapDBErrorUsesHTTPDomainSemantics(t *testing.T) {
 }
 
 func TestAuditFailureRollsBackMutation(t *testing.T) {
-	_ = godotenv.Load("../../../.env")
-	databaseURL := os.Getenv("DATABASE_URL")
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
 	if databaseURL == "" {
-		t.Skip("DATABASE_URL is not configured")
+		t.Skip("TEST_DATABASE_URL is not configured")
 	}
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, databaseURL)

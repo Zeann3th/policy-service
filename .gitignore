@@ -6,4 +6,8 @@ docs/*
 !docs/docs.go
 !docs/swagger.json
 !docs/swagger.yaml
+!docs/superpowers/
+!docs/superpowers/**
 tmp/
+application.yaml
+!e2e/application.yaml

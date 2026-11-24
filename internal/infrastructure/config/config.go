@@ -3,159 +3,174 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
-	"github.com/joho/godotenv"
+	"github.com/goccy/go-yaml"
 )
 
+const applicationConfigPath = "application.yaml"
+
 type Config struct {
-	ServiceName string
-	Environment string
-	HTTP        HTTP
-	GRPC        GRPC
-	Database    Database
-	Redis       Redis
+	ServiceName   string        `yaml:"serviceName"`
+	Environment   string        `yaml:"environment"`
+	HTTP          HTTP          `yaml:"http"`
+	GRPC          GRPC          `yaml:"grpc"`
+	Database      Database      `yaml:"database"`
+	Redis         Redis         `yaml:"redis"`
+	MessageBroker MessageBroker `yaml:"messageBroker"`
 }
 
 type HTTP struct {
-	Port           string
-	GinMode        string
-	SwaggerEnabled bool
-	// CORSOrigins are the browser origins allowed to call the API; "*"
-	// allows any origin, empty sends no CORS headers.
-	CORSOrigins []string
+	Port           string   `yaml:"port"`
+	GinMode        string   `yaml:"ginMode"`
+	SwaggerEnabled bool     `yaml:"swaggerEnabled"`
+	CORSOrigins    []string `yaml:"corsOrigins"`
 }
 
 type GRPC struct {
-	Port string
+	Port string `yaml:"port"`
 }
 
 type Database struct {
-	URL string
+	URL string `yaml:"url"`
 }
 
 type Redis struct {
-	Addrs      []string
-	Username   string
-	Password   string
-	DB         int
-	MasterName string
+	Addrs      []string `yaml:"addrs"`
+	Username   string   `yaml:"username"`
+	Password   string   `yaml:"password"`
+	DB         int      `yaml:"db"`
+	MasterName string   `yaml:"masterName"`
+}
+
+type MessageBroker struct {
+	Addrs    []string        `yaml:"addrs"`
+	Consumer MessageConsumer `yaml:"consumer"`
+	Queue    []MessageQueue  `yaml:"queue"`
+}
+
+type MessageQueue struct {
+	Name             string                   `yaml:"name"`
+	Durability       bool                     `yaml:"durability"`
+	DeleteWhenUnused bool                     `yaml:"deleteWhenUnused"`
+	Exclusive        bool                     `yaml:"exclusive"`
+	NoWait           bool                     `yaml:"noWait"`
+	Consumer         *MessageConsumerOverride `yaml:"consumer"`
+}
+
+type MessageConsumer struct {
+	Tag            string `yaml:"tag"`
+	AutoAck        bool   `yaml:"autoAck"`
+	Exclusive      bool   `yaml:"exclusive"`
+	NoLocal        bool   `yaml:"noLocal"`
+	NoWait         bool   `yaml:"noWait"`
+	RequeueOnError bool   `yaml:"requeueOnError"`
+}
+
+type MessageConsumerOverride struct {
+	Tag            string `yaml:"tag"`
+	AutoAck        *bool  `yaml:"autoAck"`
+	Exclusive      *bool  `yaml:"exclusive"`
+	NoLocal        *bool  `yaml:"noLocal"`
+	NoWait         *bool  `yaml:"noWait"`
+	RequeueOnError *bool  `yaml:"requeueOnError"`
+}
+
+func (c MessageBroker) ConsumerFor(queue MessageQueue) MessageConsumer {
+	consumer := c.Consumer
+	if queue.Consumer == nil {
+		return consumer
+	}
+	override := queue.Consumer
+	if override.Tag != "" {
+		consumer.Tag = override.Tag
+	}
+	if override.AutoAck != nil {
+		consumer.AutoAck = *override.AutoAck
+	}
+	if override.Exclusive != nil {
+		consumer.Exclusive = *override.Exclusive
+	}
+	if override.NoLocal != nil {
+		consumer.NoLocal = *override.NoLocal
+	}
+	if override.NoWait != nil {
+		consumer.NoWait = *override.NoWait
+	}
+	if override.RequeueOnError != nil {
+		consumer.RequeueOnError = *override.RequeueOnError
+	}
+	return consumer
 }
 
 func Load() (*Config, error) {
-	_ = godotenv.Load()
+	return load(applicationConfigPath)
+}
 
-	dbURL, err := getOrError("DATABASE_URL")
+func load(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read config %s: %w", path, err)
 	}
 
-	serviceName, err := getOrError("SERVICE_NAME")
-	if err != nil {
-		return nil, err
-	}
-
-	redisAddrs, err := getListOrDefault("REDIS_ADDRS", []string{"localhost:6379"})
-	if err != nil {
-		return nil, err
-	}
-
-	redisDB, err := getIntOrDefault("REDIS_DB", 0)
-	if err != nil {
-		return nil, err
-	}
-
-	swaggerEnabled, err := getBoolOrDefault("SWAGGER_ENABLED", false)
-	if err != nil {
-		return nil, err
-	}
-
-	corsOrigins, err := getListOrDefault("CORS_ALLOWED_ORIGINS", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Config{
-		ServiceName: serviceName,
-		Environment: getOrDefault("ENVIRONMENT", "release"),
+	cfg := Config{
+		Environment: "release",
 		HTTP: HTTP{
-			Port:           getOrDefault("HTTP_PORT", "8080"),
-			GinMode:        getOrDefault("GIN_MODE", "release"),
-			SwaggerEnabled: swaggerEnabled,
-			CORSOrigins:    corsOrigins,
+			Port:    "8080",
+			GinMode: "release",
 		},
-		GRPC: GRPC{
-			Port: getOrDefault("GRPC_PORT", "8081"),
+		GRPC: GRPC{Port: "8081"},
+		MessageBroker: MessageBroker{
+			Consumer: MessageConsumer{RequeueOnError: true},
 		},
-		Database: Database{
-			URL: dbURL,
-		},
-		Redis: Redis{
-			Addrs:      redisAddrs,
-			Username:   getOrDefault("REDIS_USERNAME", ""),
-			Password:   getOrDefault("REDIS_PASSWORD", ""),
-			DB:         redisDB,
-			MasterName: getOrDefault("REDIS_MASTER_NAME", ""),
-		},
-	}, nil
+	}
+	if err := yaml.UnmarshalWithOptions(data, &cfg, yaml.DisallowUnknownField()); err != nil {
+		return nil, fmt.Errorf("parse config %s: %w", path, err)
+	}
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
-func getOrDefault(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+func (c Config) validate() error {
+	if strings.TrimSpace(c.ServiceName) == "" {
+		return fmt.Errorf("serviceName is required")
 	}
-	return defaultValue
-}
-
-func getOrError(key string) (string, error) {
-	if value := os.Getenv(key); value != "" {
-		return value, nil
+	if strings.TrimSpace(c.Database.URL) == "" {
+		return fmt.Errorf("database.url is required")
 	}
-	return "", fmt.Errorf("missing required environment variable: %s", key)
-}
-
-func getIntOrDefault(key string, defaultValue int) (int, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue, nil
+	if err := validateAddresses("redis.addrs", c.Redis.Addrs); err != nil {
+		return err
 	}
-
-	parsed, err := strconv.Atoi(value)
-	if err != nil {
-		return 0, fmt.Errorf("malformed %s: %w", key, err)
+	if err := validateAddresses("messageBroker.addrs", c.MessageBroker.Addrs); err != nil {
+		return err
 	}
-	return parsed, nil
-}
-
-func getBoolOrDefault(key string, defaultValue bool) (bool, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue, nil
+	if len(c.MessageBroker.Queue) == 0 {
+		return fmt.Errorf("messageBroker.queue must contain at least one queue")
 	}
-
-	parsed, err := strconv.ParseBool(value)
-	if err != nil {
-		return false, fmt.Errorf("malformed %s: %w", key, err)
-	}
-	return parsed, nil
-}
-
-func getListOrDefault(key string, defaultValue []string) ([]string, error) {
-	raw := os.Getenv(key)
-	if raw == "" {
-		return defaultValue, nil
-	}
-
-	parts := strings.Split(raw, ",")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		trimmed := strings.TrimSpace(p)
-		if trimmed == "" {
-			return nil, fmt.Errorf("malformed %s: contains empty entry", key)
+	queueNames := make(map[string]struct{}, len(c.MessageBroker.Queue))
+	for i, queue := range c.MessageBroker.Queue {
+		name := strings.TrimSpace(queue.Name)
+		if name == "" {
+			return fmt.Errorf("messageBroker.queue[%d].name is required", i)
 		}
-		result = append(result, trimmed)
+		if _, exists := queueNames[name]; exists {
+			return fmt.Errorf("messageBroker.queue[%d].name duplicates %q", i, name)
+		}
+		queueNames[name] = struct{}{}
 	}
+	return nil
+}
 
-	return result, nil
+func validateAddresses(field string, addresses []string) error {
+	if len(addresses) == 0 {
+		return fmt.Errorf("%s must contain at least one address", field)
+	}
+	for i, address := range addresses {
+		if strings.TrimSpace(address) == "" {
+			return fmt.Errorf("%s[%d] must not be empty", field, i)
+		}
+	}
+	return nil
 }

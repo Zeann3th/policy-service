@@ -18,7 +18,7 @@ import (
 )
 
 // These tests write to a real, migrated database. They run only when
-// TEST_DATABASE_URL is set, so they never touch the .env database.
+// TEST_DATABASE_URL is set, so they never touch the local development database.
 func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")

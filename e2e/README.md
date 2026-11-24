@@ -9,6 +9,7 @@ holds about 1000 TPS without inconsistency, deadlocks or leaks.
 |---|---|---|
 | Postgres 18, pg_partman, pg_cron, pg_stat_statements (`policy_e2e_postgres`) | docker | 55432 |
 | Redis 8 (`policy_e2e_redis`) | docker | 56379 |
+| RabbitMQ 4 (`policy_e2e_rabbitmq`) | docker | - |
 | policy-service, built from this repo (`policy_e2e_app`), 4 CPU / 1 GiB | docker | 18080 HTTP, 18081 gRPC |
 | migrate (goose) and seed (psql), one-shot | docker | - |
 | k6 | **your host** | - |
@@ -39,8 +40,8 @@ docker compose -f e2e/docker-compose.yml down -v  # remove everything
 (`results/verify-<suite>-<time>.txt`) and exits non-zero if a k6 threshold or
 an invariant fails. k6 writes its full summary JSON to `results/<suite>-*.json`.
 
-Knobs: `E2E_APP_CPUS` (default 4) and `E2E_POOL_MAX_CONNS` (default 64) on
-`up.sh`; `RATE`, `DURATION`, `VUS`, `MAX_VUS`, `RELEASE_RATIO`, `PEAK`,
+Application settings live in `e2e/application.yaml`. Knobs: `E2E_APP_CPUS`
+(default 4) on `up.sh`; `RATE`, `DURATION`, `VUS`, `MAX_VUS`, `RELEASE_RATIO`, `PEAK`,
 `STEP`, `HOT` as `k6 -e` args. See each suite doc.
 
 ## Seed data (`seed/seed.sql`)

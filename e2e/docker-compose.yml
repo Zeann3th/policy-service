@@ -65,6 +65,19 @@ services:
       retries: 30
     networks: [e2e, cicd]
 
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    container_name: policy_e2e_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: policy_service
+      RABBITMQ_DEFAULT_PASS: *password
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks: [e2e, cicd]
+
   migrate:
     build:
       context: ..
@@ -98,17 +111,9 @@ services:
     image: policy-service-e2e:latest
     container_name: policy_e2e_app
     environment:
-      SERVICE_NAME: policy-service
-      ENVIRONMENT: e2e
-      GIN_MODE: release
-      HTTP_PORT: "8080"
-      GRPC_PORT: "8081"
-      # the CMS dev server (cms/), so it can call this stack from the browser
-      CORS_ALLOWED_ORIGINS: ${E2E_CORS_ORIGINS:-http://localhost:3000}
-      DATABASE_URL: postgres://policy_service:e2e_password@policy_e2e_postgres:5432/policy_service_e2e?sslmode=disable&pool_max_conns=${E2E_POOL_MAX_CONNS:-64}&pool_min_conns=16
-      REDIS_ADDRS: policy_e2e_redis:6379
-      REDIS_PASSWORD: *password
       GOMAXPROCS: ${E2E_APP_CPUS:-4}
+    volumes:
+      - ./application.yaml:/app/application.yaml:ro
     ports:
       - "18080:8080"
       - "18081:8081"
@@ -126,6 +131,8 @@ services:
       seed:
         condition: service_completed_successfully
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks: [e2e, cicd]
 

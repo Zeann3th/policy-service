@@ -78,7 +78,6 @@ func New(
 	}, nil
 }
 
-// allOrigins in CORS_ALLOWED_ORIGINS allows any origin.
 const allOrigins = "*"
 
 // corsMiddleware lets the listed browser origins (or any, with "*") call the

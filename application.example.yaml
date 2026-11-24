@@ -1,0 +1,32 @@
+serviceName: policy-service
+environment: development
+http:
+  port: "8080"
+  ginMode: release
+  swaggerEnabled: true
+  corsOrigins:
+    - http://localhost:3000
+grpc:
+  port: "8081"
+database:
+  url: postgres://policy_service:passratmanh123@localhost:5432/policy_service?sslmode=disable
+redis:
+  addrs:
+    - localhost:6379
+  password: passratmanh123
+  db: 0
+messageBroker:
+  addrs:
+    - amqp://policy_service:passratmanh123@localhost:5672/
+  consumer:
+    autoAck: false
+    exclusive: false
+    noLocal: false
+    noWait: false
+    requeueOnError: true
+  queue:
+    - name: usage-releases
+      durability: true
+      deleteWhenUnused: false
+      exclusive: false
+      noWait: false
